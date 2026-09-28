@@ -84,8 +84,14 @@ api.interceptors.response.use(
 
 export function extractApiError(error: unknown): string {
   if (axios.isAxiosError(error)) {
-    const data = error.response?.data as { error?: string } | undefined
-    if (data?.error) return data.error
+    const data = error.response?.data as { error?: unknown } | undefined
+    // backend devolve { error: "mensagem" }; outros hosts (ex.: 404 do Vercel) podem
+    // devolver { error: { code, message } } — nunca renderizar objeto cru no JSX.
+    if (typeof data?.error === 'string' && data.error) return data.error
+    if (data?.error && typeof data.error === 'object') {
+      const message = (data.error as { message?: unknown }).message
+      if (typeof message === 'string' && message) return message
+    }
     if (error.message) return error.message
   }
   return 'Erro inesperado. Tente novamente.'
