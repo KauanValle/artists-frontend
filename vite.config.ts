@@ -13,11 +13,11 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'http://localhost:5090',
+        target: 'https://artists-backend-uopm.onrender.com',
         changeOrigin: true,
       },
       '/uploads': {
-        target: 'http://localhost:5090',
+        target: 'https://artists-backend-uopm.onrender.com',
         changeOrigin: true,
       },
     },
