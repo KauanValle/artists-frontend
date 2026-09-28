@@ -37,3 +37,12 @@ export function minutesToLabel(minutes: number): string {
 export function toDateInput(date: Date): string {
   return date.toISOString().slice(0, 10)
 }
+
+import type { UserRole } from '@/types'
+
+/** Rota inicial de cada papel — evita redirecionamento em loop (ex.: Admin em rota de Contractor). */
+export function homePathFor(role: UserRole | undefined): string {
+  if (role === 'Artist') return '/artist/dashboard'
+  if (role === 'Admin') return '/admin'
+  return '/contractor/dashboard'
+}

@@ -1,5 +1,6 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
+import { homePathFor } from '@/lib/utils'
 import type { UserRole } from '@/types'
 
 export function ProtectedRoute({ role }: { role?: UserRole }) {
@@ -19,7 +20,7 @@ export function ProtectedRoute({ role }: { role?: UserRole }) {
   }
 
   if (role && user?.role !== role) {
-    return <Navigate to={user?.role === 'Artist' ? '/artist/dashboard' : '/contractor/dashboard'} replace />
+    return <Navigate to={homePathFor(user?.role)} replace />
   }
 
   return <Outlet />
@@ -35,5 +36,5 @@ export function RoleRedirect() {
     )
   }
   if (!isAuthenticated) return <Navigate to="/login" replace />
-  return <Navigate to={user?.role === 'Artist' ? '/artist/dashboard' : '/contractor/dashboard'} replace />
+  return <Navigate to={homePathFor(user?.role)} replace />
 }

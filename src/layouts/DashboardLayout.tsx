@@ -42,10 +42,12 @@ const contractorNav = [
   { to: '/contractor/perfil', label: 'Meu perfil', icon: Settings },
 ]
 
+const adminNav = [{ to: '/admin', label: 'Painel', icon: LayoutDashboard }]
+
 export function DashboardLayout() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
-  const nav = user?.role === 'Artist' ? artistNav : contractorNav
+  const nav = user?.role === 'Artist' ? artistNav : user?.role === 'Admin' ? adminNav : contractorNav
 
   const handleLogout = () => {
     logout()
@@ -82,7 +84,7 @@ export function DashboardLayout() {
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium">{user?.displayName}</p>
               <p className="text-xs text-muted-foreground">
-                {user?.role === 'Artist' ? 'Artista' : 'Contratante'}
+                {user?.role === 'Artist' ? 'Artista' : user?.role === 'Admin' ? 'Administrador' : 'Contratante'}
               </p>
             </div>
             <Button variant="ghost" size="icon" onClick={handleLogout} title="Sair">

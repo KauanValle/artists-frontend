@@ -26,6 +26,7 @@ import { ConversationsPage } from '@/pages/contractor/ConversationsPage'
 import { ContractorProfilePage } from '@/pages/contractor/ContractorProfilePage'
 
 import { BookingDetailPage } from '@/pages/shared/BookingDetailPage'
+import { AdminDashboardPage } from '@/pages/admin/AdminDashboardPage'
 
 export const router = createBrowserRouter([
   {
@@ -73,6 +74,17 @@ export const router = createBrowserRouter([
           { path: '/contractor/conversas', element: <ConversationsPage /> },
           { path: '/contractor/conversas/:id', element: <ConversationsPage /> },
           { path: '/contractor/perfil', element: <ContractorProfilePage /> },
+        ],
+      },
+    ],
+  },
+  {
+    element: <ProtectedRoute role="Admin" />,
+    children: [
+      {
+        element: <DashboardLayout />,
+        children: [
+          { path: '/admin', element: <AdminDashboardPage /> },
         ],
       },
     ],

@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { extractApiError } from '@/services/api'
+import { homePathFor } from '@/lib/utils'
 
 const schema = z.object({
   email: z.string().email('E-mail inválido'),
@@ -34,7 +35,7 @@ export function LoginPage() {
       const user = await login(data.email, data.password)
       const from = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname
       toast.success(`Bem-vindo, ${user.displayName}!`)
-      navigate(from ?? (user.role === 'Artist' ? '/artist/dashboard' : '/contractor/dashboard'), { replace: true })
+      navigate(from ?? homePathFor(user.role), { replace: true })
     } catch (err) {
       setError(extractApiError(err))
     }
