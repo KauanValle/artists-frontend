@@ -64,7 +64,7 @@ export function AgendaPage() {
           <h1 className="text-2xl font-bold">Agenda</h1>
           <p className="text-sm text-muted-foreground">Shows, ensaios, reuniões, viagens e gravações — com detecção de conflitos</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Select value={view} onValueChange={(v) => setView(v as View)}>
             <SelectTrigger className="w-32">
               <SelectValue />

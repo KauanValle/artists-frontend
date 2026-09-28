@@ -7,15 +7,15 @@ export function PublicLayout() {
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
           <Link to="/" className="flex items-center gap-2">
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">🎤</span>
-            <span className="text-base font-bold">Artist Platform</span>
+            <span className="hidden text-base font-bold sm:inline">Artist Platform</span>
           </Link>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <Link to="/login" className="text-sm font-medium text-muted-foreground hover:text-foreground">
               Entrar
             </Link>
             <Link
               to="/register"
-              className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+              className="rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 sm:px-4"
             >
               Criar conta
             </Link>

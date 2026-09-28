@@ -64,7 +64,7 @@ export function FinancialPage() {
           <h1 className="text-2xl font-bold">Financeiro</h1>
           <p className="text-sm text-muted-foreground">Receitas, despesas, resultado e contas a receber</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Tabs value={period} onValueChange={(v) => setPeriod(v as Period)}>
             <TabsList>
               <TabsTrigger value="month">Mês</TabsTrigger>
@@ -103,7 +103,8 @@ export function FinancialPage() {
               <EmptyState title="Nenhuma transação no período" icon={<Wallet />} />
             </div>
           ) : (
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[36rem] text-sm">
               <thead>
                 <tr className="border-b text-left text-muted-foreground">
                   <th className="p-3 font-medium">Descrição</th>
@@ -142,6 +143,7 @@ export function FinancialPage() {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </CardContent>
       </Card>
