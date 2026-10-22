@@ -35,6 +35,7 @@ export function RoleRedirect() {
       </div>
     )
   }
-  if (!isAuthenticated) return <Navigate to="/login" replace />
+  // Sem login, a home é a vitrine pública de artistas (não exige cadastro).
+  if (!isAuthenticated) return <Navigate to="/artistas" replace />
   return <Navigate to={homePathFor(user?.role)} replace />
 }

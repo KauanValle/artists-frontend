@@ -8,6 +8,7 @@ import { RegisterPage } from '@/pages/auth/RegisterPage'
 import { ForgotPasswordPage } from '@/pages/auth/ForgotPasswordPage'
 import { ResetPasswordPage } from '@/pages/auth/ResetPasswordPage'
 import { ArtistPublicPage } from '@/pages/public/ArtistPublicPage'
+import { ArtistsDirectoryPage } from '@/pages/public/ArtistsDirectoryPage'
 
 import { ArtistDashboardPage } from '@/pages/artist/ArtistDashboardPage'
 import { AgendaPage } from '@/pages/artist/AgendaPage'
@@ -36,6 +37,7 @@ export const router = createBrowserRouter([
       { path: '/register', element: <RegisterPage /> },
       { path: '/forgot-password', element: <ForgotPasswordPage /> },
       { path: '/reset-password', element: <ResetPasswordPage /> },
+      { path: '/artistas', element: <ArtistsDirectoryPage /> },
       { path: '/artistas/:slug', element: <ArtistPublicPage /> },
       { path: '/', element: <RoleRedirect /> },
     ],

@@ -15,9 +15,11 @@ import {
   Package,
   Search,
   Settings,
+  TriangleAlert,
   Users,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
+import { getMissingProfileFields, useMyArtist } from '@/hooks/useArtistProfile'
 import { Avatar } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { NotificationsMenu } from '@/components/NotificationsMenu'
@@ -55,6 +57,8 @@ function SidebarContent({
 }) {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
+  const { data: myArtist } = useMyArtist(user?.role === 'Artist')
+  const missingProfileFields = user?.role === 'Artist' ? getMissingProfileFields(myArtist) : []
 
   const handleLogout = () => {
     onNavigate?.()
@@ -81,8 +85,17 @@ function SidebarContent({
               )
             }
           >
-            <item.icon className="h-4 w-4" />
-            {item.label}
+            <item.icon className="h-4 w-4 shrink-0" />
+            <span className="min-w-0 flex-1 truncate">{item.label}</span>
+            {item.to === '/artist/perfil' && missingProfileFields.length > 0 && (
+              <span
+                className="shrink-0"
+                aria-label={`${missingProfileFields.length} campo${missingProfileFields.length > 1 ? 's' : ''} obrigatório${missingProfileFields.length > 1 ? 's' : ''} pendente${missingProfileFields.length > 1 ? 's' : ''}`}
+                title={`Campos obrigatórios pendentes: ${missingProfileFields.map((f) => f.label).join(', ')}`}
+              >
+                <TriangleAlert className="h-4 w-4 text-amber-500" />
+              </span>
+            )}
           </NavLink>
         ))}
       </nav>

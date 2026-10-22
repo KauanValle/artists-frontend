@@ -7,6 +7,7 @@ import type {
   Category,
   Contractor,
   CreateBookingPayload,
+  CreateGuestBookingPayload,
   CreateProposalPayload,
   Conversation,
   Equipment,
@@ -79,6 +80,11 @@ export const bookingsApi = {
   accept: (id: string) => api.post<import('@/types').Booking>(`/bookings/${id}/accept`),
   reject: (id: string) => api.post(`/bookings/${id}/reject`),
   cancel: (id: string) => api.post(`/bookings/${id}/cancel`),
+}
+
+// Rota pública: solicitação de contratação sem cadastro
+export const publicBookingsApi = {
+  create: (payload: CreateGuestBookingPayload) => api.post<import('@/types').Booking>('/public/bookings', payload),
 }
 
 export const proposalsApi = {

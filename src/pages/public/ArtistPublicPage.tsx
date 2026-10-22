@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { useNavigate, useParams } from 'react-router-dom'
-import { CalendarPlus, Heart, MapPin, Star } from 'lucide-react'
+import { CalendarPlus, CheckCircle2, Heart, MapPin, Star } from 'lucide-react'
 import { toast } from 'sonner'
-import { artistsApi, availabilityApi, bookingsApi, favoritesApi } from '@/services'
+import { artistsApi, availabilityApi, bookingsApi, favoritesApi, publicBookingsApi } from '@/services'
+import { useAuth } from '@/hooks/useAuth'
 import { Avatar } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -22,6 +23,8 @@ import type { EventType } from '@/types'
 export function ArtistPublicPage() {
   const { slug } = useParams<{ slug: string }>()
   const navigate = useNavigate()
+  const { isAuthenticated, user } = useAuth()
+  const isContractor = isAuthenticated && user?.role === 'Contractor'
   const [requestOpen, setRequestOpen] = useState(false)
   const [isFavorite, setIsFavorite] = useState(false)
 
@@ -68,7 +71,7 @@ export function ArtistPublicPage() {
             <Avatar
               src={artist.profilePhotoUrl}
               alt={artist.artisticName}
-              className="h-24 w-24 border-4 border-background text-2xl"
+              className="h-28 w-28 border-4 border-background text-2xl"
             />
             <div className="flex-1">
               <div className="flex flex-wrap items-center gap-2">
@@ -88,9 +91,11 @@ export function ArtistPublicPage() {
               )}
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="icon" onClick={() => addFavorite.mutate()} disabled={isFavorite}>
-                <Heart className={isFavorite ? 'fill-destructive text-destructive' : ''} />
-              </Button>
+              {isContractor && (
+                <Button variant="outline" size="icon" onClick={() => addFavorite.mutate()} disabled={isFavorite}>
+                  <Heart className={isFavorite ? 'fill-destructive text-destructive' : ''} />
+                </Button>
+              )}
               <Button onClick={() => setRequestOpen(true)}>
                 <CalendarPlus /> Solicitar contratação
               </Button>
@@ -212,13 +217,23 @@ export function ArtistPublicPage() {
         </div>
       </div>
 
-      <BookingRequestDialog
-        artistId={artist.id}
-        artistName={artist.artisticName}
-        open={requestOpen}
-        onClose={() => setRequestOpen(false)}
-        onCreated={(id) => navigate(`/contractor/solicitacoes/${id}`)}
-      />
+      {isContractor ? (
+        <BookingRequestDialog
+          artistId={artist.id}
+          artistName={artist.artisticName}
+          open={requestOpen}
+          onClose={() => setRequestOpen(false)}
+          onCreated={(id) => navigate(`/contractor/solicitacoes/${id}`)}
+        />
+      ) : (
+        <GuestBookingDialog
+          artistId={artist.id}
+          artistName={artist.artisticName}
+          startingPrice={artist.startingPrice}
+          open={requestOpen}
+          onClose={() => setRequestOpen(false)}
+        />
+      )}
     </div>
   )
 }
@@ -332,6 +347,251 @@ export function BookingRequestDialog({
             {create.isPending ? 'Enviando...' : 'Enviar solicitação'}
           </Button>
         </form>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+/** WhatsApp com DDD: aceita 10–13 dígitos após remover máscara. */
+function isValidWhatsapp(phone: string): boolean {
+  const digits = phone.replace(/\D/g, '')
+  return digits.length >= 10 && digits.length <= 13
+}
+
+/**
+ * Solicitação pela rota pública, sem cadastro: pede os dados básicos de contato do contratante
+ * (nome do responsável, estabelecimento, WhatsApp e valor da proposta) + os detalhes do evento.
+ * O acompanhamento acontece pelo WhatsApp informado — sem área logada.
+ */
+export function GuestBookingDialog({
+  artistId,
+  artistName,
+  startingPrice,
+  open,
+  onClose,
+}: {
+  artistId: string
+  artistName: string
+  startingPrice: number | null
+  open: boolean
+  onClose: () => void
+}) {
+  const [guestName, setGuestName] = useState('')
+  const [guestCompanyName, setGuestCompanyName] = useState('')
+  const [guestPhone, setGuestPhone] = useState('')
+  const [budget, setBudget] = useState('')
+  const [eventDate, setEventDate] = useState('')
+  const [startTime, setStartTime] = useState('20:00')
+  const [endTime, setEndTime] = useState('23:00')
+  const [location, setLocation] = useState('')
+  const [eventType, setEventType] = useState<EventType>('Show')
+  const [estimatedAudience, setEstimatedAudience] = useState('')
+  const [message, setMessage] = useState('')
+  const [created, setCreated] = useState(false)
+
+  const reset = () => {
+    setGuestName('')
+    setGuestCompanyName('')
+    setGuestPhone('')
+    setBudget('')
+    setEventDate('')
+    setStartTime('20:00')
+    setEndTime('23:00')
+    setLocation('')
+    setEventType('Show')
+    setEstimatedAudience('')
+    setMessage('')
+    setCreated(false)
+  }
+
+  const create = useMutation({
+    mutationFn: () =>
+      publicBookingsApi.create({
+        artistId,
+        guestName,
+        guestCompanyName: guestCompanyName || null,
+        guestPhone: guestPhone.replace(/\D/g, ''),
+        budget: Number(budget.replace(',', '.')),
+        eventDate,
+        startTime: `${startTime}:00`,
+        endTime: `${endTime}:00`,
+        location,
+        eventType,
+        estimatedAudience: estimatedAudience ? Number(estimatedAudience) : null,
+        message,
+      }),
+    onSuccess: () => setCreated(true),
+    onError: (e) => toast.error(extractApiError(e)),
+  })
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        if (!o) onClose()
+      }}
+    >
+      <DialogContent className="max-h-[90vh] overflow-y-auto">
+        {created ? (
+          <div className="flex flex-col items-center gap-3 py-6 text-center">
+            <CheckCircle2 className="h-12 w-12 text-emerald-500" />
+            <DialogHeader>
+              <DialogTitle>Solicitação enviada!</DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-muted-foreground">
+              {artistName} recebeu sua proposta de <strong className="text-foreground">{formatMoney(Number(budget.replace(',', '.')))}</strong> e
+              vai entrar em contato pelo WhatsApp <strong className="text-foreground">{guestPhone}</strong>.
+            </p>
+            <div className="mt-2 flex gap-2">
+              <Button variant="outline" onClick={reset}>
+                Enviar outra solicitação
+              </Button>
+              <Button
+                onClick={() => {
+                  reset()
+                  onClose()
+                }}
+              >
+                Concluir
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <DialogHeader>
+              <DialogTitle>Solicitar contratação — {artistName}</DialogTitle>
+            </DialogHeader>
+            <form
+              className="space-y-4"
+              onSubmit={(e) => {
+                e.preventDefault()
+                if (!isValidWhatsapp(guestPhone)) {
+                  toast.error('Informe um WhatsApp válido com DDD (ex.: (11) 98765-4321).')
+                  return
+                }
+                create.mutate()
+              }}
+            >
+              <div>
+                <p className="mb-2 text-sm font-semibold">Seus dados</p>
+                <div className="space-y-3">
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <Label>Nome do responsável *</Label>
+                      <Input
+                        value={guestName}
+                        onChange={(e) => setGuestName(e.target.value)}
+                        placeholder="Quem vai acompanhar o evento"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Nome do estabelecimento</Label>
+                      <Input
+                        value={guestCompanyName}
+                        onChange={(e) => setGuestCompanyName(e.target.value)}
+                        placeholder="Ex.: Bar do Carlos"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <Label>WhatsApp do responsável *</Label>
+                      <Input
+                        value={guestPhone}
+                        onChange={(e) => setGuestPhone(e.target.value)}
+                        placeholder="(11) 98765-4321"
+                        inputMode="tel"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Valor da proposta (R$) *</Label>
+                      <Input
+                        value={budget}
+                        onChange={(e) => setBudget(e.target.value)}
+                        placeholder={startingPrice !== null ? `A partir de ${formatMoney(startingPrice)}` : 'Ex.: 1500'}
+                        inputMode="decimal"
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <p className="mb-2 text-sm font-semibold">Detalhes do evento</p>
+                <div className="space-y-3">
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="space-y-1.5">
+                      <Label>Data *</Label>
+                      <Input type="date" value={eventDate} onChange={(e) => setEventDate(e.target.value)} required />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Início</Label>
+                      <Input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} required />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Fim</Label>
+                      <Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} required />
+                    </div>
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <Label>Local *</Label>
+                      <Input
+                        value={location}
+                        onChange={(e) => setLocation(e.target.value)}
+                        placeholder="Endereço do evento"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Tipo de evento</Label>
+                      <Select value={eventType} onValueChange={(v) => setEventType(v as EventType)}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Object.entries(eventTypeLabel).map(([value, label]) => (
+                            <SelectItem key={value} value={value}>
+                              {label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Público estimado</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={estimatedAudience}
+                      onChange={(e) => setEstimatedAudience(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Mensagem</Label>
+                    <Textarea
+                      value={message}
+                      onChange={(e) => setMessage(e.target.value)}
+                      placeholder="Conte os detalhes do evento..."
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-xs text-muted-foreground">
+                Sem cadastro necessário: o artista recebe sua solicitação com esses dados e responde pelo WhatsApp
+                informado.
+              </p>
+              <Button type="submit" className="w-full" disabled={create.isPending}>
+                {create.isPending ? 'Enviando...' : 'Enviar solicitação'}
+              </Button>
+            </form>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   )

@@ -10,6 +10,9 @@ export function PublicLayout() {
             <span className="hidden text-base font-bold sm:inline">Artist Platform</span>
           </Link>
           <div className="flex items-center gap-2 sm:gap-3">
+            <Link to="/artistas" className="text-sm font-medium text-muted-foreground hover:text-foreground">
+              Buscar artistas
+            </Link>
             <Link to="/login" className="text-sm font-medium text-muted-foreground hover:text-foreground">
               Entrar
             </Link>
