@@ -103,6 +103,7 @@ export function BookingDetailPage() {
             <h1 className="text-xl font-bold">
               Contratação — {isArtist ? booking.contractorName : booking.artistName}
             </h1>
+            {booking.isGuest && <Badge variant="secondary">Solicitação de visitante</Badge>}
             <BookingStatusBadge status={booking.status} />
           </div>
           <p className="text-sm text-muted-foreground">
@@ -151,6 +152,16 @@ export function BookingDetailPage() {
               horário é bloqueado e uma receita pendente é criada no seu financeiro.
             </p>
           </div>
+          
+          <div>
+            {booking.isGuest && (
+              <div className="bg-orange-100 border-l-4 border-orange-500 text-orange-700 p-4" role="alert">
+                <p className="text-xs text-muted-foreground">
+                  Solicitação aberta pela página pública, esteja de acordo que todos os detalhes foram resolvidos através do WhatsApp.
+                </p>
+              </div>
+            )}
+          </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setAcceptOpen(false)}>
               Voltar
@@ -173,11 +184,12 @@ export function BookingDetailPage() {
         </TabsList>
 
         <TabsContent value="resumo">
-          <Card>
+          {booking.isGuest && <GuestContactCard booking={booking} />}
+          <Card className={booking.isGuest ? 'mt-4' : ''}>
             <CardContent className="grid gap-4 p-6 sm:grid-cols-2">
               <Field label="Tipo de evento" value={eventTypeLabel[booking.eventType]} />
               <Field label="Público estimado" value={booking.estimatedAudience?.toLocaleString('pt-BR') ?? '—'} />
-              <Field label="Orçamento informado" value={booking.budget !== null ? formatMoney(booking.budget) : '—'} />
+              <Field label={booking.isGuest ? 'Valor da proposta' : 'Orçamento informado'} value={booking.budget !== null ? formatMoney(booking.budget) : '—'} />
               <Field label="Data do evento" value={`${formatDate(booking.eventDate)} às ${formatTime(booking.startTime)}`} />
               <div className="sm:col-span-2">
                 <p className="text-sm font-medium">Mensagem do contratante</p>
@@ -213,6 +225,8 @@ export function BookingDetailPage() {
         <TabsContent value="chat">
           {booking.conversationId ? (
             <ChatPanel conversationId={booking.conversationId} />
+          ) : booking.isGuest ? (
+            <GuestContactCard booking={booking} />
           ) : (
             <Card>
               <CardContent className="p-6 text-sm text-muted-foreground">Conversa não disponível.</CardContent>
@@ -259,6 +273,42 @@ function Field({ label, value }: { label: string; value: string }) {
       <p className="text-sm font-medium">{label}</p>
       <p className="mt-0.5 text-sm text-muted-foreground">{value}</p>
     </div>
+  )
+}
+
+/** Número internacional para wa.me: brasileiro (10–11 dígitos) recebe o prefixo 55. */
+function whatsappLink(phone: string): string {
+  const digits = phone.replace(/\D/g, '')
+  return `https://wa.me/${digits.length > 0 && digits.length <= 11 ? `55${digits}` : digits}`
+}
+
+/** Contato informado pelo visitante na solicitação pública — sem cadastro, o trato é pelo WhatsApp. */
+function GuestContactCard({ booking }: { booking: import('@/types').Booking }) {
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base">Contato do contratante</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Nome do responsável" value={booking.contractorName} />
+          <Field label="Estabelecimento" value={booking.guestCompanyName ?? '—'} />
+          <Field label="WhatsApp" value={booking.guestPhone ?? '—'} />
+        </div>
+        {booking.guestPhone && (
+          <Button asChild>
+            <a href={whatsappLink(booking.guestPhone)} target="_blank" rel="noreferrer">
+              <MessageSquare /> Falar no WhatsApp
+            </a>
+          </Button>
+        )}
+        <div className="bg-orange-100 border-l-4 border-orange-500 text-orange-700 p-4" role="alert">
+          <p className="text-xs text-muted-foreground">
+            Solicitação aberta pela página pública, sem cadastro — combine os detalhes pelo WhatsApp.
+          </p>
+        </div>
+      </CardContent>
+    </Card>
   )
 }
 

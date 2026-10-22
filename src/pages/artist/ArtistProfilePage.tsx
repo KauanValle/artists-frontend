@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Plus, Trash2 } from 'lucide-react'
+import { Plus, Trash2, TriangleAlert } from 'lucide-react'
 import { toast } from 'sonner'
 import { artistsApi, availabilityApi, feesApi, uploadsApi } from '@/services'
 import { useAuth } from '@/hooks/useAuth'
+import { requiredProfileFields } from '@/hooks/useArtistProfile'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -12,7 +13,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { availabilityStatusLabel } from '@/components/badges'
-import { formatDate, formatMoney, minutesToLabel } from '@/lib/utils'
+import { cn, formatDate, formatMoney, minutesToLabel } from '@/lib/utils'
 import { extractApiError } from '@/services/api'
 import type { AvailabilityStatus } from '@/types'
 
@@ -49,6 +50,13 @@ export function ArtistProfilePage() {
     setStyles(artist.styles)
     setSpecialties(artist.specialties)
   }
+
+  // Campos obrigatórios cobrados pelo back-end (lista compartilhada com o alerta do menu lateral):
+  // salvar → nome, nome artístico e categoria (SaveOnboarding); publicar → cidade e descrição
+  // (PublishAsync); UF e telefone são NOT NULL no banco.
+  const missingFields = requiredProfileFields.filter((f) => !(form?.[f.key] ?? '').trim())
+  const isMissing = (key: string) => missingFields.some((f) => f.key === key)
+  const missingClass = 'border-amber-500 focus-visible:ring-amber-500/40'
 
   const save = useMutation({
     mutationFn: async () => {
@@ -100,6 +108,21 @@ export function ArtistProfilePage() {
     return <p className="py-10 text-center text-sm text-muted-foreground">Carregando perfil...</p>
   }
 
+  // Campos que o perfil já tinha preenchido e agora estão vazios — o salvamento é bloqueado.
+  const clearedFields = requiredProfileFields.filter(
+    (f) => (artist[f.key] ?? '').trim() !== '' && (form[f.key] ?? '').trim() === ''
+  )
+
+  const handleSave = () => {
+    if (clearedFields.length > 0) {
+      toast.warning(
+        `Não é possível salvar: ${clearedFields.map((f) => f.label).join(', ')} ${clearedFields.length > 1 ? 'estão vazios' : 'está vazio'}. Preencha com as novas informações antes de salvar.`
+      )
+      return
+    }
+    save.mutate()
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -111,6 +134,12 @@ export function ArtistProfilePage() {
           <Badge variant={artist.isPublished ? 'success' : 'secondary'}>
             {artist.isPublished ? 'Publicado' : 'Rascunho'}
           </Badge>
+          {missingFields.length > 0 && (
+            <Badge variant="warning" className="gap-1">
+              <TriangleAlert className="h-3 w-3" />
+              {missingFields.length} {missingFields.length > 1 ? 'campos pendentes' : 'campo pendente'}
+            </Badge>
+          )}
           <Button
             variant={artist.isPublished ? 'outline' : 'default'}
             onClick={() => publish.mutate(!artist.isPublished)}
@@ -120,6 +149,19 @@ export function ArtistProfilePage() {
           </Button>
         </div>
       </div>
+
+      {missingFields.length > 0 && (
+        <div className="rounded-md border border-amber-500/60 bg-amber-50 px-4 py-3 text-sm dark:border-amber-500/40 dark:bg-amber-950/40">
+          <p className="flex items-center gap-2 font-semibold text-amber-800 dark:text-amber-300">
+            <TriangleAlert className="h-4 w-4 shrink-0" />
+            Campo{missingFields.length > 1 ? 's' : ''} obrigatório{missingFields.length > 1 ? 's' : ''} sem preencher
+          </p>
+          <p className="mt-1 text-amber-800/90 dark:text-amber-200/90">
+            Faltam: <strong>{missingFields.map((f) => f.label).join(', ')}</strong>. O back-end exige nome, nome
+            artístico e categoria para salvar; cidade e descrição para publicar.
+          </p>
+        </div>
+      )}
 
       <Card>
         <CardHeader>
@@ -154,17 +196,27 @@ export function ArtistProfilePage() {
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label>Nome</Label>
-              <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+              <Label>Nome *</Label>
+              <Input
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                className={cn(isMissing('name') && missingClass)}
+              />
+              {isMissing('name') && <MissingHint message="Informe o nome — obrigatório para salvar" />}
             </div>
             <div className="space-y-1.5">
-              <Label>Nome artístico</Label>
-              <Input value={form.artisticName} onChange={(e) => setForm({ ...form, artisticName: e.target.value })} />
+              <Label>Nome artístico *</Label>
+              <Input
+                value={form.artisticName}
+                onChange={(e) => setForm({ ...form, artisticName: e.target.value })}
+                className={cn(isMissing('artisticName') && missingClass)}
+              />
+              {isMissing('artisticName') && <MissingHint message="Informe o nome artístico — obrigatório para salvar" />}
             </div>
             <div className="space-y-1.5">
-              <Label>Categoria</Label>
+              <Label>Categoria *</Label>
               <Select value={form.categoryId} onValueChange={(v) => setForm({ ...form, categoryId: v })}>
-                <SelectTrigger>
+                <SelectTrigger className={cn(isMissing('categoryId') && missingClass)}>
                   <SelectValue placeholder="Categoria" />
                 </SelectTrigger>
                 <SelectContent>
@@ -175,27 +227,52 @@ export function ArtistProfilePage() {
                   ))}
                 </SelectContent>
               </Select>
+              {isMissing('categoryId') && <MissingHint message="Selecione a categoria — obrigatória para salvar" />}
             </div>
             <div className="space-y-1.5">
-              <Label>Cidade</Label>
-              <Input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} />
+              <Label>Cidade *</Label>
+              <Input
+                value={form.city}
+                onChange={(e) => setForm({ ...form, city: e.target.value })}
+                className={cn(isMissing('city') && missingClass)}
+              />
+              {isMissing('city') && <MissingHint message="Informe a cidade — obrigatória para publicar" />}
             </div>
             <div className="space-y-1.5">
-              <Label>UF</Label>
-              <Input maxLength={2} value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })} />
+              <Label>UF *</Label>
+              <Input
+                maxLength={2}
+                value={form.state}
+                onChange={(e) => setForm({ ...form, state: e.target.value })}
+                className={cn(isMissing('state') && missingClass)}
+              />
+              {isMissing('state') && <MissingHint message="Informe a UF (ex.: SP)" />}
             </div>
             <div className="space-y-1.5">
-              <Label>Telefone</Label>
-              <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+              <Label>Telefone *</Label>
+              <Input
+                value={form.phone}
+                onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                className={cn(isMissing('phone') && missingClass)}
+              />
+              {isMissing('phone') && <MissingHint message="Informe o telefone de contato" />}
             </div>
           </div>
           <div className="space-y-1.5">
-            <Label>Descrição</Label>
-            <Textarea rows={4} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+            <Label>Descrição *</Label>
+            <Textarea
+              rows={4}
+              value={form.description}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
+              className={cn(isMissing('description') && missingClass)}
+            />
+            {isMissing('description') && (
+              <MissingHint message="Escreva a descrição — obrigatória para publicar o perfil" />
+            )}
           </div>
           <TagListEditor label="Estilos" values={styles} onChange={setStyles} />
           <TagListEditor label="Especialidades" values={specialties} onChange={setSpecialties} />
-          <Button onClick={() => save.mutate()} disabled={save.isPending}>
+          <Button onClick={handleSave} disabled={save.isPending}>
             {save.isPending ? 'Salvando...' : 'Salvar perfil'}
           </Button>
         </CardContent>
@@ -206,6 +283,16 @@ export function ArtistProfilePage() {
         <AvailabilityCard />
       </div>
     </div>
+  )
+}
+
+/** Aviso amarelo abaixo de campo obrigatório deixado em branco (validação espelha o back-end). */
+function MissingHint({ message }: { message: string }) {
+  return (
+    <p className="flex items-center gap-1 text-xs font-medium text-amber-600 dark:text-amber-500">
+      <TriangleAlert className="h-3 w-3 shrink-0" />
+      {message}
+    </p>
   )
 }
 

@@ -173,8 +173,11 @@ export interface Booking {
   artistId: string
   artistName: string
   artistPhotoUrl: string | null
-  contractorId: string
+  contractorId: string | null
   contractorName: string
+  isGuest: boolean
+  guestCompanyName: string | null
+  guestPhone: string | null
   eventDate: string
   startTime: string
   endTime: string
@@ -199,6 +202,21 @@ export interface CreateBookingPayload {
   eventType: EventType
   estimatedAudience?: number | null
   budget?: number | null
+  message: string
+}
+
+export interface CreateGuestBookingPayload {
+  artistId: string
+  guestName: string
+  guestCompanyName?: string | null
+  guestPhone: string
+  budget: number
+  eventDate: string
+  startTime: string
+  endTime: string
+  location: string
+  eventType: EventType
+  estimatedAudience?: number | null
   message: string
 }
 
