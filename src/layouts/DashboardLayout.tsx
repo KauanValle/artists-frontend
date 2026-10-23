@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import {
+  BadgeCheck,
   CalendarDays,
   CalendarRange,
   ClipboardList,
@@ -34,6 +35,13 @@ const artistNav = [
   { to: '/artist/equipamentos', label: 'Equipamentos', icon: Package },
   { to: '/artist/perfil', label: 'Meu Perfil', icon: Music },
   { to: '/artist/configuracoes', label: 'Configurações', icon: Settings },
+  { to: '/artist/assinatura', label: 'Assinatura', icon: BadgeCheck },
+]
+
+// Conta gratuita: só dashboard e assinatura até o pagamento ser confirmado.
+const freeArtistNav = [
+  { to: '/artist/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { to: '/artist/assinatura', label: 'Assinatura', icon: CreditCard },
 ]
 
 const contractorNav = [
@@ -120,7 +128,16 @@ function SidebarContent({
 export function DashboardLayout() {
   const { user } = useAuth()
   const [menuOpen, setMenuOpen] = useState(false)
-  const nav = user?.role === 'Artist' ? artistNav : user?.role === 'Admin' ? adminNav : contractorNav
+  const isFreeArtist = user?.role === 'Artist' && user.subscriptionTier === 'Gratuito'
+  const nav = !user
+    ? artistNav
+    : user.role === 'Admin'
+      ? adminNav
+      : user.role === 'Contractor'
+        ? contractorNav
+        : isFreeArtist
+          ? freeArtistNav
+          : artistNav
 
   return (
     <div className="min-h-screen bg-secondary/40">
