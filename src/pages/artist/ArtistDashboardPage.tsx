@@ -154,7 +154,6 @@ export function ArtistDashboardPage() {
           </CardContent>
         </Card>
       </div>
-      <YampiBuyButton/>
     </div>
   )
 }
