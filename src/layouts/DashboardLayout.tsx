@@ -73,6 +73,8 @@ function SidebarContent({
     logout()
     navigate('/login')
   }
+  const isSubscriber = user?.subscriptionTier === 'Assinante';
+  
 
   return (
     <>
@@ -113,7 +115,7 @@ function SidebarContent({
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-medium">{user?.displayName}</p>
             <p className="truncate text-xs text-muted-foreground">
-              {user?.role === 'Artist' ? 'Artista' : user?.role === 'Admin' ? 'Administrador' : 'Contratante'}
+              {user?.role === 'Artist' ? 'Artista' : user?.role === 'Admin' ? 'Administrador' : 'Contratante'} | {isSubscriber ? 'Assinante' : 'Gratuito'}
             </p>
           </div>
           <Button variant="ghost" size="icon" onClick={handleLogout} title="Sair">

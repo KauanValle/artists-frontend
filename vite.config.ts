@@ -12,12 +12,14 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
+      // Alvo SEM sufixo de caminho: o path da requisição é anexado ao target.
+      // Com sufixo '/api' o pedido viraria /api/api/... (e /uploads viraria /api/uploads).
       '/api': {
-        target: 'https://artists-backend-production.up.railway.app/api',
+        target: 'https://artists-backend-production.up.railway.app',
         changeOrigin: true,
       },
       '/uploads': {
-        target: 'https://artists-backend-production.up.railway.app/api',
+        target: 'https://artists-backend-production.up.railway.app',
         changeOrigin: true,
       },
     },
