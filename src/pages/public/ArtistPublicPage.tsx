@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { useNavigate, useParams } from 'react-router-dom'
-import { CalendarPlus, CheckCircle2, Heart, MapPin, Star } from 'lucide-react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { CalendarDays, CalendarPlus, CheckCircle2, ChevronRight, Heart, Images, MapPin } from 'lucide-react'
 import { toast } from 'sonner'
 import { artistsApi, availabilityApi, bookingsApi, favoritesApi, publicBookingsApi } from '@/services'
 import { useAuth } from '@/hooks/useAuth'
@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { RatingStars } from '@/components/ui/rating-stars'
 import { EmptyState, eventTypeLabel } from '@/components/badges'
-import { formatMoney, minutesToLabel } from '@/lib/utils'
+import { formatDate, formatMoney, minutesToLabel } from '@/lib/utils'
 import { extractApiError } from '@/services/api'
 import type { EventType } from '@/types'
 
@@ -50,7 +50,11 @@ export function ArtistPublicPage() {
   })
 
   if (isLoading) {
-    return <div className="mx-auto max-w-5xl px-4 py-16">Carregando...</div>
+    return (
+      <div className="flex h-[60vh] items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    )
   }
 
   if (!artist) {
@@ -61,151 +65,265 @@ export function ArtistPublicPage() {
     )
   }
 
-  return (
-    <div className="mx-auto max-w-5xl px-4 py-8">
-      {/* Cabeçalho */}
-      <Card className="overflow-hidden">
-        <div className="h-40 bg-gradient-to-r from-primary/80 to-primary/40" />
-        <CardContent className="relative pb-6">
-          <div className="-mt-12 flex flex-col gap-4 sm:flex-row sm:items-end">
-            <Avatar
-              src={artist.profilePhotoUrl}
-              alt={artist.artisticName}
-              className="h-28 w-28 border-4 border-background text-2xl"
-            />
-            <div className="flex-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-2xl font-bold">{artist.artisticName}</h1>
-                <Badge variant="secondary">{artist.artistType === 'Band' ? 'Banda/Grupo' : 'Solo'}</Badge>
-                <Badge variant="outline">{artist.categoryName}</Badge>
-              </div>
-              <p className="mt-1 flex items-center gap-1 text-sm text-muted-foreground">
-                <MapPin className="h-4 w-4" /> {artist.city}, {artist.state}
-              </p>
-              {artist.reviewCount > 0 && (
-                <div className="mt-1 flex items-center gap-2">
-                  <RatingStars value={artist.averageRating ?? 0} />
-                  <span className="text-sm font-medium">{artist.averageRating?.toFixed(1)}</span>
-                  <span className="text-xs text-muted-foreground">({artist.reviewCount} avaliações)</span>
-                </div>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              {isContractor && (
-                <Button variant="outline" size="icon" onClick={() => addFavorite.mutate()} disabled={isFavorite}>
-                  <Heart className={isFavorite ? 'fill-destructive text-destructive' : ''} />
-                </Button>
-              )}
-              <Button onClick={() => setRequestOpen(true)}>
-                <CalendarPlus /> Solicitar contratação
-              </Button>
-            </div>
-          </div>
-          {artist.startingPrice !== null && (
-            <p className="mt-4 text-sm text-muted-foreground">
-              A partir de <span className="text-lg font-bold text-foreground">{formatMoney(artist.startingPrice)}</span>
-            </p>
-          )}
-        </CardContent>
-      </Card>
+  const tipo = artist.artistType === 'Band' ? 'Banda/Grupo' : 'Solo'
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-3">
-        <div className="space-y-6 lg:col-span-2">
+  return (
+    <div className="mx-auto max-w-6xl px-4 pb-16 pt-6">
+      {/* Trilha de navegação */}
+      <nav className="mb-4 flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
+        <Link to="/artistas" className="hover:text-foreground hover:underline">
+          Artistas
+        </Link>
+        <ChevronRight className="h-3.5 w-3.5" />
+        <span className="truncate font-medium text-foreground">{artist.artisticName}</span>
+      </nav>
+
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+        {/* Coluna principal */}
+        <div className="min-w-0 space-y-6">
+          {/* Cartão de perfil */}
           <Card>
-            <CardHeader>
-              <CardTitle>Sobre</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="whitespace-pre-line text-sm text-muted-foreground">{artist.description || 'Sem descrição.'}</p>
-              {(artist.styles.length > 0 || artist.specialties.length > 0) && (
-                <div className="mt-4 space-y-2">
+            <CardContent className="p-6">
+              <div className="flex flex-col gap-5 sm:flex-row">
+                <Avatar
+                  src={artist.profilePhotoUrl}
+                  alt={artist.artisticName}
+                  className="h-32 w-32 shrink-0 border bg-background text-3xl shadow-sm sm:h-36 sm:w-36"
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <h1 className="text-3xl font-bold">{artist.artisticName}</h1>
+                    {artist.startingPrice != null && (
+                      <p className="text-right">
+                        <span className="block text-xs text-muted-foreground">A partir de</span>
+                        <span className="text-xl font-bold">{formatMoney(artist.startingPrice)}</span>
+                        <span className="text-xs text-muted-foreground"> /apresentação</span>
+                      </p>
+                    )}
+                  </div>
+                  <p className="mt-1 font-semibold">
+                    {artist.categoryName} · {tipo}
+                  </p>
+                  <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                    {artist.reviewCount > 0 && (
+                      <span className="flex items-center gap-1.5">
+                        <RatingStars value={artist.averageRating ?? 0} />
+                        <span className="font-medium text-foreground">
+                          {artist.averageRating != null ? artist.averageRating.toFixed(1) : '—'}
+                        </span>
+                        <span>({artist.reviewCount})</span>
+                      </span>
+                    )}
+                    <span className="flex items-center gap-1">
+                      <MapPin className="h-4 w-4" /> {artist.city}, {artist.state}
+                    </span>
+                  </div>
+
+                  <div className="my-4 h-px bg-border" />
+
                   {artist.styles.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5">
-                      {artist.styles.map((s) => (
-                        <Badge key={s} variant="secondary">{s}</Badge>
-                      ))}
+                    <div>
+                      <p className="mb-2 text-sm text-muted-foreground">Habilidades principais</p>
+                      <div className="flex flex-wrap gap-2">
+                        {artist.styles.map((s) => (
+                          <Badge key={s} variant="secondary" className="rounded-full px-3 py-1">
+                            {s}
+                          </Badge>
+                        ))}
+                      </div>
                     </div>
                   )}
                   {artist.specialties.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5">
-                      {artist.specialties.map((s) => (
-                        <Badge key={s} variant="outline">{s}</Badge>
-                      ))}
+                    <div className={artist.styles.length > 0 ? 'mt-4' : ''}>
+                      <p className="mb-2 text-sm text-muted-foreground">Especialidades</p>
+                      <div className="flex flex-wrap gap-2">
+                        {artist.specialties.map((s) => (
+                          <Badge key={s} variant="outline" className="rounded-full px-3 py-1">
+                            {s}
+                          </Badge>
+                        ))}
+                      </div>
                     </div>
                   )}
+
+                  {/* CTA visível no mobile — no desktop fica na coluna lateral */}
+                  <Button size="lg" className="mt-5 w-full lg:hidden" onClick={() => setRequestOpen(true)}>
+                    <CalendarPlus /> Solicitar contratação
+                  </Button>
                 </div>
-              )}
+              </div>
             </CardContent>
           </Card>
 
+          {/* Sobre */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Sobre o artista</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
+                {artist.description || 'Este artista ainda não escreveu uma descrição.'}
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* Fotos e vídeos */}
           {(artist.galleryUrls.length > 0 || artist.videoUrls.length > 0) && (
             <Card>
-              <CardHeader>
+              <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Fotos e vídeos</CardTitle>
+                <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
+                  {artist.galleryUrls.length + artist.videoUrls.length}
+                </span>
               </CardHeader>
-              <CardContent className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                {artist.galleryUrls.map((url) => (
-                  <img key={url} src={url} alt="" className="aspect-video w-full rounded-md object-cover" />
-                ))}
-                {artist.videoUrls.map((url) => (
-                  <video key={url} src={url} controls className="aspect-video w-full rounded-md" />
-                ))}
+              <CardContent>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  {artist.galleryUrls.map((url) => (
+                    <figure key={url} className="group overflow-hidden rounded-lg border bg-muted">
+                      <img
+                        src={url}
+                        alt={`Foto de ${artist.artisticName}`}
+                        loading="lazy"
+                        className="aspect-video w-full object-cover transition duration-300 group-hover:scale-105"
+                      />
+                    </figure>
+                  ))}
+                  {artist.videoUrls.map((url) => (
+                    <video key={url} src={url} controls preload="metadata" className="aspect-video w-full rounded-lg border bg-black" />
+                  ))}
+                </div>
               </CardContent>
             </Card>
           )}
 
+          {/* Cachês em tabela */}
           <Card>
             <CardHeader>
-              <CardTitle>Avaliações</CardTitle>
+              <CardTitle>Cachês</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              {artist.reviews.length === 0 && (
-                <p className="text-sm text-muted-foreground">Ainda sem avaliações.</p>
-              )}
-              {artist.reviews.map((review) => (
-                <div key={review.id} className="border-b pb-4 last:border-0 last:pb-0">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">{review.contractorName}</span>
-                    <RatingStars value={review.overallRating} />
-                  </div>
-                  {review.comment && <p className="mt-1 text-sm text-muted-foreground">{review.comment}</p>}
+            <CardContent>
+              {artist.fees.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Sob consulta — defina o valor na sua proposta.</p>
+              ) : (
+                <div className="overflow-hidden rounded-lg border">
+                  <table className="w-full text-sm">
+                    <thead className="bg-primary/5 text-left">
+                      <tr>
+                        <th className="px-4 py-2.5 font-semibold">Duração</th>
+                        <th className="px-4 py-2.5 font-semibold">Detalhes</th>
+                        <th className="px-4 py-2.5 text-right font-semibold">Valor</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {artist.fees.map((fee) => (
+                        <tr key={fee.id} className="border-t">
+                          <td className="px-4 py-2.5 font-medium">{minutesToLabel(fee.durationMinutes)}</td>
+                          <td className="px-4 py-2.5 text-muted-foreground">{fee.description || '—'}</td>
+                          <td className="px-4 py-2.5 text-right font-semibold">{formatMoney(fee.price)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-              ))}
+              )}
+              <p className="mt-3 text-xs text-muted-foreground">Valores de referência — o preço final é definido pela proposta.</p>
+            </CardContent>
+          </Card>
+
+          {/* Avaliações */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle>Avaliações</CardTitle>
+              {artist.reviewCount > 0 && (
+                <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
+                  {artist.reviewCount}
+                </span>
+              )}
+            </CardHeader>
+            <CardContent>
+              {artist.reviews.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Ainda sem avaliações — seja o primeiro a contratar e avaliar.</p>
+              ) : (
+                <div className="space-y-3">
+                  {artist.reviews.map((review) => (
+                    <article key={review.id} className="rounded-lg border p-4">
+                      <div className="flex items-center gap-3">
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-secondary text-sm font-semibold text-secondary-foreground">
+                          {review.contractorName.charAt(0).toUpperCase()}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium">{review.contractorName}</p>
+                          <div className="flex items-center gap-2">
+                            <RatingStars value={review.overallRating} />
+                            <span className="text-xs text-muted-foreground">{formatDate(review.createdAt)}</span>
+                          </div>
+                        </div>
+                      </div>
+                      {review.comment && <p className="mt-3 text-sm text-muted-foreground">{review.comment}</p>}
+                    </article>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
 
-        <div className="space-y-6">
+        {/* Coluna lateral — contratação */}
+        <aside className="space-y-6 lg:sticky lg:top-24 lg:self-start">
           <Card>
-            <CardHeader>
-              <CardTitle>Cachês (referência)</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {artist.fees.length === 0 && <p className="text-sm text-muted-foreground">Sob consulta.</p>}
-              {artist.fees.map((fee) => (
-                <div key={fee.id} className="flex items-center justify-between text-sm">
-                  <span>{minutesToLabel(fee.durationMinutes)}</span>
-                  <span className="font-semibold">{formatMoney(fee.price)}</span>
-                </div>
-              ))}
-              <p className="pt-2 text-xs text-muted-foreground">
-                Valores de referência — o preço final é definido pela proposta.
+            <CardContent className="p-5">
+              <div className="flex gap-2">
+                {isContractor && (
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-11 w-11 shrink-0"
+                    onClick={() => addFavorite.mutate()}
+                    disabled={isFavorite}
+                    title="Favoritar"
+                  >
+                    <Heart className={isFavorite ? 'fill-destructive text-destructive' : ''} />
+                  </Button>
+                )}
+                <Button size="lg" className="flex-1" onClick={() => setRequestOpen(true)}>
+                  <CalendarPlus /> Solicitar contratação
+                </Button>
+              </div>
+              <p className="mt-3 text-center text-xs text-muted-foreground">
+                Sem cadastro necessário — resposta direto com o artista.
               </p>
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Star className="h-4 w-4" /> Disponibilidade recente
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Informações</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2.5 text-sm">
+              <InfoRow label="Tipo" value={tipo} />
+              <InfoRow label="Categoria" value={artist.categoryName} />
+              <InfoRow label="Atende em" value={`${artist.city}, ${artist.state}`} />
+              <InfoRow
+                label="Avaliação"
+                value={artist.averageRating != null ? `${artist.averageRating.toFixed(1)} / 5` : '—'}
+              />
+              <InfoRow label="Avaliações recebidas" value={String(artist.reviewCount)} />
+              <InfoRow label="Datas disponíveis" value={String(availabilities.length)} />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <CalendarDays className="h-4 w-4 text-muted-foreground" /> Datas disponíveis
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-1.5">
+            <CardContent className="space-y-2">
               {availabilities.length === 0 && (
                 <p className="text-sm text-muted-foreground">Consulte a disponibilidade pela solicitação.</p>
               )}
-              {availabilities.slice(0, 10).map((a) => (
-                <div key={a.id} className="flex items-center justify-between text-sm">
+              {availabilities.slice(0, 8).map((a) => (
+                <div key={a.id} className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
                   <span>{new Date(a.date + 'T00:00:00').toLocaleDateString('pt-BR')}</span>
                   <span className="text-muted-foreground">
                     {a.isAllDay ? 'Dia inteiro' : `${a.startTime.slice(0, 5)} – ${a.endTime.slice(0, 5)}`}
@@ -214,7 +332,7 @@ export function ArtistPublicPage() {
               ))}
             </CardContent>
           </Card>
-        </div>
+        </aside>
       </div>
 
       {isContractor ? (
@@ -234,6 +352,16 @@ export function ArtistPublicPage() {
           onClose={() => setRequestOpen(false)}
         />
       )}
+    </div>
+  )
+}
+
+/** Linha rótulo: valor usada nos blocos de informações da coluna lateral. */
+function InfoRow({ label, value }: { label: string; value: ReactNode }) {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <span className="text-muted-foreground">{label}</span>
+      <span className="truncate text-right font-medium">{value}</span>
     </div>
   )
 }
@@ -510,7 +638,7 @@ export function GuestBookingDialog({
                       <Input
                         value={budget}
                         onChange={(e) => setBudget(e.target.value)}
-                        placeholder={startingPrice !== null ? `A partir de ${formatMoney(startingPrice)}` : 'Ex.: 1500'}
+                        placeholder={startingPrice != null ? `A partir de ${formatMoney(startingPrice)}` : 'Ex.: 1500'}
                         inputMode="decimal"
                         required
                       />
