@@ -1,6 +1,7 @@
 // ─────────────────────────── Enums (serializados como string) ───────────────────────────
 
 export type UserRole = 'Artist' | 'Contractor' | 'Admin'
+export type SubscriptionTier = 'Gratuito' | 'Assinante'
 export type ArtistType = 'Solo' | 'Band'
 export type AvailabilityStatus = 'Available' | 'PreReserved' | 'Unavailable'
 export type EventType = 'Show' | 'Rehearsal' | 'Meeting' | 'Travel' | 'Recording' | 'Other'
@@ -31,6 +32,7 @@ export type NotificationType =
   | 'UpcomingShow'
   | 'PaymentOverdue'
   | 'NewReview'
+  | 'SubscriptionConfirmed'
 
 // ─────────────────────────── Auth ───────────────────────────
 
@@ -41,6 +43,7 @@ export interface User {
   role: UserRole
   artistId: string | null
   contractorId: string | null
+  subscriptionTier: SubscriptionTier
 }
 
 export interface AuthResponse {
@@ -428,6 +431,22 @@ export interface PagedResult<T> {
 
 export interface UploadResult {
   url: string
+}
+
+// ─────────────────────────── Billing / Assinatura ───────────────────────────
+
+export interface CheckoutResponse {
+  checkoutSessionId: string
+  link: string
+  status: string
+}
+
+export interface Billing {
+  id: string
+  checkoutSessionId: string
+  link: string
+  status: string
+  createdAt: string
 }
 
 // ─────────────────────────── Payloads ───────────────────────────

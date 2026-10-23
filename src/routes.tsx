@@ -9,6 +9,7 @@ import { ForgotPasswordPage } from '@/pages/auth/ForgotPasswordPage'
 import { ResetPasswordPage } from '@/pages/auth/ResetPasswordPage'
 import { ArtistPublicPage } from '@/pages/public/ArtistPublicPage'
 import { ArtistsDirectoryPage } from '@/pages/public/ArtistsDirectoryPage'
+import { SubscriptionCallbackPage } from '@/pages/public/SubscriptionCallbackPages'
 
 import { ArtistDashboardPage } from '@/pages/artist/ArtistDashboardPage'
 import { AgendaPage } from '@/pages/artist/AgendaPage'
@@ -18,6 +19,7 @@ import { TeamPage } from '@/pages/artist/TeamPage'
 import { EquipmentPage } from '@/pages/artist/EquipmentPage'
 import { ArtistProfilePage } from '@/pages/artist/ArtistProfilePage'
 import { SettingsPage } from '@/pages/artist/SettingsPage'
+import { SubscriptionPage } from '@/pages/artist/SubscriptionPage'
 
 import { ContractorDashboardPage, ContractorEventsPage } from '@/pages/contractor/ContractorDashboardPage'
 import { MarketplacePage } from '@/pages/contractor/MarketplacePage'
@@ -39,6 +41,9 @@ export const router = createBrowserRouter([
       { path: '/reset-password', element: <ResetPasswordPage /> },
       { path: '/artistas', element: <ArtistsDirectoryPage /> },
       { path: '/artistas/:slug', element: <ArtistPublicPage /> },
+      { path: '/assinatura/sucesso', element: <SubscriptionCallbackPage outcome="success" /> },
+      { path: '/assinatura/cancelado', element: <SubscriptionCallbackPage outcome="cancel" /> },
+      { path: '/assinatura/expirado', element: <SubscriptionCallbackPage outcome="expired" /> },
       { path: '/', element: <RoleRedirect /> },
     ],
   },
@@ -57,6 +62,7 @@ export const router = createBrowserRouter([
           { path: '/artist/equipamentos', element: <EquipmentPage /> },
           { path: '/artist/perfil', element: <ArtistProfilePage /> },
           { path: '/artist/configuracoes', element: <SettingsPage /> },
+          { path: '/artist/assinatura', element: <SubscriptionPage /> },
         ],
       },
     ],

@@ -1,12 +1,46 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import { CalendarDays, CreditCard, Megaphone, TrendingUp, Wallet } from 'lucide-react'
+import { CalendarDays, CreditCard, Lock, Megaphone, TrendingUp, Wallet } from 'lucide-react'
 import { bookingsApi, eventsApi, financialApi } from '@/services'
 import { useAuth } from '@/hooks/useAuth'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { BookingStatusBadge, eventTypeLabel } from '@/components/badges'
 import { EmptyState } from '@/components/badges'
 import { formatMoney } from '@/lib/utils'
+import YampiBuyButton from '@/components/ui/yampi-button'
+
+/** Visão do artista com conta gratuita: sem dados, só o convite para assinar. */
+function FreeArtistDashboard({ name }: { name?: string }) {
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold">Olá, {name} 👋</h1>
+        <p className="text-sm text-muted-foreground">Sua conta é gratuita — assine para liberar a plataforma.</p>
+      </div>
+
+      <Card className="overflow-hidden">
+        <div className="h-2 bg-gradient-to-r from-primary to-primary/50" />
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Lock className="h-4 w-4 text-muted-foreground" /> ACESSO TOTAL A PLATAFORMA
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Por <strong className="text-foreground">R$ 49,90/mês</strong> você desbloqueia financeiro, agenda, shows,
+            equipe, equipamentos, perfil público e muito mais.
+          </p>
+          <Button asChild>
+            <Link to="/artist/assinatura">
+              <CreditCard /> Conhecer a assinatura
+            </Link>
+          </Button>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
 
 export function StatCard({ title, value, icon, hint }: { title: string; value: string; icon?: React.ReactNode; hint?: string }) {
   return (
@@ -25,6 +59,7 @@ export function StatCard({ title, value, icon, hint }: { title: string; value: s
 
 export function ArtistDashboardPage() {
   const { user } = useAuth()
+  const isFreeArtist = user?.subscriptionTier === 'Gratuito'
   const today = new Date()
   const monthStart = new Date(today.getFullYear(), today.getMonth(), 1)
   const fmt = (d: Date) => d.toISOString().slice(0, 10)
@@ -32,18 +67,25 @@ export function ArtistDashboardPage() {
   const { data: summary } = useQuery({
     queryKey: ['financial-summary', fmt(monthStart)],
     queryFn: async () => (await financialApi.summary(fmt(monthStart), fmt(new Date(today.getFullYear(), today.getMonth() + 1, 0)))).data,
+    enabled: !isFreeArtist,
   })
 
   const { data: upcomingEvents = [] } = useQuery({
     queryKey: ['events-upcoming'],
     queryFn: async () =>
       (await eventsApi.list({ from: fmt(today), to: fmt(new Date(today.getTime() + 90 * 86400000)) })).data,
+    enabled: !isFreeArtist,
   })
 
   const { data: recentBookings } = useQuery({
     queryKey: ['bookings-recent'],
     queryFn: async () => (await bookingsApi.list(undefined, 1, 5)).data,
+    enabled: !isFreeArtist,
   })
+
+  if (isFreeArtist) {
+    return <FreeArtistDashboard name={user?.displayName} />
+  }
 
   const shows = upcomingEvents.filter((e) => e.type === 'Show').slice(0, 5)
 
@@ -112,6 +154,7 @@ export function ArtistDashboardPage() {
           </CardContent>
         </Card>
       </div>
+      <YampiBuyButton/>
     </div>
   )
 }

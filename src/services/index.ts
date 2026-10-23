@@ -87,6 +87,12 @@ export const publicBookingsApi = {
   create: (payload: CreateGuestBookingPayload) => api.post<import('@/types').Booking>('/public/bookings', payload),
 }
 
+// Assinatura (Asaas)
+export const billingApi = {
+  createCheckout: () => api.post<import('@/types').CheckoutResponse>('/billing/checkout'),
+  myBilling: () => api.get<import('@/types').Billing | null>('/billing/me'),
+}
+
 export const proposalsApi = {
   create: (payload: CreateProposalPayload) => api.post<Proposal>('/proposals', payload),
   get: (id: string) => api.get<Proposal>(`/proposals/${id}`),
