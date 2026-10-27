@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { CalendarDays, CalendarPlus, CheckCircle2, ChevronRight, Heart, Images, MapPin } from 'lucide-react'
+import { CalendarDays, CalendarPlus, Check, CheckCircle2, ChevronRight, Heart, Images, MapPin } from 'lucide-react'
 import { toast } from 'sonner'
 import { artistsApi, availabilityApi, bookingsApi, favoritesApi, publicBookingsApi } from '@/services'
 import { useAuth } from '@/hooks/useAuth'
@@ -9,6 +9,7 @@ import { Avatar } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { DatePickerCalendar } from '@/components/ui/date-picker-calendar'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -16,7 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { RatingStars } from '@/components/ui/rating-stars'
 import { EmptyState, eventTypeLabel } from '@/components/badges'
-import { formatDate, formatMoney, minutesToLabel } from '@/lib/utils'
+import { cn, formatDate, formatMoney, minutesToLabel } from '@/lib/utils'
 import { extractApiError } from '@/services/api'
 import type { EventType } from '@/types'
 
@@ -431,14 +432,26 @@ export function BookingRequestDialog({
           className="space-y-3"
           onSubmit={(e) => {
             e.preventDefault()
+            if (!eventDate) {
+              toast.warning('Selecione a data do evento na agenda')
+              return
+            }
             create.mutate()
           }}
         >
-          <div className="grid grid-cols-3 gap-3">
-            <div className="space-y-1.5">
-              <Label>Data</Label>
-              <Input type="date" value={eventDate} onChange={(e) => setEventDate(e.target.value)} required />
-            </div>
+          <div className="space-y-1.5">
+            <Label>Data *</Label>
+            <DatePickerCalendar
+              value={eventDate}
+              onChange={setEventDate}
+              mode="weekly"
+              minDate={new Date().toISOString().slice(0, 10)}
+            />
+            <p className="text-xs text-muted-foreground">
+              {eventDate ? `Selecionado: ${formatDate(eventDate)}` : 'Escolha o dia da apresentação na agenda semanal.'}
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>Início</Label>
               <Input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} required />
@@ -516,6 +529,7 @@ export function GuestBookingDialog({
   open: boolean
   onClose: () => void
 }) {
+  const [step, setStep] = useState(0)
   const [guestName, setGuestName] = useState('')
   const [guestCompanyName, setGuestCompanyName] = useState('')
   const [guestPhone, setGuestPhone] = useState('')
@@ -529,7 +543,10 @@ export function GuestBookingDialog({
   const [message, setMessage] = useState('')
   const [created, setCreated] = useState(false)
 
+  const today = new Date().toISOString().slice(0, 10)
+
   const reset = () => {
+    setStep(0)
     setGuestName('')
     setGuestCompanyName('')
     setGuestPhone('')
@@ -563,6 +580,36 @@ export function GuestBookingDialog({
     onSuccess: () => setCreated(true),
     onError: (e) => toast.error(extractApiError(e)),
   })
+
+  const handleContinue = () => {
+    if (!guestName.trim()) {
+      toast.warning('Informe o nome do responsável')
+      return
+    }
+    if (!isValidWhatsapp(guestPhone)) {
+      toast.warning('Informe um WhatsApp válido com DDD (ex.: (11) 98765-4321).')
+      return
+    }
+    if (!(Number(budget.replace(',', '.')) > 0)) {
+      toast.warning('Informe o valor da proposta')
+      return
+    }
+    setStep(1)
+  }
+
+  const handleSubmitRequest = () => {
+    if (!eventDate) {
+      toast.warning('Selecione a data do evento na agenda')
+      return
+    }
+    if (!location.trim()) {
+      toast.warning('Informe o local do evento')
+      return
+    }
+    create.mutate()
+  }
+
+  const STEP_TITLES = ['Seus dados', 'Detalhes do evento']
 
   return (
     <Dialog
@@ -601,135 +648,157 @@ export function GuestBookingDialog({
             <DialogHeader>
               <DialogTitle>Solicitar contratação — {artistName}</DialogTitle>
             </DialogHeader>
-            <form
-              className="space-y-4"
-              onSubmit={(e) => {
-                e.preventDefault()
-                if (!isValidWhatsapp(guestPhone)) {
-                  toast.error('Informe um WhatsApp válido com DDD (ex.: (11) 98765-4321).')
-                  return
-                }
-                create.mutate()
-              }}
-            >
-              <div>
-                <p className="mb-2 text-sm font-semibold">Seus dados</p>
-                <div className="space-y-3">
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <div className="space-y-1.5">
-                      <Label>Nome do responsável *</Label>
-                      <Input
-                        value={guestName}
-                        onChange={(e) => setGuestName(e.target.value)}
-                        placeholder="Quem vai acompanhar o evento"
-                        required
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label>Nome do estabelecimento</Label>
-                      <Input
-                        value={guestCompanyName}
-                        onChange={(e) => setGuestCompanyName(e.target.value)}
-                        placeholder="Ex.: Bar do Carlos"
-                      />
-                    </div>
-                  </div>
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <div className="space-y-1.5">
-                      <Label>WhatsApp do responsável *</Label>
-                      <Input
-                        value={guestPhone}
-                        onChange={(e) => setGuestPhone(e.target.value)}
-                        placeholder="(11) 98765-4321"
-                        inputMode="tel"
-                        required
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label>Valor da proposta (R$) *</Label>
-                      <Input
-                        value={budget}
-                        onChange={(e) => setBudget(e.target.value)}
-                        placeholder={startingPrice != null ? `A partir de ${formatMoney(startingPrice)}` : 'Ex.: 1500'}
-                        inputMode="decimal"
-                        required
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
 
-              <div>
-                <p className="mb-2 text-sm font-semibold">Detalhes do evento</p>
-                <div className="space-y-3">
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="space-y-1.5">
-                      <Label>Data *</Label>
-                      <Input type="date" value={eventDate} onChange={(e) => setEventDate(e.target.value)} required />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label>Início</Label>
-                      <Input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} required />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label>Fim</Label>
-                      <Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} required />
-                    </div>
-                  </div>
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <div className="space-y-1.5">
-                      <Label>Local *</Label>
-                      <Input
-                        value={location}
-                        onChange={(e) => setLocation(e.target.value)}
-                        placeholder="Endereço do evento"
-                        required
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label>Tipo de evento</Label>
-                      <Select value={eventType} onValueChange={(v) => setEventType(v as EventType)}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {Object.entries(eventTypeLabel).map(([value, label]) => (
-                            <SelectItem key={value} value={value}>
-                              {label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
+            {/* Indicador de passos */}
+            <ol className="flex items-center gap-2">
+              {STEP_TITLES.map((title, index) => {
+                const done = index < step
+                const active = index === step
+                return (
+                  <li key={title} className="flex items-center gap-2">
+                    <span
+                      className={cn(
+                        'flex h-6 w-6 items-center justify-center rounded-full border text-xs font-semibold',
+                        active && 'border-primary bg-primary text-primary-foreground',
+                        done && 'border-primary/40 bg-primary/10 text-primary',
+                        !active && !done && 'bg-muted text-muted-foreground'
+                      )}
+                    >
+                      {done ? <Check className="h-3 w-3" /> : index + 1}
+                    </span>
+                    <span className={cn('text-xs', active ? 'font-semibold text-foreground' : 'text-muted-foreground')}>
+                      {title}
+                    </span>
+                    {index === 0 && <span className="h-px w-6 bg-border" />}
+                  </li>
+                )
+              })}
+            </ol>
+            <p className="-mt-2 text-center text-xs text-muted-foreground">
+              Passo {step + 1} de 2 — {step === 0 ? 'seus dados de contato' : 'detalhes do evento'}
+            </p>
+
+            {/* Passo 0 — Seus dados */}
+            {step === 0 && (
+              <div className="space-y-3">
+                <div className="grid gap-3 sm:grid-cols-2">
                   <div className="space-y-1.5">
-                    <Label>Público estimado</Label>
+                    <Label>Nome do responsável *</Label>
                     <Input
-                      type="number"
-                      min={0}
-                      value={estimatedAudience}
-                      onChange={(e) => setEstimatedAudience(e.target.value)}
+                      value={guestName}
+                      onChange={(e) => setGuestName(e.target.value)}
+                      placeholder="Quem vai acompanhar o evento"
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label>Mensagem</Label>
-                    <Textarea
-                      value={message}
-                      onChange={(e) => setMessage(e.target.value)}
-                      placeholder="Conte os detalhes do evento..."
+                    <Label>Nome do estabelecimento</Label>
+                    <Input
+                      value={guestCompanyName}
+                      onChange={(e) => setGuestCompanyName(e.target.value)}
+                      placeholder="Ex.: Bar do Carlos"
                     />
                   </div>
                 </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label>WhatsApp do responsável *</Label>
+                    <Input
+                      value={guestPhone}
+                      onChange={(e) => setGuestPhone(e.target.value)}
+                      placeholder="(11) 98765-4321"
+                      inputMode="tel"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Valor da proposta (R$) *</Label>
+                    <Input
+                      value={budget}
+                      onChange={(e) => setBudget(e.target.value)}
+                      placeholder={startingPrice != null ? `A partir de ${formatMoney(startingPrice)}` : 'Ex.: 1500'}
+                      inputMode="decimal"
+                    />
+                  </div>
+                </div>
+                <Button type="button" className="w-full" onClick={handleContinue}>
+                  Continuar
+                </Button>
               </div>
+            )}
 
-              <p className="text-xs text-muted-foreground">
-                Sem cadastro necessário: o artista recebe sua solicitação com esses dados e responde pelo WhatsApp
-                informado.
-              </p>
-              <Button type="submit" className="w-full" disabled={create.isPending}>
-                {create.isPending ? 'Enviando...' : 'Enviar solicitação'}
-              </Button>
-            </form>
+            {/* Passo 1 — Detalhes do evento */}
+            {step === 1 && (
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <Label>Data do evento *</Label>
+                  <DatePickerCalendar value={eventDate} onChange={setEventDate} mode="weekly" minDate={today} />
+                  <p className="text-xs text-muted-foreground">
+                    {eventDate
+                      ? `Selecionado: ${formatDate(eventDate)}`
+                      : 'Escolha o dia da apresentação na agenda semanal.'}
+                  </p>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label>Início</Label>
+                    <Input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} required />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Fim</Label>
+                    <Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} required />
+                  </div>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label>Local *</Label>
+                    <Input
+                      value={location}
+                      onChange={(e) => setLocation(e.target.value)}
+                      placeholder="Endereço do evento"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Tipo de evento</Label>
+                    <Select value={eventType} onValueChange={(v) => setEventType(v as EventType)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(eventTypeLabel).map(([value, label]) => (
+                          <SelectItem key={value} value={value}>
+                            {label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Público estimado</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={estimatedAudience}
+                    onChange={(e) => setEstimatedAudience(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Mensagem</Label>
+                  <Textarea
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    placeholder="Conte os detalhes do evento..."
+                  />
+                </div>
+
+                <p className="text-xs text-muted-foreground">
+                  Sem cadastro necessário: o artista recebe sua solicitação com esses dados e responde pelo WhatsApp
+                  informado.
+                </p>
+                <Button type="button" className="w-full" onClick={handleSubmitRequest} disabled={create.isPending}>
+                  {create.isPending ? 'Enviando...' : 'Enviar solicitação'}
+                </Button>
+              </div>
+            )}
           </>
         )}
       </DialogContent>
