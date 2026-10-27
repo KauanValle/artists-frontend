@@ -75,6 +75,7 @@ export interface Artist {
   description: string
   styles: string[]
   specialties: string[]
+  eventTypes: string[]
   galleryUrls: string[]
   videoUrls: string[]
   slug: string
@@ -146,6 +147,7 @@ export interface ArtistDetailPublic {
   description: string
   styles: string[]
   specialties: string[]
+  eventTypes: string[]
   galleryUrls: string[]
   videoUrls: string[]
   averageRating: number | null
@@ -463,6 +465,7 @@ export interface SaveArtistPayload {
   description: string
   styles: string[]
   specialties: string[]
+  eventTypes: string[]
   galleryUrls: string[]
   videoUrls: string[]
 }
