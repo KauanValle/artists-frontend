@@ -161,6 +161,18 @@ export function ArtistPublicPage() {
               <CardTitle>Sobre o artista</CardTitle>
             </CardHeader>
             <CardContent>
+              {artist.eventTypes.length > 0 && (
+                <div className="mb-4">
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Ideal para</p>
+                  <div className="flex flex-wrap gap-2">
+                    {artist.eventTypes.map((type) => (
+                      <Badge key={type} variant="secondary" className="rounded-full px-3 py-1">
+                        {type}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
               <p className="whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
                 {artist.description || 'Este artista ainda não escreveu uma descrição.'}
               </p>
