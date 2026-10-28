@@ -1,4 +1,5 @@
 import { Link, Outlet } from 'react-router-dom'
+import { ThemeToggle } from '@/components/ui/theme-toggle'
 
 export function PublicLayout() {
   return (
@@ -9,8 +10,9 @@ export function PublicLayout() {
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">🎤</span>
             <span className="hidden text-base font-bold sm:inline">Artist Platform</span>
           </Link>
-          <div className="flex items-center gap-2 sm:gap-3">
-            <Link to="/artistas" className="text-sm font-medium text-muted-foreground hover:text-foreground">
+          <div className="flex items-center gap-1 sm:gap-2">
+            <ThemeToggle />
+            <Link to="/artistas" className="hidden text-sm font-medium text-muted-foreground hover:text-foreground sm:inline">
               Buscar artistas
             </Link>
             <Link to="/login" className="text-sm font-medium text-muted-foreground hover:text-foreground">

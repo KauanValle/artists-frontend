@@ -187,6 +187,18 @@ export const contractorsApi = {
   updateMy: (payload: SaveContractorPayload) => api.put<Contractor>('/contractors/me', payload),
 }
 
+export const contractsApi = {
+  get: (bookingId: string) => api.get<import('@/types').ArtistContract>(`/bookings/${bookingId}/contract`),
+  sign: (bookingId: string, payload: import('@/types').SignArtistContractPayload) =>
+    api.post<import('@/types').ArtistContract>(`/bookings/${bookingId}/contract/sign`, payload),
+}
+
+export const publicContractsApi = {
+  getByToken: (token: string) => api.get<import('@/types').ArtistContract>(`/public/contracts/${token}`),
+  sign: (token: string, payload: import('@/types').SignContractorPayload) =>
+    api.post<import('@/types').ArtistContract>(`/public/contracts/${token}/sign`, payload),
+}
+
 export const uploadsApi = {
   upload: (file: File) => {
     const form = new FormData()

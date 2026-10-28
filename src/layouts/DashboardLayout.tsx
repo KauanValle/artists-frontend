@@ -21,6 +21,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { getMissingProfileFields, useMyArtist } from '@/hooks/useArtistProfile'
+import { ThemeToggle } from '@/components/ui/theme-toggle'
 import { Avatar } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { NotificationsMenu } from '@/components/NotificationsMenu'
@@ -167,7 +168,10 @@ export function DashboardLayout() {
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">🎤</span>
             <span className="text-sm font-bold">Artist Platform</span>
           </div>
-          <NotificationsMenu />
+          <div className="flex items-center gap-1">
+            <ThemeToggle />
+            <NotificationsMenu />
+          </div>
         </header>
         <main className="flex-1 p-4 lg:p-6">
           <Outlet />

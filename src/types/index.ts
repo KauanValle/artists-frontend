@@ -506,6 +506,63 @@ export interface BusySlot {
   endTime: string
 }
 
+export interface ArtistContract {
+  bookingRequestId: string
+  signed: boolean
+  contractText: string
+  contentHash: string
+  artistName: string
+  artisticName: string
+  artistDocument: string
+  artistAddress: string
+  artistContact: string
+  contractorName: string
+  contractorDocument: string
+  contractorRepresentative: string
+  contractorAddress: string
+  contractorContact: string
+  paymentTerms: string
+  eventDate: string
+  startTime: string
+  endTime: string
+  location: string
+  cacheValue: number | null
+  signatureData: string | null
+  signedName: string | null
+  signedAtUtc: string | null
+  signedIp: string | null
+  signedUserAgent: string | null
+  contractorAccessToken: string | null
+  contractorSigned: boolean
+  contractorSignedDocument: string | null
+  contractorSignatureData: string | null
+  contractorSignedName: string | null
+  contractorSignedAtUtc: string | null
+  contractorSignedIp: string | null
+  contractorContentHash: string | null
+}
+
+export interface SignContractorPayload {
+  signedName: string
+  signedDocument: string
+  signedAddress: string
+  signedContact: string
+  representative?: string | null
+  signatureData: string
+}
+
+export interface SignArtistContractPayload {
+  artistDocument: string
+  artistAddress: string
+  artistContact: string
+  contractorDocument?: string | null
+  contractorRepresentative?: string | null
+  contractorAddress?: string | null
+  contractorContact?: string | null
+  paymentTerms: string
+  signatureData: string
+}
+
 export interface SaveTeamMemberPayload {
   name: string
   photoUrl: string

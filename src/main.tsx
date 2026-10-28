@@ -5,6 +5,7 @@ import { RouterProvider } from 'react-router-dom'
 import { Toaster } from 'sonner'
 import { router } from './routes'
 import { AuthProvider } from '@/hooks/useAuth'
+import { ThemeProvider, initTheme } from '@/hooks/useTheme'
 import './index.css'
 
 const queryClient = new QueryClient({
@@ -17,13 +18,17 @@ const queryClient = new QueryClient({
   },
 })
 
+initTheme()
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <RouterProvider router={router} />
-        <Toaster richColors position="top-right" />
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <RouterProvider router={router} />
+          <Toaster richColors position="top-right" />
+        </AuthProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   </React.StrictMode>
 )

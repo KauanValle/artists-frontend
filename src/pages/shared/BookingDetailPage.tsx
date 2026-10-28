@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Check, MessageSquare, Send, X } from 'lucide-react'
+import { ArrowLeft, Check, Lock, MessageSquare, Send, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { bookingsApi, conversationsApi, proposalsApi } from '@/services'
 import { useAuth } from '@/hooks/useAuth'
@@ -16,6 +16,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { BookingStatusBadge, eventTypeLabel, proposalStatusLabel } from '@/components/badges'
 import { cn, formatDate, formatDateTime, formatMoney, formatTime } from '@/lib/utils'
 import { extractApiError } from '@/services/api'
+import { ContractTab } from '@/pages/shared/ContractTab'
 import type { CreateProposalPayload, Proposal } from '@/types'
 
 export function BookingDetailPage() {
@@ -89,6 +90,8 @@ export function BookingDetailPage() {
 
   const isArtist = user?.role === 'Artist'
   const canAct = booking.status === 'Requested' || booking.status === 'Negotiating' || booking.status === 'Proposed'
+  // O contrato (Jurídico) só é liberado com o show confirmado.
+  const contractUnlocked = booking.status === 'Confirmed'
   const canAcceptDirectly = isArtist && (booking.status === 'Requested' || booking.status === 'Negotiating')
   const pendingProposal = proposals.find((p) => p.status === 'Pending')
 
@@ -177,6 +180,13 @@ export function BookingDetailPage() {
         <TabsList>
           <TabsTrigger value="resumo">Resumo</TabsTrigger>
           <TabsTrigger value="financeiro">Financeiro</TabsTrigger>
+          <TabsTrigger
+            value="juridico"
+            disabled={!contractUnlocked}
+            title={contractUnlocked ? undefined : 'Disponível quando o show estiver confirmado'}
+          >
+            <Lock className="h-3.5 w-3.5" /> Jurídico
+          </TabsTrigger>
           <TabsTrigger value="chat" className="gap-1.5">
             <MessageSquare className="h-3.5 w-3.5" /> Chat
           </TabsTrigger>
@@ -220,6 +230,19 @@ export function BookingDetailPage() {
               busy={accept.isPending || rejectProposal.isPending}
             />
           ))}
+        </TabsContent>
+
+        <TabsContent value="juridico">
+          {contractUnlocked ? (
+            <ContractTab booking={booking} />
+          ) : (
+            <Card>
+              <CardContent className="flex items-start gap-3 p-6 text-sm text-muted-foreground">
+                <Lock className="mt-0.5 h-4 w-4 shrink-0" />
+                O Jurídico é liberado quando o status do show estiver <strong className="text-foreground">Confirmado</strong>.
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         <TabsContent value="chat">

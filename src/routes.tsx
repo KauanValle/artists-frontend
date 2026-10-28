@@ -10,6 +10,7 @@ import { ResetPasswordPage } from '@/pages/auth/ResetPasswordPage'
 import { ArtistPublicPage } from '@/pages/public/ArtistPublicPage'
 import { ArtistsDirectoryPage } from '@/pages/public/ArtistsDirectoryPage'
 import { SubscriptionCallbackPage } from '@/pages/public/SubscriptionCallbackPages'
+import { ContractorSigningPage } from '@/pages/public/ContractorSigningPage'
 
 import { ArtistDashboardPage } from '@/pages/artist/ArtistDashboardPage'
 import { AgendaPage } from '@/pages/artist/AgendaPage'
@@ -44,6 +45,7 @@ export const router = createBrowserRouter([
       { path: '/assinatura/sucesso', element: <SubscriptionCallbackPage outcome="success" /> },
       { path: '/assinatura/cancelado', element: <SubscriptionCallbackPage outcome="cancel" /> },
       { path: '/assinatura/expirado', element: <SubscriptionCallbackPage outcome="expired" /> },
+      { path: '/contrato/:token', element: <ContractorSigningPage /> },
       { path: '/', element: <RoleRedirect /> },
     ],
   },
