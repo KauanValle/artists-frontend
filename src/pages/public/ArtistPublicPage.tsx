@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { CalendarDays, CalendarPlus, Check, CheckCircle2, ChevronRight, Heart, Images, MapPin } from 'lucide-react'
@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { DatePickerCalendar } from '@/components/ui/date-picker-calendar'
+import { TimeRangePicker, type TimeInterval } from '@/components/ui/time-range-picker'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -40,6 +41,66 @@ export function ArtistPublicPage() {
     queryFn: async () => (await availabilityApi.listByArtist(artist!.id)).data,
     enabled: !!artist?.id,
   })
+
+  // Eventos agendados/confirmados ocupam a agenda do artista na contratação (janela de 6 meses).
+  const busyFrom = new Date().toISOString().slice(0, 10)
+  const busyTo = new Date(Date.now() + 180 * 86400000).toISOString().slice(0, 10)
+  const { data: busySlots = [] } = useQuery({
+    queryKey: ['artist-busy-slots', artist?.id, busyFrom, busyTo],
+    queryFn: async () => (await availabilityApi.busySlots(artist!.id, busyFrom, busyTo)).data,
+    enabled: !!artist?.id,
+  })
+
+  // O endpoint devolve datas livres E bloqueios; o card "Datas disponíveis" mostra só as livres.
+  const availableDates = availabilities.filter((a) => a.status === 'Available')
+  // Dias da semana em que o artista atende (distintos das disponibilidades livres) —
+  // dias fora deles ficam bloqueados na agenda da contratação.
+  const workingWeekdays = useMemo(
+    () =>
+      [
+        ...new Set(
+          availabilities
+            .filter((a) => a.status === 'Available')
+            .map((a) => new Date(`${a.date}T00:00:00`).getDay())
+        ),
+      ].sort((x, y) => x - y),
+    [availabilities]
+  )
+
+  // Janelas bloqueadas por dia: indisponibilidades declaradas + eventos agendados/confirmados, em HH:mm.
+  const blockedTimesByDate = useMemo(() => {
+    const map: Record<string, { start: string; end: string }[]> = {}
+    const add = (key: string, start: string, end: string) => {
+      map[key] = [...(map[key] ?? []), { start: start.slice(0, 5), end: end.slice(0, 5) }]
+    }
+    for (const a of availabilities.filter((a) => a.status !== 'Available'))
+      add(a.date, a.startTime, a.isAllDay ? '24:00' : a.endTime)
+    for (const slot of busySlots) add(slot.date, slot.startTime, slot.endTime)
+    return map
+  }, [availabilities, busySlots])
+
+  // Dia inteiro bloqueado (janela 06:00–24:00 coberta) → desabilitado no calendário;
+  // bloqueio parcial → dia continua selecionável (bolinha amarela) e os horários bloqueados
+  // são desabilitados nos seletores de hora.
+  const { fullyBlockedDates, partialDates } = useMemo(() => {
+    const full: string[] = []
+    const partial: string[] = []
+    for (const [date, intervals] of Object.entries(blockedTimesByDate)) {
+      const sorted = [...intervals].sort((a, b) => a.start.localeCompare(b.start))
+      let cursor = '06:00'
+      let covered = true
+      for (const interval of sorted) {
+        if (interval.start > cursor) {
+          covered = false
+          break
+        }
+        if (interval.end > cursor) cursor = interval.end
+      }
+      if (covered && cursor >= '23:59') full.push(date)
+      else partial.push(date)
+    }
+    return { fullyBlockedDates: full, partialDates: partial }
+  }, [blockedTimesByDate])
 
   const addFavorite = useMutation({
     mutationFn: () => favoritesApi.add(artist!.id),
@@ -321,7 +382,7 @@ export function ArtistPublicPage() {
                 value={artist.averageRating != null ? `${artist.averageRating.toFixed(1)} / 5` : '—'}
               />
               <InfoRow label="Avaliações recebidas" value={String(artist.reviewCount)} />
-              <InfoRow label="Datas disponíveis" value={String(availabilities.length)} />
+              <InfoRow label="Datas disponíveis" value={String(availableDates.length)} />
             </CardContent>
           </Card>
 
@@ -332,10 +393,10 @@ export function ArtistPublicPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              {availabilities.length === 0 && (
+              {availableDates.length === 0 && (
                 <p className="text-sm text-muted-foreground">Consulte a disponibilidade pela solicitação.</p>
               )}
-              {availabilities.slice(0, 8).map((a) => (
+              {availableDates.slice(0, 8).map((a) => (
                 <div key={a.id} className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
                   <span>{new Date(a.date + 'T00:00:00').toLocaleDateString('pt-BR')}</span>
                   <span className="text-muted-foreground">
@@ -355,6 +416,10 @@ export function ArtistPublicPage() {
           open={requestOpen}
           onClose={() => setRequestOpen(false)}
           onCreated={(id) => navigate(`/contractor/solicitacoes/${id}`)}
+          fullyBlockedDates={fullyBlockedDates}
+          partialDates={partialDates}
+          blockedTimesByDate={blockedTimesByDate}
+          workingWeekdays={workingWeekdays}
         />
       ) : (
         <GuestBookingDialog
@@ -363,6 +428,10 @@ export function ArtistPublicPage() {
           startingPrice={artist.startingPrice}
           open={requestOpen}
           onClose={() => setRequestOpen(false)}
+          fullyBlockedDates={fullyBlockedDates}
+          partialDates={partialDates}
+          blockedTimesByDate={blockedTimesByDate}
+          workingWeekdays={workingWeekdays}
         />
       )}
     </div>
@@ -385,16 +454,29 @@ export function BookingRequestDialog({
   open,
   onClose,
   onCreated,
+  fullyBlockedDates = [],
+  partialDates = [],
+  blockedTimesByDate = {},
+  workingWeekdays = [],
 }: {
   artistId: string
   artistName: string
   open: boolean
   onClose: () => void
   onCreated?: (bookingId: string) => void
+  fullyBlockedDates?: string[]
+  partialDates?: string[]
+  blockedTimesByDate?: Record<string, TimeInterval[]>
+  workingWeekdays?: number[]
 }) {
   const [eventDate, setEventDate] = useState('')
-  const [startTime, setStartTime] = useState('20:00')
-  const [endTime, setEndTime] = useState('23:00')
+  const [startTime, setStartTime] = useState<string | null>(null)
+  const [endTime, setEndTime] = useState<string | null>(null)
+
+  const dateOutsideWorkingDays =
+    workingWeekdays.length > 0 &&
+    eventDate !== '' &&
+    !workingWeekdays.includes(new Date(`${eventDate}T00:00:00`).getDay())
   const [location, setLocation] = useState('')
   const [eventType, setEventType] = useState<EventType>('Show')
   const [estimatedAudience, setEstimatedAudience] = useState('')
@@ -432,8 +514,12 @@ export function BookingRequestDialog({
           className="space-y-3"
           onSubmit={(e) => {
             e.preventDefault()
-            if (!eventDate) {
-              toast.warning('Selecione a data do evento na agenda')
+            if (fullyBlockedDates.includes(eventDate)) {
+              toast.warning('O artista está indisponível nessa data. Escolha outro dia na agenda.')
+              return
+            }
+            if (!startTime || !endTime) {
+              toast.warning('Selecione o horário de início e fim do evento')
               return
             }
             create.mutate()
@@ -442,25 +528,37 @@ export function BookingRequestDialog({
           <div className="space-y-1.5">
             <Label>Data *</Label>
             <DatePickerCalendar
-              value={eventDate}
-              onChange={setEventDate}
+              value={eventDate || undefined}
+              onChange={(d) => {
+                setEventDate(d)
+                setStartTime(null)
+                setEndTime(null)
+              }}
               mode="weekly"
               minDate={new Date().toISOString().slice(0, 10)}
+              disabledDates={fullyBlockedDates}
+              partialDates={partialDates}
+              workingWeekdays={workingWeekdays}
             />
             <p className="text-xs text-muted-foreground">
-              {eventDate ? `Selecionado: ${formatDate(eventDate)}` : 'Escolha o dia da apresentação na agenda semanal.'}
+              {dateOutsideWorkingDays
+                ? 'O artista não atende nesse dia da semana.'
+                : !eventDate
+                  ? 'Escolha o dia na agenda. Dias riscados estão fechados; bolinha amarela = bloqueio parcial.'
+                  : `Selecionado: ${formatDate(eventDate)}`}
             </p>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label>Início</Label>
-              <Input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} required />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Fim</Label>
-              <Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} required />
-            </div>
-          </div>
+          {eventDate && (
+            <TimeRangePicker
+              start={startTime}
+              end={endTime}
+              onChange={(s, e) => {
+                setStartTime(s)
+                setEndTime(e)
+              }}
+              blocked={blockedTimesByDate[eventDate] ?? []}
+            />
+          )}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>Local</Label>
@@ -522,12 +620,20 @@ export function GuestBookingDialog({
   startingPrice,
   open,
   onClose,
+  fullyBlockedDates = [],
+  partialDates = [],
+  blockedTimesByDate = {},
+  workingWeekdays = [],
 }: {
   artistId: string
   artistName: string
   startingPrice: number | null
   open: boolean
   onClose: () => void
+  fullyBlockedDates?: string[]
+  partialDates?: string[]
+  blockedTimesByDate?: Record<string, TimeInterval[]>
+  workingWeekdays?: number[]
 }) {
   const [step, setStep] = useState(0)
   const [guestName, setGuestName] = useState('')
@@ -535,8 +641,13 @@ export function GuestBookingDialog({
   const [guestPhone, setGuestPhone] = useState('')
   const [budget, setBudget] = useState('')
   const [eventDate, setEventDate] = useState('')
-  const [startTime, setStartTime] = useState('20:00')
-  const [endTime, setEndTime] = useState('23:00')
+  const [startTime, setStartTime] = useState<string | null>(null)
+  const [endTime, setEndTime] = useState<string | null>(null)
+
+  const dateOutsideWorkingDays =
+    workingWeekdays.length > 0 &&
+    eventDate !== '' &&
+    !workingWeekdays.includes(new Date(`${eventDate}T00:00:00`).getDay())
   const [location, setLocation] = useState('')
   const [eventType, setEventType] = useState<EventType>('Show')
   const [estimatedAudience, setEstimatedAudience] = useState('')
@@ -552,8 +663,8 @@ export function GuestBookingDialog({
     setGuestPhone('')
     setBudget('')
     setEventDate('')
-    setStartTime('20:00')
-    setEndTime('23:00')
+    setStartTime(null)
+    setEndTime(null)
     setLocation('')
     setEventType('Show')
     setEstimatedAudience('')
@@ -600,6 +711,18 @@ export function GuestBookingDialog({
   const handleSubmitRequest = () => {
     if (!eventDate) {
       toast.warning('Selecione a data do evento na agenda')
+      return
+    }
+    if (dateOutsideWorkingDays) {
+      toast.warning('O artista não atende nesse dia da semana. Escolha outro dia.')
+      return
+    }
+    if (fullyBlockedDates.includes(eventDate)) {
+      toast.warning('O artista está indisponível nessa data. Escolha outro dia na agenda.')
+      return
+    }
+    if (!startTime || !endTime) {
+      toast.warning('Selecione o horário de início e fim do evento')
       return
     }
     if (!location.trim()) {
@@ -730,23 +853,38 @@ export function GuestBookingDialog({
               <div className="space-y-3">
                 <div className="space-y-1.5">
                   <Label>Data do evento *</Label>
-                  <DatePickerCalendar value={eventDate} onChange={setEventDate} mode="weekly" minDate={today} />
+                  <DatePickerCalendar
+                    value={eventDate || undefined}
+                    onChange={(d) => {
+                      setEventDate(d)
+                      setStartTime(null)
+                      setEndTime(null)
+                    }}
+                    mode="weekly"
+                    minDate={today}
+                    disabledDates={fullyBlockedDates}
+                    partialDates={partialDates}
+                    workingWeekdays={workingWeekdays}
+                  />
                   <p className="text-xs text-muted-foreground">
-                    {eventDate
-                      ? `Selecionado: ${formatDate(eventDate)}`
-                      : 'Escolha o dia da apresentação na agenda semanal.'}
+                    {dateOutsideWorkingDays
+                      ? 'O artista não atende nesse dia da semana.'
+                      : !eventDate
+                        ? 'Escolha o dia na agenda. Dias riscados estão fechados; bolinha amarela = bloqueio parcial.'
+                        : `Selecionado: ${formatDate(eventDate)}`}
                   </p>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label>Início</Label>
-                    <Input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} required />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Fim</Label>
-                    <Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} required />
-                  </div>
-                </div>
+                {eventDate && (
+                  <TimeRangePicker
+                    start={startTime}
+                    end={endTime}
+                    onChange={(s, e) => {
+                      setStartTime(s)
+                      setEndTime(e)
+                    }}
+                    blocked={blockedTimesByDate[eventDate] ?? []}
+                  />
+                )}
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="space-y-1.5">
                     <Label>Local *</Label>

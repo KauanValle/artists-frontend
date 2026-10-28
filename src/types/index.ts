@@ -485,6 +485,27 @@ export interface SaveAvailabilityPayload {
   note?: string | null
 }
 
+export interface SaveAvailabilityBatchPayload {
+  dates: string[]
+  startTime: string
+  endTime: string
+  isAllDay: boolean
+  status: AvailabilityStatus
+  note?: string | null
+}
+
+export interface BatchAvailabilityResult {
+  created: number
+  skippedExisting: number
+  skippedEventConflict: number
+}
+
+export interface BusySlot {
+  date: string
+  startTime: string
+  endTime: string
+}
+
 export interface SaveTeamMemberPayload {
   name: string
   photoUrl: string

@@ -1,12 +1,14 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
+import { addDays, addWeeks, format, getDay } from 'date-fns'
 import { CalendarDays, Check, CreditCard, Music2, Plus, Trash2, TriangleAlert, User, Wallet } from 'lucide-react'
 import { toast } from 'sonner'
 import { artistsApi, availabilityApi, feesApi, uploadsApi } from '@/services'
 import { useAuth } from '@/hooks/useAuth'
 import { requiredProfileFields } from '@/hooks/useArtistProfile'
 import { ChipMultiSelect } from '@/components/ui/chip-multi-select'
+import { DatePickerCalendar } from '@/components/ui/date-picker-calendar'
 import { EVENT_TYPES, styleOptionsForCategory } from '@/lib/artistOptions'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -578,8 +580,8 @@ function FeesCard({ artistId }: { artistId: string }) {
 
 function AvailabilityCard() {
   const queryClient = useQueryClient()
+  const today = new Date().toISOString().slice(0, 10)
 
-  // lista simples: recarrega por artistId via endpoint público
   const { data: availabilities = [] } = useQuery({
     queryKey: ['availabilities'],
     queryFn: async () => {
@@ -588,10 +590,70 @@ function AvailabilityCard() {
     },
   })
 
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
+  // Bloco 1 — dias de trabalho padrão (repetição semanal)
+  const [workWeekdays, setWorkWeekdays] = useState<number[]>([])
+  const [horizonWeeks, setHorizonWeeks] = useState('4')
+
+  // Pré-seleciona os chips com os dias da semana que já existem nas disponibilidades salvas.
+  const [weekdaysInitialized, setWeekdaysInitialized] = useState(false)
+  useEffect(() => {
+    if (weekdaysInitialized || availabilities.length === 0) return
+    const savedWeekdays = [...new Set(availabilities.map((a) => new Date(`${a.date}T00:00:00`).getDay()))].sort()
+    setWorkWeekdays(savedWeekdays)
+    setWeekdaysInitialized(true)
+  }, [availabilities, weekdaysInitialized])
+
+  // Horário padrão aplicado aos novos dias (blocos de criação em lote)
+  const [batchStart, setBatchStart] = useState('20:00')
+  const [batchEnd, setBatchEnd] = useState('23:00')
+
+  // Bloco 3 — dia específico (editar um único dia)
+  const [date, setDate] = useState(today)
   const [start, setStart] = useState('18:00')
   const [end, setEnd] = useState('23:00')
   const [status, setStatus] = useState<AvailabilityStatus>('Available')
+
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ['availabilities'] })
+
+  const WEEKDAY_OPTIONS = [
+    { value: 1, label: 'Seg' },
+    { value: 2, label: 'Ter' },
+    { value: 3, label: 'Qua' },
+    { value: 4, label: 'Qui' },
+    { value: 5, label: 'Sex' },
+    { value: 6, label: 'Sáb' },
+    { value: 0, label: 'Dom' },
+  ]
+
+  const applyWeekdays = useMutation({
+    mutationFn: () => {
+      // Expande os dias da semana selecionados em datas concretas ao longo do período.
+      const startDay = new Date()
+      const endDay = addWeeks(startDay, Number(horizonWeeks))
+      const dates: string[] = []
+      let current = startDay
+      while (current <= endDay) {
+        if (workWeekdays.includes(getDay(current))) dates.push(format(current, 'yyyy-MM-dd'))
+        current = addDays(current, 1)
+      }
+      return availabilityApi.createBatch({
+        dates,
+        startTime: batchStart,
+        endTime: batchEnd,
+        isAllDay: false,
+        status: 'Available',
+      })
+    },
+    onSuccess: ({ data }) => {
+      const parts = [`${data.created} dia(s) salvos`]
+      if (data.skippedExisting) parts.push(`${data.skippedExisting} já existiam`)
+      if (data.skippedEventConflict) parts.push(`${data.skippedEventConflict} com show na agenda foram pulados`)
+      toast.success(`Dias de trabalho aplicados: ${parts.join(' • ')}.`)
+      setWorkWeekdays([])
+      invalidate()
+    },
+    onError: (e) => toast.error(extractApiError(e)),
+  })
 
   const create = useMutation({
     mutationFn: () =>
@@ -603,24 +665,134 @@ function AvailabilityCard() {
         status,
       }),
     onSuccess: () => {
-      toast.success('Disponibilidade criada!')
-      queryClient.invalidateQueries({ queryKey: ['availabilities'] })
+      toast.success(
+        status === 'Unavailable'
+          ? 'Dia marcado como indisponível — intervalos de trabalho conflitantes foram substituídos.'
+          : 'Disponibilidade criada!'
+      )
+      invalidate()
     },
     onError: (e) => toast.error(extractApiError(e)),
   })
 
   const remove = useMutation({
     mutationFn: (id: string) => availabilityApi.remove(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['availabilities'] }),
+    onSuccess: () => invalidate(),
     onError: (e) => toast.error(extractApiError(e)),
   })
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Disponibilidade</CardTitle>
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <CalendarDays className="h-4 w-4" /> Disponibilidade
+        </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-5">
+        {/* Horário padrão dos novos dias */}
+        <div className="flex flex-wrap items-end gap-3 rounded-lg border p-3">
+          <div className="space-y-1">
+            <Label className="text-xs">Horário dos novos dias</Label>
+            <div className="flex gap-2">
+              <Input type="time" value={batchStart} onChange={(e) => setBatchStart(e.target.value)} className="w-28" />
+              <Input type="time" value={batchEnd} onChange={(e) => setBatchEnd(e.target.value)} className="w-28" />
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground">Aplicado aos dois blocos abaixo.</p>
+        </div>
+
+        {/* Bloco 1 — dias de trabalho padrão */}
+        <div className="space-y-3 rounded-lg border p-4">
+          <div>
+            <p className="text-sm font-semibold">Dias de trabalho (padrão)</p>
+            <p className="text-xs text-muted-foreground">
+              Marque os dias da semana em que você costuma trabalhar e aplique para as próximas semanas.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {WEEKDAY_OPTIONS.map((weekday) => {
+              const active = workWeekdays.includes(weekday.value)
+              return (
+                <button
+                  key={weekday.value}
+                  type="button"
+                  onClick={() =>
+                    setWorkWeekdays(
+                      active ? workWeekdays.filter((v) => v !== weekday.value) : [...workWeekdays, weekday.value]
+                    )
+                  }
+                  className={cn(
+                    'rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors',
+                    active
+                      ? 'border-primary bg-primary text-primary-foreground'
+                      : 'bg-background hover:bg-accent'
+                  )}
+                >
+                  {weekday.label}
+                </button>
+              )
+            })}
+          </div>
+          <div className="flex flex-wrap items-end gap-2">
+            <div className="space-y-1">
+              <Label className="text-xs">Período</Label>
+              <Select value={horizonWeeks} onValueChange={setHorizonWeeks}>
+                <SelectTrigger className="w-44">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="4">Próximas 4 semanas</SelectItem>
+                  <SelectItem value="8">Próximas 8 semanas</SelectItem>
+                  <SelectItem value="12">Próximas 12 semanas</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button
+              type="button"
+              onClick={() => applyWeekdays.mutate()}
+              disabled={applyWeekdays.isPending || workWeekdays.length === 0}
+            >
+              {applyWeekdays.isPending ? 'Aplicando...' : 'Aplicar dias de trabalho'}
+            </Button>
+          </div>
+        </div>
+
+        {/* Bloco 2 — dia específico (editar um único dia) */}
+        <div className="space-y-3 rounded-lg border p-4">
+          <p className="text-sm font-semibold">Dia específico</p>
+          <p className="text-xs text-muted-foreground">Para ajustar um único dia.</p>
+          <DatePickerCalendar value={date} onChange={setDate} mode="weekly" minDate={today} />
+          <div className="flex flex-wrap items-end gap-2">
+            <div>
+              <Label className="text-xs">Início</Label>
+              <Input type="time" value={start} onChange={(e) => setStart(e.target.value)} className="w-28" />
+            </div>
+            <div>
+              <Label className="text-xs">Fim</Label>
+              <Input type="time" value={end} onChange={(e) => setEnd(e.target.value)} className="w-28" />
+            </div>
+            <div>
+              <Label className="text-xs">Status</Label>
+              <Select value={status} onValueChange={(v) => setStatus(v as AvailabilityStatus)}>
+                <SelectTrigger className="w-36">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(availabilityStatusLabel).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button type="button" onClick={() => create.mutate()} disabled={create.isPending}>
+              <Plus /> Adicionar
+            </Button>
+          </div>
+        </div>
+
+        {/* Dias já salvos */}
         <div className="flex flex-wrap gap-2">
           {availabilities.slice(0, 12).map((a) => (
             <div key={a.id} className="flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-xs">
@@ -635,40 +807,8 @@ function AvailabilityCard() {
             </div>
           ))}
           {availabilities.length === 0 && (
-            <p className="text-sm text-muted-foreground">Cadastre intervalos disponíveis ou bloqueios por dia.</p>
+            <p className="text-sm text-muted-foreground">Nenhum dia salvo ainda — use os blocos acima.</p>
           )}
-        </div>
-        <div className="flex flex-wrap items-end gap-2">
-          <div>
-            <Label className="text-xs">Data</Label>
-            <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-36" />
-          </div>
-          <div>
-            <Label className="text-xs">Início</Label>
-            <Input type="time" value={start} onChange={(e) => setStart(e.target.value)} className="w-28" />
-          </div>
-          <div>
-            <Label className="text-xs">Fim</Label>
-            <Input type="time" value={end} onChange={(e) => setEnd(e.target.value)} className="w-28" />
-          </div>
-          <div>
-            <Label className="text-xs">Status</Label>
-            <Select value={status} onValueChange={(v) => setStatus(v as AvailabilityStatus)}>
-              <SelectTrigger className="w-36">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(availabilityStatusLabel).map(([value, label]) => (
-                  <SelectItem key={value} value={value}>
-                    {label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <Button type="button" onClick={() => create.mutate()} disabled={create.isPending}>
-            <Plus /> Adicionar
-          </Button>
         </div>
       </CardContent>
     </Card>

@@ -25,6 +25,7 @@ import type {
   SaveTeamMemberPayload,
   SaveArtistPayload,
   SaveAvailabilityPayload,
+  SaveAvailabilityBatchPayload,
   SaveContractorPayload,
   SaveFeePayload,
   SearchArtistsParams,
@@ -65,6 +66,10 @@ export const availabilityApi = {
   listByArtist: (artistId: string, from?: string, to?: string) =>
     api.get<Availability[]>(`/artists/${artistId}/availability`, { params: { from, to } }),
   create: (payload: SaveAvailabilityPayload) => api.post<Availability[]>('/artists/me/availability', payload),
+  createBatch: (payload: SaveAvailabilityBatchPayload) =>
+    api.post<import('@/types').BatchAvailabilityResult>('/artists/me/availability/batch', payload),
+  busySlots: (artistId: string, from?: string, to?: string) =>
+    api.get<import('@/types').BusySlot[]>(`/artists/${artistId}/availability/busy-slots`, { params: { from, to } }),
   update: (id: string, payload: SaveAvailabilityPayload) =>
     api.put<Availability>(`/artists/me/availability/${id}`, payload),
   remove: (id: string) => api.delete(`/artists/me/availability/${id}`),

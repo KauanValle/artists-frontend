@@ -9,8 +9,19 @@ export type CalendarMode = 'weekly' | 'monthly'
 
 const WEEK_DAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
 
+interface CalendarBaseProps {
+  mode?: CalendarMode
+  minDate?: string
+  /** Datas que não podem ser selecionadas (bloqueio do dia inteiro) — aparecem riscadas. */
+  disabledDates?: string[]
+  /** Datas com bloqueio parcial de horário — continuam selecionáveis, mas marcadas com texto âmbar. */
+  partialDates?: string[]
+  /** Dias da semana (0=Dom..6=Sáb) que o artista atende — quando informado, os demais ficam bloqueados. */
+  workingWeekdays?: number[]
+}
+
 /**
- * Seletor visual de data reutilizável.
+ * Seletor visual de data reutilizável (dia único).
  *
  * @param mode 'weekly' exibe uma faixa de 7 dias com navegação semana a semana;
  *             'monthly' exibe a grade do mês completo. Padrão: 'weekly'.
@@ -24,17 +35,88 @@ export function DatePickerCalendar({
   onChange,
   mode = 'weekly',
   minDate,
+  disabledDates,
+  partialDates,
+  workingWeekdays,
 }: {
   value?: string
   onChange: (date: string) => void
-  mode?: CalendarMode
-  minDate?: string
-}) {
+} & CalendarBaseProps) {
   const [cursor, setCursor] = useState<Date>(value ? new Date(`${value}T00:00:00`) : new Date())
 
-  const selected = value ? new Date(`${value}T00:00:00`) : undefined
-  const min = minDate ? new Date(`${minDate}T00:00:00`) : undefined
+  return (
+    <CalendarView
+      cursor={cursor}
+      setCursor={setCursor}
+      mode={mode}
+      minDate={minDate}
+      disabledDates={disabledDates}
+      partialDates={partialDates}
+      workingWeekdays={workingWeekdays}
+      selectedKeys={value ? [value] : []}
+      onPick={onChange}
+    />
+  )
+}
 
+/**
+ * Seleção múltipla de datas na grade do mês (ex.: disponibilidade do artista).
+ * Clicar em um dia selecionado o desmarca; onChange devolve a lista ordenada.
+ */
+export function MultiDatePickerCalendar({
+  selected,
+  onChange,
+  mode = 'monthly',
+  minDate,
+  disabledDates,
+  partialDates,
+}: {
+  selected: string[]
+  onChange: (dates: string[]) => void
+} & CalendarBaseProps) {
+  const [cursor, setCursor] = useState<Date>(() =>
+    selected.length > 0 ? new Date(`${selected[0]}T00:00:00`) : new Date()
+  )
+
+  const onPick = (key: string) =>
+    onChange(selected.includes(key) ? selected.filter((d) => d !== key) : [...selected, key].sort())
+
+  return (
+    <CalendarView
+      cursor={cursor}
+      setCursor={setCursor}
+      mode={mode}
+      minDate={minDate}
+      disabledDates={disabledDates}
+      partialDates={partialDates}
+      selectedKeys={selected}
+      onPick={onPick}
+    />
+  )
+}
+
+/// Grade compartilhada pelos dois modos — a navegação e a lógica de datas vêm do chamador.
+function CalendarView({
+  cursor,
+  setCursor,
+  mode,
+  minDate,
+  disabledDates,
+  partialDates,
+  workingWeekdays,
+  selectedKeys,
+  onPick,
+}: {
+  cursor: Date
+  setCursor: (date: Date) => void
+  mode: CalendarMode
+  minDate?: string
+  disabledDates?: string[]
+  partialDates?: string[]
+  workingWeekdays?: number[]
+  selectedKeys: string[]
+  onPick: (key: string) => void
+}) {
   const range = useMemo(() => {
     if (mode === 'monthly') return { from: startOfMonth(cursor), to: endOfMonth(cursor) }
     return { from: startOfWeek(cursor, { weekStartsOn: 0 }), to: endOfWeek(cursor, { weekStartsOn: 0 }) }
@@ -51,9 +133,18 @@ export function DatePickerCalendar({
   }, [range])
 
   const navigate = (direction: 1 | -1) =>
-    setCursor((c) => (mode === 'monthly' ? addMonths(c, direction) : addDays(c, direction * 7)))
+    setCursor(mode === 'monthly' ? addMonths(cursor, direction) : addDays(cursor, direction * 7))
 
-  const isDisabled = (day: Date) => (min ? isBefore(day, min) : false)
+  const blocked = useMemo(() => new Set(disabledDates ?? []), [disabledDates])
+  const partial = useMemo(() => new Set(partialDates ?? []), [partialDates])
+
+  const isDisabled = (day: Date) => {
+    if (minDate && isBefore(day, new Date(`${minDate}T00:00:00`))) return true
+    if (blocked.has(format(day, 'yyyy-MM-dd'))) return true
+    // Dias de trabalho declarados: dias da semana fora deles ficam bloqueados.
+    if (workingWeekdays && workingWeekdays.length > 0 && !workingWeekdays.includes(day.getDay())) return true
+    return false
+  }
 
   return (
     <div className="rounded-lg border p-3">
@@ -101,7 +192,9 @@ export function DatePickerCalendar({
 
         {days.map((day) => {
           const key = format(day, 'yyyy-MM-dd')
-          const isSelected = selected ? isSameDay(day, selected) : false
+          const isSelected = selectedKeys.includes(key)
+          const isPast = minDate ? isBefore(day, new Date(`${minDate}T00:00:00`)) : false
+          const isBlocked = !isPast && blocked.has(key)
           const disabled = isDisabled(day)
           const isToday = isSameDay(day, new Date())
 
@@ -113,15 +206,17 @@ export function DatePickerCalendar({
               onClick={(e) => {
                 e.preventDefault()
                 e.stopPropagation()
-                if (!disabled) onChange(key)
+                if (!disabled) onPick(key)
               }}
               className={cn(
-                'rounded-md border py-1.5 text-sm font-medium transition-colors',
+                'relative rounded-md py-1.5 text-sm font-medium transition-colors',
                 isSelected
-                  ? 'border-primary bg-primary text-primary-foreground'
+                  ? 'bg-primary font-semibold text-primary-foreground'
                   : 'hover:bg-accent',
-                !isSelected && isToday && 'border-primary/50',
-                disabled && 'cursor-not-allowed opacity-40 hover:bg-transparent'
+                !isSelected && isToday && 'ring-1 ring-inset ring-primary/50',
+                !isSelected && partial.has(key) && 'text-amber-600 dark:text-amber-400',
+                disabled && 'cursor-not-allowed opacity-40 hover:bg-transparent',
+                isBlocked && !isSelected && 'line-through decoration-destructive/70'
               )}
             >
               {mode === 'weekly' && (
