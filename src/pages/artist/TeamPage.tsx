@@ -12,7 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { EmptyState } from '@/components/badges'
 import { formatMoney } from '@/lib/utils'
 import { extractApiError } from '@/services/api'
-import type { ShareType } from '@/types'
+import { InfoTooltip } from '@/components/ui/info-tooltip'
+import type { AllocationType, ShareType } from '@/types'
 
 export function TeamPage() {
   const queryClient = useQueryClient()
@@ -133,6 +134,7 @@ function TeamMemberDialog({
   const [role, setRole] = useState('')
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
+  const [allocationType, setAllocationType] = useState<AllocationType>('Interno')
   const [shareType, setShareType] = useState<ShareType>('Percentage')
   const [shareValue, setShareValue] = useState('')
   const [notes, setNotes] = useState('')
@@ -144,6 +146,7 @@ function TeamMemberDialog({
     setRole(editing.role)
     setPhone(editing.phone)
     setEmail(editing.email)
+    setAllocationType(editing.allocationType)
     setShareType(editing.defaultShareType)
     setShareValue(String(editing.defaultShareValue))
     setNotes(editing.notes)
@@ -154,6 +157,7 @@ function TeamMemberDialog({
     setRole('')
     setPhone('')
     setEmail('')
+    setAllocationType('Interno')
     setShareType('Percentage')
     setShareValue('')
     setNotes('')
@@ -168,6 +172,7 @@ function TeamMemberDialog({
         phone,
         email,
         photoUrl: '',
+        allocationType,
         defaultShareType: shareType,
         defaultShareValue: Number(shareValue.replace(',', '.')) || 0,
         notes,
@@ -214,6 +219,32 @@ function TeamMemberDialog({
               <Label>E-mail</Label>
               <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
             </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="flex items-center gap-1.5">
+              Tipo de vínculo <InfoTooltip text="Interno: pessoa que trabalha especificamente para você. Externo: profissional que o contratante pode adicionar como adicional na contratação do show." />
+            </Label>
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                type="button"
+                variant={allocationType === 'Interno' ? 'default' : 'outline'}
+                onClick={() => setAllocationType('Interno')}
+              >
+                Interno
+              </Button>
+              <Button
+                type="button"
+                variant={allocationType === 'Externo' ? 'default' : 'outline'}
+                onClick={() => setAllocationType('Externo')}
+              >
+                Externo
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {allocationType === 'Externo'
+                ? 'Externo: este profissional aparece como adicional na contratação do show (custo para o contratante).'
+                : 'Interno: este profissional trabalha especificamente para você.'}
+            </p>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">

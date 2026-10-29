@@ -1,9 +1,10 @@
 import { useMemo, useState, type ReactNode } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import { addDays } from 'date-fns'
 import { CalendarDays, CalendarPlus, Check, CheckCircle2, ChevronRight, Heart, Images, MapPin } from 'lucide-react'
 import { toast } from 'sonner'
-import { artistsApi, availabilityApi, bookingsApi, favoritesApi, publicBookingsApi } from '@/services'
+import { addonsApi, artistsApi, availabilityApi, bookingsApi, favoritesApi, publicBookingsApi } from '@/services'
 import { useAuth } from '@/hooks/useAuth'
 import { Avatar } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
@@ -18,9 +19,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { RatingStars } from '@/components/ui/rating-stars'
 import { EmptyState, eventTypeLabel } from '@/components/badges'
-import { cn, formatDate, formatMoney, minutesToLabel } from '@/lib/utils'
+import { cn, formatDate, formatMoney, minutesToLabel, toDateInput } from '@/lib/utils'
 import { extractApiError } from '@/services/api'
-import type { EventType } from '@/types'
+import type { AddonItemType, BookingAddonItem, EventType } from '@/types'
 
 export function ArtistPublicPage() {
   const { slug } = useParams<{ slug: string }>()
@@ -43,8 +44,8 @@ export function ArtistPublicPage() {
   })
 
   // Eventos agendados/confirmados ocupam a agenda do artista na contratação (janela de 6 meses).
-  const busyFrom = new Date().toISOString().slice(0, 10)
-  const busyTo = new Date(Date.now() + 180 * 86400000).toISOString().slice(0, 10)
+  const busyFrom = toDateInput()
+  const busyTo = toDateInput(addDays(new Date(), 180))
   const { data: busySlots = [] } = useQuery({
     queryKey: ['artist-busy-slots', artist?.id, busyFrom, busyTo],
     queryFn: async () => (await availabilityApi.busySlots(artist!.id, busyFrom, busyTo)).data,
@@ -535,7 +536,7 @@ export function BookingRequestDialog({
                 setEndTime(null)
               }}
               mode="weekly"
-              minDate={new Date().toISOString().slice(0, 10)}
+              minDate={toDateInput()}
               disabledDates={fullyBlockedDates}
               partialDates={partialDates}
               workingWeekdays={workingWeekdays}
@@ -643,18 +644,71 @@ export function GuestBookingDialog({
   const [eventDate, setEventDate] = useState('')
   const [startTime, setStartTime] = useState<string | null>(null)
   const [endTime, setEndTime] = useState<string | null>(null)
-
-  const dateOutsideWorkingDays =
-    workingWeekdays.length > 0 &&
-    eventDate !== '' &&
-    !workingWeekdays.includes(new Date(`${eventDate}T00:00:00`).getDay())
   const [location, setLocation] = useState('')
   const [eventType, setEventType] = useState<EventType>('Show')
   const [estimatedAudience, setEstimatedAudience] = useState('')
   const [message, setMessage] = useState('')
+  const [selectedAddons, setSelectedAddons] = useState<BookingAddonItem[]>([])
   const [created, setCreated] = useState(false)
 
-  const today = new Date().toISOString().slice(0, 10)
+  const today = toDateInput()
+
+  const { data: addons } = useQuery({
+    queryKey: ['artist-addons', artistId],
+    queryFn: async () => (await addonsApi.list(artistId)).data,
+    enabled: open && !!artistId,
+  })
+
+  const baseBudget = Number(budget.replace(',', '.')) || 0
+
+  // Prévia dos adicionais selecionados — mesma fórmula do servidor:
+  // percentual calculado sobre a proposta base, fixo somado diretamente.
+  const addonDetails = useMemo(() => {
+    const details: { itemType: AddonItemType; itemId: string; name: string; label: string; amount: number }[] = []
+    for (const sel of selectedAddons) {
+      if (sel.itemType === 'TeamMember') {
+        const member = addons?.teamMembers.find((t) => t.id === sel.itemId)
+        if (member) {
+          const amount =
+            member.shareType === 'Percentage'
+              ? Math.round((baseBudget * member.shareValue) / 100 * 100) / 100
+              : member.shareValue
+          details.push({ itemType: sel.itemType, itemId: sel.itemId, name: member.name, label: member.role || 'Equipe externa', amount })
+        }
+      } else {
+        const equipment = addons?.equipment.find((t) => t.id === sel.itemId)
+        if (equipment) {
+          const amount =
+            equipment.shareType === 'Percentage'
+              ? Math.round((baseBudget * equipment.shareValue) / 100 * 100) / 100
+              : equipment.shareValue
+          details.push({ itemType: sel.itemType, itemId: sel.itemId, name: equipment.name, label: equipment.category || 'Equipamento externo', amount })
+        }
+      }
+    }
+    return details
+  }, [selectedAddons, addons, baseBudget])
+
+  const addonsTotal = addonDetails.reduce((sum, a) => sum + a.amount, 0)
+  const newTotal = baseBudget + addonsTotal
+
+  const durationLabel = (() => {
+    if (!startTime || !endTime) return null
+    const [sh, sm] = startTime.split(':').map(Number)
+    const [eh, em] = endTime.split(':').map(Number)
+    const minutes = eh * 60 + em - (sh * 60 + sm)
+    const hours = Math.floor(minutes / 60)
+    const rest = minutes % 60
+    return rest === 0 ? String(hours) + 'h' : String(hours) + 'h' + String(rest).padStart(2, '0')
+  })()
+
+  const toggleAddon = (itemType: AddonItemType, itemId: string) => {
+    setSelectedAddons((current) =>
+      current.some((a) => a.itemType === itemType && a.itemId === itemId)
+        ? current.filter((a) => !(a.itemType === itemType && a.itemId === itemId))
+        : [...current, { itemType, itemId }]
+    )
+  }
 
   const reset = () => {
     setStep(0)
@@ -669,43 +723,53 @@ export function GuestBookingDialog({
     setEventType('Show')
     setEstimatedAudience('')
     setMessage('')
+    setSelectedAddons([])
     setCreated(false)
   }
 
-  const create = useMutation({
-    mutationFn: () =>
-      publicBookingsApi.create({
-        artistId,
-        guestName,
-        guestCompanyName: guestCompanyName || null,
-        guestPhone: guestPhone.replace(/\D/g, ''),
-        budget: Number(budget.replace(',', '.')),
-        eventDate,
-        startTime: `${startTime}:00`,
-        endTime: `${endTime}:00`,
-        location,
-        eventType,
-        estimatedAudience: estimatedAudience ? Number(estimatedAudience) : null,
-        message,
-      }),
-    onSuccess: () => setCreated(true),
-    onError: (e) => toast.error(extractApiError(e)),
-  })
+  const dateOutsideWorkingDays =
+    workingWeekdays.length > 0 &&
+    eventDate !== '' &&
+    !workingWeekdays.includes(new Date(eventDate + 'T00:00:00').getDay())
 
   const handleContinue = () => {
-    if (!guestName.trim()) {
-      toast.warning('Informe o nome do responsável')
-      return
+    if (step === 0) {
+      if (!guestName.trim()) {
+        toast.warning('Informe o nome do responsável')
+        return
+      }
+      if (!isValidWhatsapp(guestPhone)) {
+        toast.warning('Informe um WhatsApp válido com DDD (ex.: (11) 98765-4321).')
+        return
+      }
+      if (!(Number(budget.replace(',', '.')) > 0)) {
+        toast.warning('Informe o valor da proposta')
+        return
+      }
     }
-    if (!isValidWhatsapp(guestPhone)) {
-      toast.warning('Informe um WhatsApp válido com DDD (ex.: (11) 98765-4321).')
-      return
+    if (step === 1) {
+      if (!eventDate) {
+        toast.warning('Selecione a data do evento na agenda')
+        return
+      }
+      if (fullyBlockedDates.includes(eventDate)) {
+        toast.warning('O artista está indisponível nessa data. Escolha outro dia na agenda.')
+        return
+      }
+      if (dateOutsideWorkingDays) {
+        toast.warning('O artista não atende nesse dia da semana. Escolha outro dia.')
+        return
+      }
+      if (!startTime || !endTime) {
+        toast.warning('Selecione o horário de início e término do evento')
+        return
+      }
+      if (!location.trim()) {
+        toast.warning('Informe o local do evento')
+        return
+      }
     }
-    if (!(Number(budget.replace(',', '.')) > 0)) {
-      toast.warning('Informe o valor da proposta')
-      return
-    }
-    setStep(1)
+    setStep((s) => s + 1)
   }
 
   const handleSubmitRequest = () => {
@@ -713,16 +777,16 @@ export function GuestBookingDialog({
       toast.warning('Selecione a data do evento na agenda')
       return
     }
-    if (dateOutsideWorkingDays) {
-      toast.warning('O artista não atende nesse dia da semana. Escolha outro dia.')
-      return
-    }
     if (fullyBlockedDates.includes(eventDate)) {
       toast.warning('O artista está indisponível nessa data. Escolha outro dia na agenda.')
       return
     }
+    if (dateOutsideWorkingDays) {
+      toast.warning('O artista não atende nesse dia da semana. Escolha outro dia.')
+      return
+    }
     if (!startTime || !endTime) {
-      toast.warning('Selecione o horário de início e fim do evento')
+      toast.warning('Selecione o horário de início e término do evento')
       return
     }
     if (!location.trim()) {
@@ -732,7 +796,32 @@ export function GuestBookingDialog({
     create.mutate()
   }
 
-  const STEP_TITLES = ['Seus dados', 'Detalhes do evento']
+
+  const create = useMutation({
+    mutationFn: async () =>
+      (
+        await publicBookingsApi.create({
+          artistId,
+          guestName: guestName.trim(),
+          guestCompanyName: guestCompanyName || null,
+          guestPhone: guestPhone.replace(/\D/g, ''),
+          budget: baseBudget,
+          eventDate,
+          startTime: (startTime ?? '20:00') + ':00',
+          endTime: (endTime ?? '23:00') + ':00',
+          location,
+          eventType,
+          estimatedAudience: estimatedAudience ? Number(estimatedAudience) : null,
+          message,
+          addons: selectedAddons,
+        })
+      ).data,
+    onSuccess: () => setCreated(true),
+    onError: (e) => toast.error(extractApiError(e)),
+  })
+
+
+  const STEP_TITLES = ['Seus dados', 'Detalhes do evento', 'Adicionais', 'Confirmação']
 
   return (
     <Dialog
@@ -749,8 +838,9 @@ export function GuestBookingDialog({
               <DialogTitle>Solicitação enviada!</DialogTitle>
             </DialogHeader>
             <p className="text-sm text-muted-foreground">
-              {artistName} recebeu sua proposta de <strong className="text-foreground">{formatMoney(Number(budget.replace(',', '.')))}</strong> e
-              vai entrar em contato pelo WhatsApp <strong className="text-foreground">{guestPhone}</strong>.
+              {artistName} recebeu sua proposta de{' '}
+              <strong className="text-foreground">{formatMoney(newTotal)}</strong> e vai entrar em contato pelo
+              WhatsApp <strong className="text-foreground">{guestPhone}</strong>.
             </p>
             <div className="mt-2 flex gap-2">
               <Button variant="outline" onClick={reset}>
@@ -789,16 +879,21 @@ export function GuestBookingDialog({
                     >
                       {done ? <Check className="h-3 w-3" /> : index + 1}
                     </span>
-                    <span className={cn('text-xs', active ? 'font-semibold text-foreground' : 'text-muted-foreground')}>
+                    <span
+                      className={cn(
+                        'hidden text-xs sm:block',
+                        active ? 'font-semibold text-foreground' : 'text-muted-foreground'
+                      )}
+                    >
                       {title}
                     </span>
-                    {index === 0 && <span className="h-px w-6 bg-border" />}
+                    {index < STEP_TITLES.length - 1 && <span className="h-px w-4 bg-border" />}
                   </li>
                 )
               })}
             </ol>
             <p className="-mt-2 text-center text-xs text-muted-foreground">
-              Passo {step + 1} de 2 — {step === 0 ? 'seus dados de contato' : 'detalhes do evento'}
+              Passo {step + 1} de {STEP_TITLES.length} — {STEP_TITLES[step]}
             </p>
 
             {/* Passo 0 — Seus dados */}
@@ -837,7 +932,7 @@ export function GuestBookingDialog({
                     <Input
                       value={budget}
                       onChange={(e) => setBudget(e.target.value)}
-                      placeholder={startingPrice != null ? `A partir de ${formatMoney(startingPrice)}` : 'Ex.: 1500'}
+                      placeholder={startingPrice != null ? 'A partir de ' + formatMoney(startingPrice) : 'Ex.: 1500'}
                       inputMode="decimal"
                     />
                   </div>
@@ -871,7 +966,7 @@ export function GuestBookingDialog({
                       ? 'O artista não atende nesse dia da semana.'
                       : !eventDate
                         ? 'Escolha o dia na agenda. Dias riscados estão fechados; bolinha amarela = bloqueio parcial.'
-                        : `Selecionado: ${formatDate(eventDate)}`}
+                        : 'Selecionado: ' + formatDate(eventDate)}
                   </p>
                 </div>
                 {eventDate && (
@@ -927,6 +1022,172 @@ export function GuestBookingDialog({
                     placeholder="Conte os detalhes do evento..."
                   />
                 </div>
+                <Button type="button" className="w-full" onClick={handleContinue}>
+                  Continuar
+                </Button>
+              </div>
+            )}
+
+            {/* Passo 2 — Adicionais */}
+            {step === 2 && (
+              <div className="space-y-4">
+                <div>
+                  <p className="text-sm font-semibold">Adicionais para o seu evento</p>
+                  <p className="text-xs text-muted-foreground">
+                    Profissionais e equipamentos extras oferecidos por {artistName}. O valor entra na proposta
+                    (percentual sobre a proposta ou valor fixo).
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Equipe externa</p>
+                  {addons && addons.teamMembers.length > 0 ? (
+                    addons.teamMembers.map((member) => {
+                      const selected = selectedAddons.some((a) => a.itemType === 'TeamMember' && a.itemId === member.id)
+                      return (
+                        <button
+                          key={member.id}
+                          type="button"
+                          onClick={() => toggleAddon('TeamMember', member.id)}
+                          className={cn(
+                            'flex w-full items-center justify-between gap-3 rounded-lg border p-3 text-left transition-colors',
+                            selected ? 'border-primary bg-primary/5' : 'hover:bg-accent'
+                          )}
+                        >
+                          <div className="flex items-center gap-3">
+                            <span
+                              className={cn(
+                                'flex h-5 w-5 items-center justify-center rounded border',
+                                selected ? 'border-primary bg-primary text-primary-foreground' : 'bg-background'
+                              )}
+                            >
+                              {selected && <Check className="h-3.5 w-3.5" />}
+                            </span>
+                            <div>
+                              <p className="text-sm font-medium">{member.name}</p>
+                              <p className="text-xs text-muted-foreground">{member.role || 'Equipe externa'}</p>
+                            </div>
+                          </div>
+                          <span className="text-sm font-semibold">
+                            {member.shareType === 'Percentage'
+                              ? '+ ' + member.shareValue + '%'
+                              : '+ ' + formatMoney(member.shareValue)}
+                          </span>
+                        </button>
+                      )
+                    })
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Este artista não oferece adicionais de equipe.</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Equipamentos externos
+                  </p>
+                  {addons && addons.equipment.length > 0 ? (
+                    addons.equipment.map((equipment) => {
+                      const selected = selectedAddons.some((a) => a.itemType === 'Equipment' && a.itemId === equipment.id)
+                      return (
+                        <button
+                          key={equipment.id}
+                          type="button"
+                          onClick={() => toggleAddon('Equipment', equipment.id)}
+                          className={cn(
+                            'flex w-full items-center justify-between gap-3 rounded-lg border p-3 text-left transition-colors',
+                            selected ? 'border-primary bg-primary/5' : 'hover:bg-accent'
+                          )}
+                        >
+                          <div className="flex items-center gap-3">
+                            <span
+                              className={cn(
+                                'flex h-5 w-5 items-center justify-center rounded border',
+                                selected ? 'border-primary bg-primary text-primary-foreground' : 'bg-background'
+                              )}
+                            >
+                              {selected && <Check className="h-3.5 w-3.5" />}
+                            </span>
+                            <div>
+                              <p className="text-sm font-medium">{equipment.name}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {equipment.category || 'Equipamento'}
+                              </p>
+                            </div>
+                          </div>
+                          <span className="text-sm font-semibold">
+                            {equipment.shareType === 'Percentage'
+                              ? '+ ' + equipment.shareValue + '%'
+                              : '+ ' + formatMoney(equipment.shareValue)}
+                          </span>
+                        </button>
+                      )
+                    })
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Este artista não oferece equipamentos externos.</p>
+                  )}
+                </div>
+
+                <div className="flex items-center justify-between rounded-lg bg-accent px-4 py-3">
+                  <span className="text-sm font-medium">Total com adicionais</span>
+                  <span className="text-lg font-bold">{formatMoney(newTotal)}</span>
+                </div>
+
+                <Button type="button" className="w-full" onClick={handleContinue}>
+                  Continuar
+                </Button>
+              </div>
+            )}
+
+            {/* Passo 3 — Confirmação */}
+            {step === 3 && (
+              <div className="space-y-4">
+                <Card>
+                  <CardContent className="space-y-3 p-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Proposta base</span>
+                      <span className="font-medium">{formatMoney(baseBudget)}</span>
+                    </div>
+                    {addonDetails.map((addon) => (
+                      <div
+                        key={addon.itemType + '-' + addon.itemId}
+                        className="flex items-center justify-between text-sm"
+                      >
+                        <span className="text-muted-foreground">
+                          {addon.name} <span className="text-xs">({addon.label})</span>
+                        </span>
+                        <span>{formatMoney(addon.amount)}</span>
+                      </div>
+                    ))}
+                    <div className="flex items-center justify-between border-t pt-3">
+                      <span className="font-semibold">Valor total da proposta</span>
+                      <span className="text-lg font-bold text-primary">{formatMoney(newTotal)}</span>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="grid gap-3 p-4 text-sm">
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Data</span>
+                      <span className="font-medium">{formatDate(eventDate)}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Duração do show</span>
+                      <span className="font-medium">
+                        {startTime} – {endTime}
+                        {durationLabel ? ' (' + durationLabel + ')' : ''}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Local</span>
+                      <span className="max-w-56 truncate text-right font-medium">{location}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Responsável</span>
+                      <span className="font-medium">{guestName}</span>
+                    </div>
+                  </CardContent>
+                </Card>
 
                 <p className="text-xs text-muted-foreground">
                   Sem cadastro necessário: o artista recebe sua solicitação com esses dados e responde pelo WhatsApp
@@ -937,6 +1198,27 @@ export function GuestBookingDialog({
                 </Button>
               </div>
             )}
+
+            {/* Navegação */}
+            <div className="flex items-center justify-between border-t pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={step === 0}
+                onClick={() => setStep((s) => Math.max(0, s - 1))}
+              >
+                Voltar
+              </Button>
+              {step < STEP_TITLES.length - 1 ? (
+                <Button type="button" onClick={handleContinue}>
+                  Continuar
+                </Button>
+              ) : (
+                <Button type="button" onClick={handleSubmitRequest} disabled={create.isPending}>
+                  {create.isPending ? 'Enviando...' : 'Enviar solicitação'}
+                </Button>
+              )}
+            </div>
           </>
         )}
       </DialogContent>

@@ -34,8 +34,12 @@ export function minutesToLabel(minutes: number): string {
   return `${h}h${m.toString().padStart(2, '0')}`
 }
 
-export function toDateInput(date: Date): string {
-  return date.toISOString().slice(0, 10)
+/** Data no formato dos inputs (yyyy-MM-dd) usando o dia LOCAL (evita desvio de fuso). */
+export function toDateInput(date: Date = new Date()): string {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
 }
 
 import type { UserRole } from '@/types'

@@ -8,6 +8,7 @@ import { artistsApi, availabilityApi, feesApi, uploadsApi } from '@/services'
 import { useAuth } from '@/hooks/useAuth'
 import { requiredProfileFields } from '@/hooks/useArtistProfile'
 import { ChipMultiSelect } from '@/components/ui/chip-multi-select'
+import { InfoTooltip } from '@/components/ui/info-tooltip'
 import { DatePickerCalendar } from '@/components/ui/date-picker-calendar'
 import { EVENT_TYPES, styleOptionsForCategory } from '@/lib/artistOptions'
 import { Badge } from '@/components/ui/badge'
@@ -18,7 +19,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { availabilityStatusLabel } from '@/components/badges'
-import { cn, formatDate, formatMoney, minutesToLabel } from '@/lib/utils'
+import { cn, formatDate, formatMoney, minutesToLabel, toDateInput } from '@/lib/utils'
 import { extractApiError } from '@/services/api'
 import type { AvailabilityStatus } from '@/types'
 
@@ -69,6 +70,7 @@ export function ArtistProfilePage() {
       phone: artist.phone,
       description: artist.description,
       profilePhotoUrl: artist.profilePhotoUrl ?? '',
+      travelTimeMinutes: String(artist.travelTimeMinutes ?? 0),
     })
     setStyles(artist.styles)
     setSpecialties(artist.specialties)
@@ -100,6 +102,7 @@ export function ArtistProfilePage() {
         eventTypes,
         galleryUrls: artist?.galleryUrls ?? [],
         videoUrls: artist?.videoUrls ?? [],
+        travelTimeMinutes: Number(f.travelTimeMinutes) || 0,
       }
       await artistsApi.saveOnboarding(payload as never)
     },
@@ -417,7 +420,10 @@ export function ArtistProfilePage() {
           <p className="text-sm text-muted-foreground">
             Cadastre as datas em que você pode (ou não) se apresentar. Revise tudo e salve o perfil.
           </p>
-          <AvailabilityCard />
+          <AvailabilityCard
+            travelTimeMinutes={Number(form!.travelTimeMinutes) || 0}
+            onTravelTimeChange={(minutes) => setForm({ ...form!, travelTimeMinutes: String(minutes) })}
+          />
         </div>
       )}
 
@@ -578,9 +584,15 @@ function FeesCard({ artistId }: { artistId: string }) {
   )
 }
 
-function AvailabilityCard() {
+function AvailabilityCard({
+  travelTimeMinutes,
+  onTravelTimeChange,
+}: {
+  travelTimeMinutes: number
+  onTravelTimeChange: (minutes: number) => void
+}) {
   const queryClient = useQueryClient()
-  const today = new Date().toISOString().slice(0, 10)
+  const today = toDateInput()
 
   const { data: availabilities = [] } = useQuery({
     queryKey: ['availabilities'],
@@ -689,6 +701,37 @@ function AvailabilityCard() {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-5">
+        {/* Tempo de deslocamento/montagem aplicado aos shows confirmados */}
+        <div className="space-y-2 rounded-lg border p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="space-y-1">
+              <Label className="flex items-center gap-1.5">
+                Tempo de deslocamento <InfoTooltip text="Tempo reservado na sua agenda para montagem do equipamento, deslocamento até o local e desmontagem. Ex.: com 1h, um show das 20h às 22h bloqueia a agenda das 19h às 23h." />
+              </Label>
+              <Select
+                value={String(travelTimeMinutes)}
+                onValueChange={(v) => onTravelTimeChange(Number(v))}
+              >
+                <SelectTrigger className="w-44">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="0">Nenhum</SelectItem>
+                  <SelectItem value="30">30 minutos</SelectItem>
+                  <SelectItem value="60">1 hora</SelectItem>
+                  <SelectItem value="90">1 hora e 30 minutos</SelectItem>
+                  <SelectItem value="120">2 horas</SelectItem>
+                  <SelectItem value="150">2 horas e 30 minutos</SelectItem>
+                  <SelectItem value="180">3 horas</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <p className="max-w-64 text-xs text-muted-foreground">
+              Ex.: com 1 hora, um show das 20h às 22h bloqueia sua agenda das 19h às 23h.
+            </p>
+          </div>
+        </div>
+
         {/* Horário padrão dos novos dias */}
         <div className="flex flex-wrap items-end gap-3 rounded-lg border p-3">
           <div className="space-y-1">

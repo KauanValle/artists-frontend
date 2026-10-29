@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { BookingStatusBadge, eventTypeLabel } from '@/components/badges'
 import { EmptyState } from '@/components/badges'
-import { formatMoney } from '@/lib/utils'
+import { formatMoney, toDateInput } from '@/lib/utils'
 import YampiBuyButton from '@/components/ui/yampi-button'
 
 /** Visão do artista com conta gratuita: sem dados, só o convite para assinar. */
@@ -62,7 +62,7 @@ export function ArtistDashboardPage() {
   const isFreeArtist = user?.subscriptionTier === 'Gratuito'
   const today = new Date()
   const monthStart = new Date(today.getFullYear(), today.getMonth(), 1)
-  const fmt = (d: Date) => d.toISOString().slice(0, 10)
+  const fmt = (d: Date) => toDateInput(d)
 
   const { data: summary } = useQuery({
     queryKey: ['financial-summary', fmt(monthStart)],

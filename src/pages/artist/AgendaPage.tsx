@@ -207,8 +207,8 @@ export function CreateEventDialog({
       eventsApi.create({
         title,
         type,
-        startDateTime: new Date(`${date}T${start}:00`).toISOString(),
-        endDateTime: new Date(`${date}T${end}:00`).toISOString(),
+        startDateTime: `${date}T${start}:00`,
+        endDateTime: `${date}T${end}:00`,
         location,
         description,
       }),

@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { EmptyState, TransactionStatusBadge } from '@/components/badges'
 import { StatCard } from '@/pages/artist/ArtistDashboardPage'
-import { formatDate, formatMoney } from '@/lib/utils'
+import { formatDate, formatMoney, toDateInput } from '@/lib/utils'
 import { extractApiError } from '@/services/api'
 import type { TransactionType } from '@/types'
 
@@ -35,7 +35,7 @@ export function FinancialPage() {
     return { from: null, to: null }
   }, [period, customFrom, customTo])
 
-  const fmt = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : undefined)
+  const fmt = (d: Date | null) => (d ? toDateInput(d) : undefined)
 
   const { data: summary } = useQuery({
     queryKey: ['financial-summary', from?.toISOString(), to?.toISOString()],

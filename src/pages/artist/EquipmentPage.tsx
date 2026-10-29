@@ -13,7 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { EmptyState, equipmentStatusLabel } from '@/components/badges'
 import { formatMoney } from '@/lib/utils'
 import { extractApiError } from '@/services/api'
-import type { Equipment, EquipmentStatus } from '@/types'
+import { InfoTooltip } from '@/components/ui/info-tooltip'
+import type { AllocationType, Equipment, EquipmentStatus, ShareType } from '@/types'
 
 export function EquipmentPage() {
   const queryClient = useQueryClient()
@@ -142,6 +143,9 @@ function EquipmentDialog({ open, onClose, editing }: { open: boolean; onClose: (
     identifier: '',
     weightKg: '',
     value: '',
+    allocationType: 'Interno' as AllocationType,
+    shareType: 'Fixed' as ShareType,
+    shareValue: '',
     status: 'Available' as EquipmentStatus,
     notes: '',
   })
@@ -158,6 +162,9 @@ function EquipmentDialog({ open, onClose, editing }: { open: boolean; onClose: (
         identifier: editing?.identifier ?? '',
         weightKg: editing?.weightKg != null ? String(editing.weightKg) : '',
         value: editing?.value != null ? String(editing.value) : '',
+        allocationType: editing?.allocationType ?? 'Interno',
+        shareType: editing?.shareType ?? 'Fixed',
+        shareValue: editing?.shareValue != null ? String(editing.shareValue) : '',
         status: editing?.status ?? 'Available',
         notes: editing?.notes ?? '',
       })
@@ -175,6 +182,9 @@ function EquipmentDialog({ open, onClose, editing }: { open: boolean; onClose: (
         identifier: form.identifier,
         weightKg: form.weightKg ? Number(form.weightKg) : null,
         value: form.value ? Number(form.value) : null,
+        allocationType: form.allocationType,
+        shareType: form.shareType,
+        shareValue: Number(form.shareValue.replace(',', '.')) || 0,
         status: form.status,
         notes: form.notes,
       }
@@ -223,6 +233,47 @@ function EquipmentDialog({ open, onClose, editing }: { open: boolean; onClose: (
                 </SelectContent>
               </Select>
             </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="flex items-center gap-1.5">
+              Tipo de vínculo <InfoTooltip text="Interno: equipamento de uso exclusivo do artista. Externo: equipamento que o contratante pode adicionar como adicional na contratação do show." />
+            </Label>
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                type="button"
+                variant={form.allocationType === 'Interno' ? 'default' : 'outline'}
+                onClick={() => setForm({ ...form, allocationType: 'Interno' })}
+              >
+                Interno
+              </Button>
+              <Button
+                type="button"
+                variant={form.allocationType === 'Externo' ? 'default' : 'outline'}
+                onClick={() => setForm({ ...form, allocationType: 'Externo' })}
+              >
+                Externo
+              </Button>
+            </div>
+            {form.allocationType === 'Externo' && (
+              <div className="grid grid-cols-2 gap-3 pt-1">
+                <div className="space-y-1.5">
+                  <Label>Tipo de custo</Label>
+                  <Select value={form.shareType} onValueChange={(v) => setForm({ ...form, shareType: v as ShareType })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Fixed">Valor fixo (R$)</SelectItem>
+                      <SelectItem value="Percentage">Percentual (%)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>{form.shareType === 'Percentage' ? 'Percentual' : 'Valor do adicional'}</Label>
+                  <Input value={form.shareValue} onChange={(e) => setForm({ ...form, shareValue: e.target.value })} placeholder="0" />
+                </div>
+              </div>
+            )}
           </div>
           <div className="grid grid-cols-3 gap-3">
             <div className="space-y-1.5">

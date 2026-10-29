@@ -199,6 +199,11 @@ export const publicContractsApi = {
     api.post<import('@/types').ArtistContract>(`/public/contracts/${token}/sign`, payload),
 }
 
+// Adicionais públicos do artista (equipe externa + equipamento externo)
+export const addonsApi = {
+  list: (artistId: string) => api.get<import('@/types').ArtistAddons>(`/artists/${artistId}/addons`),
+}
+
 export const uploadsApi = {
   upload: (file: File) => {
     const form = new FormData()

@@ -22,6 +22,8 @@ export type TransactionStatus = 'Pending' | 'Received' | 'Paid' | 'Overdue' | 'C
 export type EquipmentStatus = 'Available' | 'InUse' | 'Maintenance' | 'Unavailable'
 export type ShareType = 'Percentage' | 'Fixed'
 export type ContractorType = 'Person' | 'Company'
+export type AllocationType = 'Interno' | 'Externo'
+export type AddonItemType = 'TeamMember' | 'Equipment'
 export type NotificationType =
   | 'NewBookingRequest'
   | 'NewMessage'
@@ -33,6 +35,7 @@ export type NotificationType =
   | 'PaymentOverdue'
   | 'NewReview'
   | 'SubscriptionConfirmed'
+  | 'BookingCancelled'
 
 // ─────────────────────────── Auth ───────────────────────────
 
@@ -83,6 +86,7 @@ export interface Artist {
   averageRating: number | null
   reviewCount: number
   startingPrice: number | null
+  travelTimeMinutes: number
 }
 
 export interface ArtistCard {
@@ -173,6 +177,16 @@ export interface SearchArtistsParams {
 
 // ─────────────────────────── Bookings & Proposals ───────────────────────────
 
+export interface BookingAddon {
+  id: string
+  itemType: AddonItemType
+  itemId: string
+  name: string
+  shareType: ShareType
+  shareValue: number
+  amount: number
+}
+
 export interface Booking {
   id: string
   artistId: string
@@ -196,6 +210,31 @@ export interface Booking {
   acceptedProposalId: string | null
   conversationId: string
   createdAt: string
+  addons: BookingAddon[]
+}
+
+export interface BookingAddonItem {
+  itemType: AddonItemType
+  itemId: string
+}
+
+export interface ArtistAddons {
+  teamMembers: {
+    id: string
+    name: string
+    role: string
+    allocationType: AllocationType
+    shareType: ShareType
+    shareValue: number
+  }[]
+  equipment: {
+    id: string
+    name: string
+    category: string
+    allocationType: AllocationType
+    shareType: ShareType
+    shareValue: number
+  }[]
 }
 
 export interface CreateBookingPayload {
@@ -208,6 +247,7 @@ export interface CreateBookingPayload {
   estimatedAudience?: number | null
   budget?: number | null
   message: string
+  addons?: BookingAddonItem[]
 }
 
 export interface CreateGuestBookingPayload {
@@ -223,6 +263,7 @@ export interface CreateGuestBookingPayload {
   eventType: EventType
   estimatedAudience?: number | null
   message: string
+  addons?: BookingAddonItem[]
 }
 
 export interface ProposalItem {
@@ -374,6 +415,7 @@ export interface TeamMember {
   role: string
   phone: string
   email: string
+  allocationType: AllocationType
   defaultShareType: ShareType
   defaultShareValue: number
   notes: string
@@ -388,6 +430,9 @@ export interface Equipment {
   identifier: string
   weightKg: number | null
   value: number | null
+  allocationType: AllocationType
+  shareType: ShareType
+  shareValue: number
   status: EquipmentStatus
   notes: string
 }
@@ -468,6 +513,7 @@ export interface SaveArtistPayload {
   eventTypes: string[]
   galleryUrls: string[]
   videoUrls: string[]
+  travelTimeMinutes: number
 }
 
 export interface SaveFeePayload {
@@ -569,6 +615,7 @@ export interface SaveTeamMemberPayload {
   role: string
   phone: string
   email: string
+  allocationType: AllocationType
   defaultShareType: ShareType
   defaultShareValue: number
   notes: string
@@ -582,6 +629,9 @@ export interface SaveEquipmentPayload {
   identifier: string
   weightKg?: number | null
   value?: number | null
+  allocationType: AllocationType
+  shareType: ShareType
+  shareValue: number
   status: EquipmentStatus
   notes: string
 }

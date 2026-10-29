@@ -17,6 +17,7 @@ import { BookingStatusBadge, eventTypeLabel, proposalStatusLabel } from '@/compo
 import { cn, formatDate, formatDateTime, formatMoney, formatTime } from '@/lib/utils'
 import { extractApiError } from '@/services/api'
 import { ContractTab } from '@/pages/shared/ContractTab'
+import { EventTeamEquipmentTab } from '@/pages/shared/EventTeamEquipmentTab'
 import type { CreateProposalPayload, Proposal } from '@/types'
 
 export function BookingDetailPage() {
@@ -33,6 +34,7 @@ export function BookingDetailPage() {
   })
 
   const [acceptOpen, setAcceptOpen] = useState(false)
+  const [cancelConfirmedOpen, setCancelConfirmedOpen] = useState(false)
 
   const acceptDirect = useMutation({
     mutationFn: () => bookingsApi.accept(id!),
@@ -54,7 +56,18 @@ export function BookingDetailPage() {
     queryClient.invalidateQueries({ queryKey: ['booking', id] })
     queryClient.invalidateQueries({ queryKey: ['proposals', id] })
     queryClient.invalidateQueries({ queryKey: ['bookings'] })
+    if (booking?.eventId) queryClient.invalidateQueries({ queryKey: ['event-detail', booking.eventId] })
   }
+
+  const cancelConfirmed = useMutation({
+    mutationFn: () => bookingsApi.cancel(id!),
+    onSuccess: () => {
+      toast.success('Show cancelado. A agenda do artista foi liberada.')
+      setCancelConfirmedOpen(false)
+      invalidate()
+    },
+    onError: (e) => toast.error(extractApiError(e)),
+  })
 
   const act = useMutation({
     mutationFn: async ({ action }: { action: 'negotiate' | 'reject' | 'cancel' }) => {
@@ -128,12 +141,50 @@ export function BookingDetailPage() {
             Recusar
           </Button>
         )}
+        {isArtist && booking.status === 'Confirmed' && (
+          <Button variant="destructive" onClick={() => setCancelConfirmedOpen(true)} disabled={cancelConfirmed.isPending}>
+            <X /> Cancelar show
+          </Button>
+        )}
         {canAct && (
           <Button variant="outline" onClick={() => act.mutate({ action: 'cancel' })} disabled={act.isPending}>
             <X /> Cancelar
           </Button>
         )}
       </div>
+
+      <Dialog open={cancelConfirmedOpen} onOpenChange={(o) => !o && setCancelConfirmedOpen(false)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Cancelar show confirmado</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 text-sm text-muted-foreground">
+            <p>
+              Confirma o cancelamento do show de{' '}
+              <strong className="text-foreground">{formatDate(booking.eventDate)}</strong> às{' '}
+              <strong className="text-foreground">{formatTime(booking.startTime)}</strong> com{' '}
+              <strong className="text-foreground">{booking.contractorName}</strong>?
+            </p>
+            <p>
+              A agenda será liberada e o contratante será notificado. Conforme a cláusula 3.2 do contrato, o
+              cancelamento após 24h da confirmação pode sujeitar à multa de 50% do cachê — alinhe pelo WhatsApp
+              antes de prosseguir.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCancelConfirmedOpen(false)}>
+              Voltar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => cancelConfirmed.mutate()}
+              disabled={cancelConfirmed.isPending}
+            >
+              {cancelConfirmed.isPending ? 'Cancelando...' : 'Confirmar cancelamento'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={acceptOpen} onOpenChange={(o) => !o && setAcceptOpen(false)}>
         <DialogContent className="max-w-md">
@@ -205,6 +256,32 @@ export function BookingDetailPage() {
                 <p className="text-sm font-medium">Mensagem do contratante</p>
                 <p className="mt-1 text-sm text-muted-foreground">{booking.message || '—'}</p>
               </div>
+              {booking.addons.length > 0 && (
+                <div className="sm:col-span-2">
+                  <p className="text-sm font-medium">Adicionais contratados</p>
+                  <div className="mt-2 space-y-1.5">
+                    {booking.addons.map((addon) => (
+                      <div key={addon.id} className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+                        <span>
+                          {addon.name}{' '}
+                          <span className="text-xs text-muted-foreground">
+                            ({addon.shareType === 'Percentage' ? `${addon.shareValue}% da proposta` : 'valor fixo'})
+                          </span>
+                        </span>
+                        <span className="font-medium">{formatMoney(addon.amount)}</span>
+                      </div>
+                    ))}
+                    <div className="flex items-center justify-between rounded-md bg-accent px-3 py-2 text-sm font-semibold">
+                      <span>Total da proposta com adicionais</span>
+                      <span>
+                        {formatMoney(
+                          (booking.budget ?? 0)
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -257,24 +334,19 @@ export function BookingDetailPage() {
           )}
         </TabsContent>
 
-        <TabsContent value="docs">
+        <TabsContent value="docs" className="space-y-6">
+          <EventTeamEquipmentTab booking={booking} />
           <Card>
             <CardContent className="p-6 text-sm text-muted-foreground">
-              <p>
-                Equipe, equipamentos e documentos do evento são gerenciados pelo artista na{' '}
-                <Link to="/artist/agenda" className="text-primary hover:underline">
-                  agenda
-                </Link>{' '}
-                (checklist por evento) e nas páginas de{' '}
-                <Link to="/artist/equipe" className="text-primary hover:underline">
-                  equipe
-                </Link>{' '}
-                e{' '}
-                <Link to="/artist/equipamentos" className="text-primary hover:underline">
-                  equipamentos
-                </Link>
-                . Documentos digitais ficam fora do MVP.
-              </p>
+              Gerencie também os cadastros-base nas páginas de{' '}
+              <Link to="/artist/equipe" className="text-primary hover:underline">
+                equipe
+              </Link>{' '}
+              e{' '}
+              <Link to="/artist/equipamentos" className="text-primary hover:underline">
+                equipamentos
+              </Link>
+              . Documentos digitais ficam fora do MVP.
             </CardContent>
           </Card>
         </TabsContent>
