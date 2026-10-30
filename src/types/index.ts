@@ -650,3 +650,22 @@ export interface SaveContractorPayload {
   city: string
   state: string
 }
+
+export interface SocialLink {
+  artistId: string
+  platform: string
+  handle: string
+  url: string
+}
+
+export interface Epk {
+  artistId: string
+  bio: string
+  photoUrls: string[]
+  videoUrls: string[]
+  songs: string[]
+  spotifyUrl: string | null
+  youTubeUrl: string | null
+  soundCloudUrl: string | null
+  spotifyPlaylistUrl: string | null
+}

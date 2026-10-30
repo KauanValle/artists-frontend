@@ -8,6 +8,7 @@ import { RegisterPage } from '@/pages/auth/RegisterPage'
 import { ForgotPasswordPage } from '@/pages/auth/ForgotPasswordPage'
 import { ResetPasswordPage } from '@/pages/auth/ResetPasswordPage'
 import { ArtistPublicPage } from '@/pages/public/ArtistPublicPage'
+import { EpkPublicPage } from '@/pages/public/EpkPublicPage'
 import { ArtistsDirectoryPage } from '@/pages/public/ArtistsDirectoryPage'
 import { SubscriptionCallbackPage } from '@/pages/public/SubscriptionCallbackPages'
 import { ContractorSigningPage } from '@/pages/public/ContractorSigningPage'
@@ -19,6 +20,7 @@ import { FinancialPage } from '@/pages/artist/FinancialPage'
 import { TeamPage } from '@/pages/artist/TeamPage'
 import { EquipmentPage } from '@/pages/artist/EquipmentPage'
 import { ArtistProfilePage } from '@/pages/artist/ArtistProfilePage'
+import { EpkPage } from '@/pages/artist/EpkPage'
 import { SettingsPage } from '@/pages/artist/SettingsPage'
 import { SubscriptionPage } from '@/pages/artist/SubscriptionPage'
 
@@ -50,6 +52,11 @@ export const router = createBrowserRouter([
     ],
   },
   {
+    // EPK público do artista — landing própria, fora do layout do site (e do login)
+    path: '/epk/:slug',
+    element: <EpkPublicPage />,
+  },
+  {
     element: <ProtectedRoute role="Artist" />,
     children: [
       {
@@ -63,6 +70,7 @@ export const router = createBrowserRouter([
           { path: '/artist/equipe', element: <TeamPage /> },
           { path: '/artist/equipamentos', element: <EquipmentPage /> },
           { path: '/artist/perfil', element: <ArtistProfilePage /> },
+          { path: '/artist/epk', element: <EpkPage /> },
           { path: '/artist/configuracoes', element: <SettingsPage /> },
           { path: '/artist/assinatura', element: <SubscriptionPage /> },
         ],

@@ -177,11 +177,26 @@ export function ContractorSigningPage() {
                   <Label>Endereço *</Label>
                   <Input value={signedAddress} onChange={(e) => setSignedAddress(e.target.value)} placeholder="Rua, número — cidade/UF" />
                 </div>
-                <div className="space-y-1.5">
-                  <Label>Telefone/E-mail *</Label>
-                  <Input value={signedContact} onChange={(e) => setSignedContact(e.target.value)} placeholder="(41) 99999-0000 · voce@email.com" />
-                </div>
-                <div className="space-y-1.5 sm:col-span-2">
+                  <div className="space-y-1.5">
+                      <Label>Telefone *</Label>
+                      <Input
+                          value={signedContact}
+                          onChange={(e) => {
+                              const rawValue = e.target.value.replace(/\D/g, ''); // Remove tudo que não for número
+                              if (rawValue.length <= 11) {
+                                  const maskedValue = rawValue.replace(
+                                      /^(\d{2})(\d{5})(\d{0,4})$/,
+                                      '($1) $2-$3'
+                                  ); // Aplica a máscara
+                                  setSignedContact(rawValue); // Armazena o valor sem máscara
+                                  e.target.value = maskedValue; // Mostra o valor com máscara
+                              }
+                          }}
+                          placeholder="(41) 99999-0000"
+                          maxLength={15} // Limita o número de caracteres exibidos
+                      />
+                  </div>
+                  <div className="space-y-1.5 sm:col-span-2">
                   <Label>Representante legal, se aplicável</Label>
                   <Input value={representative} onChange={(e) => setRepresentative(e.target.value)} placeholder="Nome do representante" />
                 </div>

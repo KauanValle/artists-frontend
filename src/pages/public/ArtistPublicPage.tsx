@@ -2,9 +2,9 @@ import { useMemo, useState, type ReactNode } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { addDays } from 'date-fns'
-import { CalendarDays, CalendarPlus, Check, CheckCircle2, ChevronRight, Heart, Images, MapPin } from 'lucide-react'
+import { CalendarDays, CalendarPlus, Check, CheckCircle2, ChevronRight, Heart, Images, Instagram, MapPin } from 'lucide-react'
 import { toast } from 'sonner'
-import { addonsApi, artistsApi, availabilityApi, bookingsApi, favoritesApi, publicBookingsApi } from '@/services'
+import { addonsApi, artistsApi, availabilityApi, bookingsApi, favoritesApi, publicBookingsApi, socialLinksApi } from '@/services'
 import { useAuth } from '@/hooks/useAuth'
 import { Avatar } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
@@ -51,6 +51,14 @@ export function ArtistPublicPage() {
     queryFn: async () => (await availabilityApi.busySlots(artist!.id, busyFrom, busyTo)).data,
     enabled: !!artist?.id,
   })
+
+  // Redes sociais (Instagram) exibidas ao lado das habilidades.
+  const { data: socialLinks = [] } = useQuery({
+    queryKey: ['artist-social-links', artist?.id],
+    queryFn: async () => (await socialLinksApi.list(artist!.id)).data,
+    enabled: !!artist?.id,
+  })
+  const instagram = socialLinks.find((l) => l.platform === 'Instagram')
 
   // O endpoint devolve datas livres E bloqueios; o card "Datas disponíveis" mostra só as livres.
   const availableDates = availabilities.filter((a) => a.status === 'Available')
@@ -203,20 +211,37 @@ export function ArtistPublicPage() {
 
                   <div className="my-4 h-px bg-border" />
 
-                  {artist.styles.length > 0 && (
+                  {(artist.styles.length > 0 || instagram) && (
                     <div>
-                      <p className="mb-2 text-sm text-muted-foreground">Habilidades principais</p>
-                      <div className="flex flex-wrap gap-2">
-                        {artist.styles.map((s) => (
-                          <Badge key={s} variant="secondary" className="rounded-full px-3 py-1">
-                            {s}
-                          </Badge>
-                        ))}
+                      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                        {artist.styles.length > 0 && (
+                          <p className="text-sm text-muted-foreground">Habilidades principais</p>
+                        )}
+                        {instagram && (
+                          <a
+                            href={instagram.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title={`@${instagram.handle} no Instagram`}
+                            className="ml-auto inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
+                          >
+                            <Instagram className="h-4 w-4" />@{instagram.handle}
+                          </a>
+                        )}
                       </div>
+                      {artist.styles.length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                          {artist.styles.map((s) => (
+                            <Badge key={s} variant="secondary" className="rounded-full px-3 py-1">
+                              {s}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
                   {artist.specialties.length > 0 && (
-                    <div className={artist.styles.length > 0 ? 'mt-4' : ''}>
+                    <div className={artist.styles.length > 0 || instagram ? 'mt-4' : ''}>
                       <p className="mb-2 text-sm text-muted-foreground">Especialidades</p>
                       <div className="flex flex-wrap gap-2">
                         {artist.specialties.map((s) => (
@@ -965,16 +990,24 @@ export function GuestBookingDialog({
                   </div>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="space-y-1.5">
-                    <Label>WhatsApp do responsável *</Label>
-                    <Input
-                      value={guestPhone}
-                      onChange={(e) => setGuestPhone(e.target.value)}
-                      placeholder="(11) 98765-4321"
-                      inputMode="tel"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
+                    <div className="space-y-1.5">
+                        <Label>WhatsApp do responsável *</Label>
+                        <Input
+                            value={guestPhone.replace(/^(\d{2})(\d{5})(\d{4})$/, '($1) $2-$3')} // Aplica a máscara ao exibir
+                            onChange={(e) => {
+                                const rawValue = e.target.value.replace(/\D/g, ''); // Remove caracteres não numéricos
+                                if (rawValue.length <= 11) {
+                                    setGuestPhone(rawValue); // Armazena o valor sem máscara
+                                }
+                            }}
+                            placeholder="(41) 99999-9999"
+                            inputMode="tel"
+                            maxLength={15} // Limita o número de caracteres exibidos
+                        />
+                    </div>
+
+
+                    <div className="space-y-1.5">
                     <Label>Valor da proposta (R$) *</Label>
                     <Input
                       value={budget}

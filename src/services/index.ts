@@ -204,6 +204,27 @@ export const addonsApi = {
   list: (artistId: string) => api.get<import('@/types').ArtistAddons>(`/artists/${artistId}/addons`),
 }
 
+// EPK do artista (kit de imprensa público em /epk/{slug})
+export const epkApi = {
+  get: (artistId: string) => api.get<import('@/types').Epk>(`/epk/${artistId}`),
+  save: (payload: {
+    bio: string
+    photoUrls: string[]
+    videoUrls: string[]
+    songs: string[]
+    spotifyUrl: string | null
+    youTubeUrl: string | null
+    soundCloudUrl: string | null
+    spotifyPlaylistUrl: string | null
+  }) => api.put<import('@/types').Epk>('/epk', payload),
+}
+
+// Redes sociais do artista (por enquanto Instagram)
+export const socialLinksApi = {
+  list: (artistId: string) => api.get<import('@/types').SocialLink[]>(`/social-links/${artistId}`),
+  save: (payload: { platform: string; handle: string }) => api.put<import('@/types').SocialLink | null>('/social-links', payload),
+}
+
 // Identidade visual da plataforma
 export const brandingApi = {
   get: () => api.get<import('@/types').Branding>('/branding'),
