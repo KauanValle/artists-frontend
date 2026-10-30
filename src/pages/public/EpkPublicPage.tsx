@@ -1,21 +1,28 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import {
   ArrowRight,
   Briefcase,
+  ChevronLeft,
+  ChevronRight,
+  Clapperboard,
   ClipboardList,
   Clock,
   Disc3,
+  Images,
   Instagram,
+  LayoutGrid,
   MapPin,
   Music,
   Play,
   Send,
+  Share2,
   Speaker,
   Star,
   User,
 } from 'lucide-react'
+import { toast } from 'sonner'
 import { artistsApi, epkApi, socialLinksApi } from '@/services'
 import { SoundCloudIcon, SpotifyIcon, YoutubeIcon } from '@/components/ui/streaming-icons'
 import { BrandLogo } from '@/components/ui/brand-logo'
@@ -59,6 +66,27 @@ export function EpkPublicPage() {
     if (artist) document.title = `${artist.artisticName} — EPK | reprissa`
   }, [artist])
 
+  // Galeria — abas de filtro, carrossel de fotos e duração dos vídeos (MP4).
+  // Hooks precisam vir antes dos retornos antecipados (regras de hooks).
+  const [tabMidia, setTabMidia] = useState<'todos' | 'fotos' | 'videos'>('todos')
+  const [fotoIndex, setFotoIndex] = useState(0)
+  const [duracoesVideo, setDuracoesVideo] = useState<Record<string, number>>({})
+  const [videoTocando, setVideoTocando] = useState<string | null>(null)
+  const [progressoVideo, setProgressoVideo] = useState<Record<string, number>>({})
+  const stripRef = useRef<HTMLDivElement>(null)
+  const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({})
+  const fotosGaleriaPre = artist
+    ? (epk?.photoUrls ?? []).length > 0
+      ? (epk?.photoUrls ?? [])
+      : artist.galleryUrls
+    : []
+  useEffect(() => setFotoIndex(0), [fotosGaleriaPre.length])
+  const thumbsJanela = useMemo(() => {
+    if (fotosGaleriaPre.length <= 6) return { inicio: 0, fotos: fotosGaleriaPre }
+    const inicio = Math.min(Math.max(0, fotoIndex - 2), fotosGaleriaPre.length - 6)
+    return { inicio, fotos: fotosGaleriaPre.slice(inicio, inicio + 6) }
+  }, [fotosGaleriaPre, fotoIndex])
+
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#0a0a12]">
@@ -89,8 +117,9 @@ export function EpkPublicPage() {
   const epkPhotos = epk?.photoUrls ?? []
   const epkVideos = epk?.videoUrls ?? []
   const fotosGaleria = epkPhotos.length > 0 ? epkPhotos : artist.galleryUrls
-  const videoDestaque = epkVideos[0] ?? artist.videoUrls[0] ?? null
-  const temGaleria = fotosGaleria.length > 0
+  const videosGaleria = epkVideos.length > 0 ? epkVideos : artist.videoUrls
+  const videoDestaque = videosGaleria[0] ?? null
+  const temGaleria = fotosGaleria.length > 0 || videosGaleria.length > 0
   const temVideo = videoDestaque != null
   const isVideoArquivo = (url: string) => !/^https?:\/\/(www\.)?(youtube\.com|youtu\.be|vimeo\.com)\//i.test(url)
 
@@ -137,7 +166,43 @@ export function EpkPublicPage() {
   ].filter((p) => !!p.url)
   const temRepertorio = epkSongs.length > 0 || plataformas.length > 0 || !!epk?.spotifyPlaylistUrl
 
-  // Contratação — informações comerciais. Duração/estrutura/rider ainda não têm
+  // Galeria — derivados de filtro (os hooks estão no topo do componente).
+  const mostrarVideos = temGaleria && (tabMidia === 'todos' || tabMidia === 'videos') && videosGaleria.length > 0
+  const mostrarFotos = temGaleria && (tabMidia === 'todos' || tabMidia === 'fotos') && fotosGaleria.length > 0
+  const fmtDuracao = (segundos: number) => {
+    const s = Math.max(0, Math.round(segundos))
+    return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
+  }
+  const nomeVideo = (url: string) => {
+    if (!isVideoArquivo(url)) return 'Vídeo no YouTube'
+    try {
+      const arquivo = decodeURIComponent(new URL(url, window.location.origin).pathname.split('/').pop() ?? '')
+      const nome = arquivo.replace(/\.[^.]+$/, '')
+      // Arquivos enviados recebem nome de código no storage — exibe rótulo amigável.
+      if (!nome || /^[a-f0-9-]{16,}$/i.test(nome)) return 'Vídeo'
+      return nome
+    } catch {
+      return 'Vídeo'
+    }
+  }
+  const rolarStrip = (delta: number) => stripRef.current?.scrollBy({ left: delta, behavior: 'smooth' })
+
+  // Duração dos shows — extraída dos cachês cadastrados (hora × cachê):
+  // durações distintas em ordem crescente, ex.: "1h, 2h ou 3h".
+  const duracoes = [...new Set(artist.fees.map((f) => f.durationMinutes).filter((m) => m > 0))].sort(
+    (a, b) => a - b
+  )
+  const duracaoLabel = (min: number) =>
+    min < 60 ? `${min}min` : min % 60 === 0 ? `${min / 60}h` : `${Math.floor(min / 60)}h${String(min % 60).padStart(2, '0')}`
+  const duracaoTexto =
+    duracoes.length > 0
+      ? duracoes
+          .map(duracaoLabel)
+          .join(', ')
+          .replace(/, ([^,]*)$/, ' ou $1')
+      : 'A combinar'
+
+  // Contratação — informações comerciais. Estrutura/rider ainda não têm
   // campo no perfil: usam o texto padrão do kit até a etapa de edição do EPK.
   const comercial = [
     {
@@ -145,7 +210,7 @@ export function EpkPublicPage() {
       label: 'Formatos de apresentação',
       value: artist.eventTypes.length > 0 ? artist.eventTypes.join(' / ') : `Show · ${tipo}`,
     },
-    { icon: Clock, label: 'Duração dos shows', value: '1h, 2h ou 3h' },
+    { icon: Clock, label: 'Duração dos shows', value: duracaoTexto },
     { icon: ClipboardList, label: 'Rider técnico', value: 'Disponível mediante solicitação' },
   ]
 
@@ -346,75 +411,306 @@ export function EpkPublicPage() {
       {temGaleria && (
         <section id="epk-galeria" className="scroll-mt-16 border-t border-white/5 py-16 lg:py-20">
           <div className="mx-auto max-w-6xl px-4">
-            <div className="flex flex-wrap items-end justify-between gap-3">
+            {/* Cabeçalho */}
+            <div className="flex flex-wrap items-end justify-between gap-4">
               <div>
-                <p className="text-sm font-semibold uppercase tracking-[0.2em] text-violet-400">Galeria</p>
-                <h2 className="mt-2 text-3xl font-bold tracking-tight">Fotos & vídeos</h2>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-violet-400">Galeria</p>
+                <h2 className="mt-2 text-3xl font-bold tracking-tight text-white sm:text-4xl">Fotos &amp; Vídeos</h2>
+                <p className="mt-2 text-sm text-white/50">
+                  Confira alguns registros de shows, bastidores e trabalhos do artista.
+                </p>
               </div>
-              {!isVideoArquivo(videoDestaque) && (
-                <a
-                  href={videoDestaque}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm font-semibold text-violet-400 hover:text-violet-300"
-                >
-                  Ver galeria completa →
-                </a>
-              )}
+              <Button
+                variant="outline"
+                className="rounded-xl border-white/15 bg-white/[0.04] text-white hover:bg-white/10 hover:text-white"
+                onClick={() => {
+                  navigator.clipboard.writeText(window.location.href)
+                  toast.success('Link da galeria copiado!')
+                }}
+              >
+                <Share2 className="h-4 w-4" /> Compartilhar galeria
+              </Button>
             </div>
 
-            {/* Vídeos do EPK: MP4 toca embutido; YouTube/Vimeo vira card de link */}
-            {epkVideos.length > 0 && (
-              <div className={cn('mt-8 grid gap-3', epkVideos.length > 1 ? 'md:grid-cols-2' : '')}>
-                {epkVideos.map((url) =>
-                  isVideoArquivo(url) ? (
-                    <video
-                      key={url}
-                      src={url}
-                      controls
-                      preload="metadata"
-                      className="aspect-video w-full rounded-2xl border border-white/10 bg-black"
-                    />
-                  ) : (
+            {/* Abas Todos / Fotos / Vídeos */}
+            <div className="mt-6 inline-flex flex-wrap gap-1 rounded-xl border border-white/10 bg-white/[0.03] p-1">
+              {(
+                [
+                  { id: 'todos', label: 'Todos', Icon: LayoutGrid, count: fotosGaleria.length + videosGaleria.length },
+                  { id: 'fotos', label: 'Fotos', Icon: Images, count: fotosGaleria.length },
+                  { id: 'videos', label: 'Vídeos', Icon: Clapperboard, count: videosGaleria.length },
+                ] as const
+              ).map(({ id, label, Icon, count }) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setTabMidia(id)}
+                  className={cn(
+                    'flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors',
+                    tabMidia === id ? 'bg-violet-600 text-white' : 'text-white/60 hover:text-white'
+                  )}
+                >
+                  <Icon className="h-4 w-4" /> {label}
+                  <span
+                    className={cn(
+                      'rounded-full px-1.5 py-0.5 text-[11px] font-semibold',
+                      tabMidia === id ? 'bg-white/20 text-white' : 'bg-white/10 text-white/60'
+                    )}
+                  >
+                    {count}
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            {/* Vídeos */}
+            {mostrarVideos && (
+              <div className="mt-10">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="flex items-center gap-2 text-lg font-bold text-white">
+                    <Clapperboard className="h-5 w-5 text-violet-400" /> Vídeos
+                    <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs font-semibold text-white/70">
+                      {videosGaleria.length}
+                    </span>
+                  </p>
+                  {epk?.youTubeUrl && (
                     <a
-                      key={url}
-                      href={url}
+                      href={epk.youTubeUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="group relative flex aspect-video items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-[#151221]"
+                      className="text-sm font-semibold text-violet-400 hover:text-violet-300"
                     >
-                      <span className="flex h-14 w-14 items-center justify-center rounded-full bg-violet-600 text-white transition-transform group-hover:scale-110">
-                        <Play className="h-6 w-6" />
-                      </span>
-                      <span className="absolute bottom-3 left-4 max-w-[80%] truncate text-sm text-white/60">
-                        {url}
-                      </span>
+                      Ver todos os vídeos →
                     </a>
-                  )
-                )}
+                  )}
+                </div>
+
+                <div className="mt-4 grid gap-4 md:grid-cols-2">
+                  {videosGaleria.map((url) =>
+                    isVideoArquivo(url) ? (
+                      <div
+                        key={url}
+                        className="group relative aspect-video overflow-hidden rounded-2xl border border-white/10 bg-black"
+                      >
+                        <video
+                          ref={(el) => {
+                            videoRefs.current[url] = el
+                          }}
+                          src={url}
+                          preload="metadata"
+                          playsInline
+                          className="h-full w-full object-cover"
+                          onLoadedMetadata={(e) => {
+                            const duracao = e.currentTarget.duration
+                            if (!Number.isFinite(duracao)) return
+                            setDuracoesVideo((atual) =>
+                              atual[url] != null ? atual : { ...atual, [url]: duracao }
+                            )
+                          }}
+                          onTimeUpdate={(e) => {
+                            const video = e.currentTarget
+                            const fracao = video.duration ? video.currentTime / video.duration : 0
+                            setProgressoVideo((atual) => ({ ...atual, [url]: fracao }))
+                          }}
+                          onPlay={() => {
+                            Object.entries(videoRefs.current).forEach(([outra, el]) => {
+                              if (outra !== url && el && !el.paused) el.pause()
+                            })
+                            setVideoTocando(url)
+                          }}
+                          onPause={() => setVideoTocando((atual) => (atual === url ? null : atual))}
+                          onEnded={() => {
+                            setVideoTocando((atual) => (atual === url ? null : atual))
+                            setProgressoVideo((atual) => ({ ...atual, [url]: 0 }))
+                          }}
+                        />
+
+                        {/* Clique alterna play/pause */}
+                        <button
+                          type="button"
+                          aria-label={videoTocando === url ? 'Pausar vídeo' : 'Reproduzir vídeo'}
+                          onClick={() => {
+                            const video = videoRefs.current[url]
+                            if (!video) return
+                            if (video.paused) void video.play()
+                            else video.pause()
+                          }}
+                          className="absolute inset-0"
+                        />
+
+                        {/* Overlay de repouso: play central */}
+                        {videoTocando !== url && (
+                          <span className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/25 transition-opacity">
+                            <span className="flex h-14 w-14 items-center justify-center rounded-full border border-white/25 bg-black/50 backdrop-blur transition-transform group-hover:scale-110">
+                              <Play className="h-6 w-6 fill-white text-white" />
+                            </span>
+                          </span>
+                        )}
+
+                        {/* Duração */}
+                        <span className="pointer-events-none absolute left-3 top-3 flex items-center gap-1.5 rounded-md bg-black/70 px-2 py-1 text-xs font-medium text-white">
+                          <Clapperboard className="h-3.5 w-3.5" />
+                          {duracoesVideo[url] != null ? fmtDuracao(duracoesVideo[url]!) : '--:--'}
+                        </span>
+
+                        {/* Título + HD */}
+                        <span className="pointer-events-none absolute inset-x-0 bottom-1 flex items-end justify-between bg-gradient-to-t from-black/85 to-transparent px-4 pb-3 pt-10">
+                          <span className="max-w-[70%] truncate text-sm font-semibold text-white">
+                            {nomeVideo(url)}
+                          </span>
+                          <span className="rounded-md border border-white/25 bg-black/50 px-1.5 py-0.5 text-[11px] font-semibold text-white/80">
+                            HD
+                          </span>
+                        </span>
+
+                        {/* Progresso */}
+                        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1 bg-white/15">
+                          <div
+                            className="h-full bg-violet-500 transition-[width] duration-200"
+                            style={{ width: `${Math.min(100, (progressoVideo[url] ?? 0) * 100)}%` }}
+                          />
+                        </div>
+                      </div>
+                    ) : (
+                      <a
+                        key={url}
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="group relative flex aspect-video items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-[#151221]"
+                      >
+                        <span className="flex h-14 w-14 items-center justify-center rounded-full bg-violet-600 text-white shadow-[0_0_24px_-4px_rgba(139,92,246,0.9)] transition-transform group-hover:scale-110">
+                          <Play className="h-6 w-6" />
+                        </span>
+                        <span className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-black/85 to-transparent px-4 pb-3 pt-8">
+                          <span className="text-sm font-semibold text-white">Vídeo no YouTube</span>
+                          <span className="rounded-md bg-black/60 px-1.5 py-0.5 text-[11px] font-semibold text-white/80">HD</span>
+                        </span>
+                      </a>
+                    )
+                  )}
+                </div>
               </div>
             )}
 
-            <div className="mt-8 grid grid-cols-2 gap-3 md:grid-cols-4">
-              {fotosGaleria.slice(0, 12).map((url, i) => (
-                <a
-                  key={url}
-                  href={url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={cn(
-                    'group relative overflow-hidden rounded-2xl border border-white/10',
-                    epkVideos.length === 0 && i === 0 && 'col-span-2 row-span-2'
-                  )}
-                >
-                  <img
-                    src={url}
-                    alt={`Foto ${i + 1} de ${artist.artisticName}`}
-                    className="aspect-square w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                  />
-                </a>
-              ))}
-            </div>
+            {/* Fotos */}
+            {mostrarFotos && (
+              <div className={cn('mt-10', mostrarVideos && 'border-t border-white/5 pt-10')}>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="flex items-center gap-2 text-lg font-bold text-white">
+                    <Images className="h-5 w-5 text-violet-400" /> Fotos
+                    <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs font-semibold text-white/70">
+                      {fotosGaleria.length}
+                    </span>
+                  </p>
+                  <a
+                    href={fotosGaleria[Math.min(fotoIndex, fotosGaleria.length - 1)]}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm font-semibold text-violet-400 hover:text-violet-300"
+                  >
+                    Ver todas as fotos →
+                  </a>
+                </div>
+
+                {/* Carrossel principal + coluna de miniaturas */}
+                <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_220px]">
+                  <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-black">
+                    <img
+                      src={fotosGaleria[Math.min(fotoIndex, fotosGaleria.length - 1)]}
+                      alt={`Foto ${fotoIndex + 1} de ${artist.artisticName}`}
+                      className="aspect-[16/10] w-full object-cover"
+                    />
+                    {fotosGaleria.length > 1 && (
+                      <>
+                        <button
+                          type="button"
+                          aria-label="Foto anterior"
+                          onClick={() => setFotoIndex((i) => (i - 1 + fotosGaleria.length) % fotosGaleria.length)}
+                          className="absolute left-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur transition-colors hover:bg-black/80"
+                        >
+                          <ChevronLeft className="h-5 w-5" />
+                        </button>
+                        <button
+                          type="button"
+                          aria-label="Próxima foto"
+                          onClick={() => setFotoIndex((i) => (i + 1) % fotosGaleria.length)}
+                          className="absolute right-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur transition-colors hover:bg-black/80"
+                        >
+                          <ChevronRight className="h-5 w-5" />
+                        </button>
+                      </>
+                    )}
+                    <span className="absolute bottom-3 left-4 text-xs font-medium text-white/80">
+                      {Math.min(fotoIndex + 1, fotosGaleria.length)} / {fotosGaleria.length}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2 lg:grid-cols-2">
+                    {thumbsJanela.fotos.map((url, i) => {
+                      const indiceReal = thumbsJanela.inicio + i
+                      return (
+                        <button
+                          key={url}
+                          type="button"
+                          onClick={() => setFotoIndex(indiceReal)}
+                          className={cn(
+                            'overflow-hidden rounded-xl border transition-colors',
+                            indiceReal === fotoIndex
+                              ? 'border-violet-500 ring-1 ring-violet-500'
+                              : 'border-white/10 opacity-80 hover:opacity-100'
+                          )}
+                        >
+                          <img src={url} alt="" className="aspect-square h-full w-full object-cover" />
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* Faixa de miniaturas */}
+                {fotosGaleria.length > 1 && (
+                  <div className="mt-3 flex items-center gap-2">
+                    <button
+                      type="button"
+                      aria-label="Rolar miniaturas para a esquerda"
+                      onClick={() => rolarStrip(-240)}
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 text-white/60 hover:text-white"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </button>
+                    <div
+                      ref={stripRef}
+                      className="flex flex-1 gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                    >
+                      {fotosGaleria.map((url, i) => (
+                        <button
+                          key={url}
+                          type="button"
+                          onClick={() => setFotoIndex(i)}
+                          className={cn(
+                            'h-16 w-24 shrink-0 overflow-hidden rounded-lg border transition-colors',
+                            i === fotoIndex
+                              ? 'border-violet-500 ring-1 ring-violet-500'
+                              : 'border-white/10 opacity-70 hover:opacity-100'
+                          )}
+                        >
+                          <img src={url} alt="" className="h-full w-full object-cover" />
+                        </button>
+                      ))}
+                    </div>
+                    <button
+                      type="button"
+                      aria-label="Rolar miniaturas para a direita"
+                      onClick={() => rolarStrip(240)}
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 text-white/60 hover:text-white"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </section>
       )}
