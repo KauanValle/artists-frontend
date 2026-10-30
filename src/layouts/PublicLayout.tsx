@@ -1,4 +1,5 @@
 import { Link, Outlet } from 'react-router-dom'
+import { BrandMark } from '@/components/ui/brand-logo'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
 
 export function PublicLayout() {
@@ -7,8 +8,7 @@ export function PublicLayout() {
       <header className="border-b">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
           <Link to="/" className="flex items-center gap-2">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">🎤</span>
-            <span className="hidden text-base font-bold sm:inline">Artist Platform</span>
+            <BrandMark />
           </Link>
           <div className="flex items-center gap-1 sm:gap-2">
             <ThemeToggle />
@@ -29,7 +29,7 @@ export function PublicLayout() {
       </header>
       <Outlet />
       <footer className="border-t py-8 text-center text-sm text-muted-foreground">
-        Artist Platform — O sistema operacional da carreira do artista
+        reprissa — conectando talentos a oportunidades
       </footer>
     </div>
   )

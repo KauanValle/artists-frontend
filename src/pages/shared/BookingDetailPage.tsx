@@ -216,6 +216,7 @@ export function BookingDetailPage() {
               </div>
             )}
           </div>
+          
           <DialogFooter>
             <Button variant="outline" onClick={() => setAcceptOpen(false)}>
               Voltar
@@ -398,8 +399,8 @@ function GuestContactCard({ booking }: { booking: import('@/types').Booking }) {
           </Button>
         )}
         <div className="bg-orange-100 border-l-4 border-orange-500 text-orange-700 p-4" role="alert">
-          <p className="text-xs text-muted-foreground">
-            Solicitação aberta pela página pública, sem cadastro — combine os detalhes pelo WhatsApp.
+          <p className="text-xs text-black">
+            Para prosseguir com a contratação do evento, peça para o contratante se cadastrar no Reprissa com os mesmos dados informados na solicitação. Assim, o artista terá acesso ao chat, propostas e contrato digital.
           </p>
         </div>
       </CardContent>

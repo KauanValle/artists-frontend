@@ -78,8 +78,8 @@ export const availabilityApi = {
 // Bookings & Proposals
 export const bookingsApi = {
   create: (payload: CreateBookingPayload) => api.post('/bookings', payload),
-  list: (status?: string, page = 1, pageSize = 50) =>
-    api.get<PagedResult<import('@/types').Booking>>('/bookings', { params: { status, page, pageSize } }),
+  list: (status?: string, page = 1, pageSize = 50, isGuest?: boolean) =>
+    api.get<PagedResult<import('@/types').Booking>>('/bookings', { params: { status, isGuest, page, pageSize } }),
   get: (id: string) => api.get<import('@/types').Booking>(`/bookings/${id}`),
   negotiate: (id: string) => api.post(`/bookings/${id}/negotiate`),
   accept: (id: string) => api.post<import('@/types').Booking>(`/bookings/${id}/accept`),
@@ -202,6 +202,19 @@ export const publicContractsApi = {
 // Adicionais públicos do artista (equipe externa + equipamento externo)
 export const addonsApi = {
   list: (artistId: string) => api.get<import('@/types').ArtistAddons>(`/artists/${artistId}/addons`),
+}
+
+// Identidade visual da plataforma
+export const brandingApi = {
+  get: () => api.get<import('@/types').Branding>('/branding'),
+  uploadLogo: (file: File) => {
+    const form = new FormData()
+    form.append('file', file)
+    return api.post<import('@/types').Branding>('/branding/logo', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+  },
+  removeLogo: () => api.delete('/branding/logo'),
 }
 
 export const uploadsApi = {

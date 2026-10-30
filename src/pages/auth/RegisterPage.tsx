@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Link, useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -44,7 +45,15 @@ const ARTIST_STEPS = [
 export function RegisterPage() {
   const { registerArtist, registerContractor } = useAuth()
   const navigate = useNavigate()
-  const [role, setRole] = useState<'Artist' | 'Contractor'>('Artist')
+  const [searchParams] = useSearchParams()
+
+  // Pré-preenchimento via link gerado no admin (contratante visitante → cadastro)
+  const prefillName = searchParams.get('nome') ?? ''
+  const prefillEmpresa = searchParams.get('empresa') ?? ''
+  const prefillTelefone = searchParams.get('telefone') ?? ''
+  const hasPrefill = Boolean(prefillName || prefillEmpresa || prefillTelefone)
+
+  const [role, setRole] = useState<'Artist' | 'Contractor'>(hasPrefill ? 'Contractor' : 'Artist')
   const [step, setStep] = useState(0)
   const [artistType, setArtistType] = useState('Solo')
   const [categoryId, setCategoryId] = useState('')
@@ -60,6 +69,10 @@ export function RegisterPage() {
 
   const schema = role === 'Artist' ? artistSchema : contractorSchema
   const { register, handleSubmit, trigger, formState: { errors, isSubmitting } } = useForm<Record<string, string>>({
+    defaultValues: {
+      name: prefillName,
+      phone: prefillTelefone,
+    },
     // Registro tem dois formatos (artista em passos / contratante em formulário único);
     // validação fina é feita pelo schema escolhido.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -89,7 +102,7 @@ export function RegisterPage() {
         toast.success('Conta criada! Assine para desbloquear o perfil completo.')
         navigate('/artist/dashboard')
       } else {
-        await registerContractor({ ...data, contractorType: 'Person' })
+        await registerContractor({ ...data, contractorType: 'Person', companyName: prefillEmpresa || null })
         toast.success('Conta criada com sucesso!')
         navigate('/contractor/dashboard')
       }
@@ -107,6 +120,12 @@ export function RegisterPage() {
           <h1 className="text-2xl font-bold">Criar conta</h1>
           <p className="mt-1 text-sm text-muted-foreground">Escolha seu perfil e comece agora</p>
         </div>
+
+        {hasPrefill && (
+          <div className="mb-4 rounded-md border border-emerald-500/60 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-500/40 dark:bg-emerald-950/40 dark:text-emerald-200">
+            Reconhecemos os dados da sua contratação — só falta seu e-mail e senha para criar a conta!
+          </div>
+        )}
 
         <div className="mb-4 grid grid-cols-2 gap-2">
           <Button variant={role === 'Artist' ? 'default' : 'outline'} onClick={() => setRole('Artist')}>

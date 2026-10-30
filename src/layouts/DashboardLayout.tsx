@@ -22,6 +22,7 @@ import {
 import { useAuth } from '@/hooks/useAuth'
 import { getMissingProfileFields, useMyArtist } from '@/hooks/useArtistProfile'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
+import { BrandMark } from '@/components/ui/brand-logo'
 import { Avatar } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { NotificationsMenu } from '@/components/NotificationsMenu'
@@ -80,8 +81,7 @@ function SidebarContent({
   return (
     <>
       <div className="flex h-16 items-center gap-2 border-b px-5">
-        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">🎤</span>
-        <span className="text-base font-bold">Artist Platform</span>
+        <BrandMark />
       </div>
       <nav className="flex-1 space-y-1 overflow-y-auto p-3">
         {nav.map((item) => (
@@ -165,8 +165,7 @@ export function DashboardLayout() {
             <Button variant="ghost" size="icon" onClick={() => setMenuOpen(true)} aria-label="Abrir menu">
               <Menu className="h-5 w-5" />
             </Button>
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">🎤</span>
-            <span className="text-sm font-bold">Artist Platform</span>
+            <BrandMark />
           </div>
           <div className="flex items-center gap-1">
             <ThemeToggle />

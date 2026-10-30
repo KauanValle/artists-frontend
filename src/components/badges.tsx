@@ -3,6 +3,7 @@ import type { BookingStatus, EventStatus, TransactionStatus, ProposalStatus, Equ
 import { Badge } from '@/components/ui/badge'
 
 const bookingLabels: Record<BookingStatus, { label: string; variant: 'secondary' | 'warning' | 'info' | 'success' | 'destructive' | 'muted' }> = {
+  AwaitingAccount: { label: 'Aguardando conta', variant: 'warning' },
   Requested: { label: 'Solicitado', variant: 'info' },
   Negotiating: { label: 'Em negociação', variant: 'warning' },
   Proposed: { label: 'Proposta enviada', variant: 'warning' },
@@ -19,8 +20,9 @@ export function BookingStatusBadge({ status }: { status: BookingStatus }) {
   return <Badge variant={config.variant}>{config.label}</Badge>
 }
 
-const eventLabels: Record<EventStatus, { label: string; variant: 'secondary' | 'success' | 'muted' | 'destructive' }> = {
+const eventLabels: Record<EventStatus, { label: string; variant: 'secondary' | 'success' | 'warning' | 'muted' | 'destructive' }> = {
   Scheduled: { label: 'Agendado', variant: 'secondary' },
+  PreReserved: { label: 'Pré-reservado', variant: 'warning' },
   Confirmed: { label: 'Confirmado', variant: 'success' },
   Completed: { label: 'Realizado', variant: 'muted' },
   Cancelled: { label: 'Cancelado', variant: 'destructive' },

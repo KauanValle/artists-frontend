@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -5,23 +7,24 @@
 @layer base {
   :root {
     --background: 0 0% 100%;
-    --foreground: 240 10% 3.9%;
+    --foreground: 240 10% 6%;
     --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
-    --primary: 262 83% 58%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
-    --accent: 262 83% 96%;
-    --accent-foreground: 262 83% 30%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 262 83% 58%;
-    --radius: 0.5rem;
+    --card-foreground: 240 10% 6%;
+    --primary: 252 90% 60%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 240 5% 95%;
+    --secondary-foreground: 240 6% 12%;
+    --muted: 240 5% 95%;
+    --muted-foreground: 240 4% 32%;
+    --accent: 252 70% 95%;
+    --accent-foreground: 252 80% 32%;
+    --destructive: 0 84% 55%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 240 6% 88%;
+    --input: 240 6% 88%;
+    --ring: 252 90% 60%;
+    --brand-blue: 223 100% 59%;
+    --radius: 0.75rem;
   }
 
   * {
@@ -30,27 +33,28 @@
 
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-family: 'Montserrat', system-ui, -apple-system, sans-serif;
   }
 
-  /* Tema escuro (classe aplicada em <html> pelo ThemeProvider) */
+  /* Tema escuro — identidade reprissa (preto profundo + roxo) */
   .dark {
-    --background: 240 10% 3.9%;
+    --background: 240 14% 4%;
     --foreground: 0 0% 98%;
-    --card: 240 8% 6%;
+    --card: 240 12% 7%;
     --card-foreground: 0 0% 98%;
-    --primary: 262 83% 66%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 240 4% 12%;
+    --primary: 252 95% 68%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 240 6% 13%;
     --secondary-foreground: 0 0% 98%;
-    --muted: 240 4% 12%;
-    --muted-foreground: 240 5% 64.9%;
-    --accent: 262 30% 16%;
-    --accent-foreground: 262 60% 88%;
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 4% 15%;
-    --input: 240 4% 15%;
-    --ring: 262 83% 66%;
+    --muted: 240 6% 13%;
+    --muted-foreground: 240 6% 75%;
+    --accent: 255 35% 17%;
+    --accent-foreground: 255 60% 88%;
+    --destructive: 0 72% 55%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 240 8% 15%;
+    --input: 240 8% 15%;
+    --ring: 252 95% 68%;
+    --brand-blue: 223 100% 62%;
   }
 }

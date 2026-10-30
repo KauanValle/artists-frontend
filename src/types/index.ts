@@ -5,13 +5,14 @@ export type SubscriptionTier = 'Gratuito' | 'Assinante'
 export type ArtistType = 'Solo' | 'Band'
 export type AvailabilityStatus = 'Available' | 'PreReserved' | 'Unavailable'
 export type EventType = 'Show' | 'Rehearsal' | 'Meeting' | 'Travel' | 'Recording' | 'Other'
-export type EventStatus = 'Scheduled' | 'Confirmed' | 'Completed' | 'Cancelled'
+export type EventStatus = 'Scheduled' | 'Confirmed' | 'PreReserved' | 'Completed' | 'Cancelled'
 export type BookingStatus =
   | 'Requested'
   | 'Negotiating'
   | 'Proposed'
   | 'Accepted'
   | 'Confirmed'
+  | 'AwaitingAccount'
   | 'Completed'
   | 'Cancelled'
   | 'Rejected'
@@ -586,6 +587,10 @@ export interface ArtistContract {
   contractorSignedAtUtc: string | null
   contractorSignedIp: string | null
   contractorContentHash: string | null
+}
+
+export interface Branding {
+  logoUrl: string | null
 }
 
 export interface SignContractorPayload {

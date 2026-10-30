@@ -46,7 +46,7 @@ export function LoginPage() {
       <div className="w-full max-w-sm">
         <div className="mb-6 text-center">
           <h1 className="text-2xl font-bold">Entrar</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Acesse sua conta na Artist Platform</p>
+          <p className="mt-1 text-sm text-muted-foreground">Acesse sua conta na reprissa</p>
         </div>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-1.5">
