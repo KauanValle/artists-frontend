@@ -33,19 +33,24 @@ function durationLabel(start: string, end: string): string {
  * Seleção visual de horário em um único painel: o cliente clica no horário de INÍCIO
  * e depois no de FIM — a faixa entre eles fica destacada, com duração calculada.
  *
- * @param blocked intervalos bloqueados do dia — horários que cruzam ficam riscados/desabilitados.
+ * @param blocked janelas hard (riscadas/desabilitadas — ex.: show confirmado).
+ * @param soft janelas soft (ex.: show pré-reservado) — selecionáveis com destaque âmbar e aviso.
  */
 export function TimeRangePicker({
   start,
   end,
   onChange,
   blocked = [],
+    previousBlocked = [],
+  soft = [],
   disabled = false,
 }: {
   start: string | null
   end: string | null
   onChange: (start: string | null, end: string | null) => void
   blocked?: TimeInterval[]
+  soft?: TimeInterval[]
+    previousBlocked?: TimeInterval[]
   disabled?: boolean
 }) {
   const slots = useMemo(() => {
@@ -53,9 +58,6 @@ export function TimeRangePicker({
     for (let t = DAY_START_MINUTES; t < DAY_END_MINUTES; t += SLOT_MINUTES) list.push(toTime(t))
     return list
   }, [])
-
-  const crossesBlock = (slot: string) =>
-    blocked.some((b) => toMinutes(start!) < toMinutes(b.end) && toMinutes(slot) > toMinutes(b.start))
 
   const pick = (slot: string) => {
     // Sem início, com a faixa já completa, ou clicando antes do início: começa uma nova seleção.
@@ -66,13 +68,17 @@ export function TimeRangePicker({
     onChange(start, slot)
   }
 
-  const state = (slot: string): 'start' | 'end' | 'range' | 'free' | 'blocked' => {
+  const state = (slot: string): 'start' | 'end' | 'range' | 'free' | 'blocked' | 'soft' | 'previousBlocked' => {
     const m = toMinutes(slot)
     if (blocked.some((b) => m >= toMinutes(b.start) && m < toMinutes(b.end))) return 'blocked'
+    if (previousBlocked.some((pb) => m >= toMinutes(pb.start) && m < toMinutes(pb.end))) return 'previousBlocked'
     if (start === slot) return 'start'
     if (end === slot) return 'end'
     if (start && end && m > toMinutes(start) && m < toMinutes(end)) return 'range'
-    if (start && !end && m > toMinutes(start)) return crossesBlock(slot) ? 'blocked' : 'free'
+    if (start && !end && m > toMinutes(start)) {
+      // Cruzou alguma janela soft: pode prosseguir, mas o slot avisa
+      return soft.some((s) => toMinutes(start) < toMinutes(s.end) && m > toMinutes(s.start)) ? 'soft' : 'free'
+    }
     return 'free'
   }
 
@@ -89,7 +95,9 @@ export function TimeRangePicker({
       <div className="grid grid-cols-6 gap-1.5">
         {slots.map((slot) => {
           const s = state(slot)
+          const softState = s === 'soft'
           const blockedState = s === 'blocked'
+          const previousBlockedState = s === 'previousBlocked'
           return (
             <button
               key={slot}
@@ -98,14 +106,24 @@ export function TimeRangePicker({
               onClick={(e) => {
                 e.preventDefault()
                 e.stopPropagation()
-                pick(slot)
+                if (!blockedState) pick(slot)
               }}
               className={cn(
                 'rounded-md border py-1.5 text-xs font-medium transition-colors',
                 (s === 'start' || s === 'end') && 'border-primary bg-primary text-primary-foreground',
                 s === 'range' && 'border-primary/40 bg-primary/10 text-primary',
+                s === 'soft' && 'border-amber-500/60 bg-amber-500/10 text-amber-500',
                 s === 'free' && 'hover:bg-accent',
-                blockedState && 'cursor-not-allowed line-through opacity-40 hover:bg-transparent'
+                blockedState && 'cursor-not-allowed line-through opacity-40 hover:bg-transparent',
+                  previousBlockedState
+                      ? start === slot || end === slot
+                          ? 'border-primary bg-primary text-primary-foreground'
+                          : start && end && toMinutes(slot) > toMinutes(start) && toMinutes(slot) < toMinutes(end)
+                              ? 'border-primary/40 bg-primary/10 text-primary'
+                              : 'border-amber-100/60 text-amber-100'
+                      : ''
+
+
               )}
             >
               {slot}

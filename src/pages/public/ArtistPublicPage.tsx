@@ -68,16 +68,21 @@ export function ArtistPublicPage() {
     [availabilities]
   )
 
-  // Janelas bloqueadas por dia: indisponibilidades declaradas + eventos agendados/confirmados, em HH:mm.
-  const blockedTimesByDate = useMemo(() => {
-    const map: Record<string, { start: string; end: string }[]> = {}
-    const add = (key: string, start: string, end: string) => {
+  // Janelas bloqueadas por dia: indisponibilidades declaradas + eventos, em HH:mm,
+  // separadas por força — Confirmed/Scheduled travam; PreReserved é soft (com alerta).
+  const { blockedTimesByDate, softTimesByDate } = useMemo(() => {
+    const hard: Record<string, { start: string; end: string }[]> = {}
+    const soft: Record<string, { start: string; end: string }[]> = {}
+    const add = (map: typeof hard, key: string, start: string, end: string) => {
       map[key] = [...(map[key] ?? []), { start: start.slice(0, 5), end: end.slice(0, 5) }]
     }
     for (const a of availabilities.filter((a) => a.status !== 'Available'))
-      add(a.date, a.startTime, a.isAllDay ? '24:00' : a.endTime)
-    for (const slot of busySlots) add(slot.date, slot.startTime, slot.endTime)
-    return map
+      add(hard, a.date, a.startTime, a.isAllDay ? '24:00' : a.endTime)
+    for (const slot of busySlots) {
+      // Pré-reservado (aceite de visitante) é soft: avisa, mas não trava a agenda
+      add(slot.status === 'PreReserved' ? soft : hard, slot.date, slot.startTime, slot.endTime)
+    }
+    return { blockedTimesByDate: hard, softTimesByDate: soft }
   }, [availabilities, busySlots])
 
   // Dia inteiro bloqueado (janela 06:00–24:00 coberta) → desabilitado no calendário;
@@ -420,6 +425,7 @@ export function ArtistPublicPage() {
           fullyBlockedDates={fullyBlockedDates}
           partialDates={partialDates}
           blockedTimesByDate={blockedTimesByDate}
+          softTimesByDate={softTimesByDate}
           workingWeekdays={workingWeekdays}
         />
       ) : (
@@ -432,6 +438,7 @@ export function ArtistPublicPage() {
           fullyBlockedDates={fullyBlockedDates}
           partialDates={partialDates}
           blockedTimesByDate={blockedTimesByDate}
+          softTimesByDate={softTimesByDate}
           workingWeekdays={workingWeekdays}
         />
       )}
@@ -458,6 +465,7 @@ export function BookingRequestDialog({
   fullyBlockedDates = [],
   partialDates = [],
   blockedTimesByDate = {},
+  softTimesByDate = {},
   workingWeekdays = [],
 }: {
   artistId: string
@@ -468,6 +476,7 @@ export function BookingRequestDialog({
   fullyBlockedDates?: string[]
   partialDates?: string[]
   blockedTimesByDate?: Record<string, TimeInterval[]>
+  softTimesByDate?: Record<string, TimeInterval[]>
   workingWeekdays?: number[]
 }) {
   const [eventDate, setEventDate] = useState('')
@@ -558,6 +567,7 @@ export function BookingRequestDialog({
                 setEndTime(e)
               }}
               blocked={blockedTimesByDate[eventDate] ?? []}
+              soft={softTimesByDate[eventDate] ?? []}
             />
           )}
           <div className="grid grid-cols-2 gap-3">
@@ -624,6 +634,7 @@ export function GuestBookingDialog({
   fullyBlockedDates = [],
   partialDates = [],
   blockedTimesByDate = {},
+  softTimesByDate = {},
   workingWeekdays = [],
 }: {
   artistId: string
@@ -634,6 +645,7 @@ export function GuestBookingDialog({
   fullyBlockedDates?: string[]
   partialDates?: string[]
   blockedTimesByDate?: Record<string, TimeInterval[]>
+  softTimesByDate?: Record<string, TimeInterval[]>
   workingWeekdays?: number[]
 }) {
   const [step, setStep] = useState(0)
@@ -830,7 +842,7 @@ export function GuestBookingDialog({
         if (!o) onClose()
       }}
     >
-      <DialogContent className="max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] overflow-y-auto overflow-x-hidden sm:max-w-2xl">
         {created ? (
           <div className="flex flex-col items-center gap-3 py-6 text-center">
             <CheckCircle2 className="h-12 w-12 text-emerald-500" />
@@ -946,40 +958,57 @@ export function GuestBookingDialog({
             {/* Passo 1 — Detalhes do evento */}
             {step === 1 && (
               <div className="space-y-3">
-                <div className="space-y-1.5">
-                  <Label>Data do evento *</Label>
-                  <DatePickerCalendar
-                    value={eventDate || undefined}
-                    onChange={(d) => {
-                      setEventDate(d)
-                      setStartTime(null)
-                      setEndTime(null)
-                    }}
-                    mode="weekly"
-                    minDate={today}
-                    disabledDates={fullyBlockedDates}
-                    partialDates={partialDates}
-                    workingWeekdays={workingWeekdays}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    {dateOutsideWorkingDays
-                      ? 'O artista não atende nesse dia da semana.'
-                      : !eventDate
-                        ? 'Escolha o dia na agenda. Dias riscados estão fechados; bolinha amarela = bloqueio parcial.'
-                        : 'Selecionado: ' + formatDate(eventDate)}
-                  </p>
+                <div className="grid items-start gap-4 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label>Data do evento *</Label>
+                    <DatePickerCalendar
+                      value={eventDate || undefined}
+                      onChange={(d) => {
+                        setEventDate(d)
+                        setStartTime(null)
+                        setEndTime(null)
+                      }}
+                      mode="weekly"
+                      minDate={today}
+                      disabledDates={fullyBlockedDates}
+                      partialDates={partialDates}
+                      workingWeekdays={workingWeekdays}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      {dateOutsideWorkingDays
+                        ? 'O artista não atende nesse dia da semana.'
+                        : !eventDate
+                          ? 'Escolha o dia na agenda. Dias riscados estão fechados; bolinha amarela = bloqueio parcial.'
+                          : 'Selecionado: ' + formatDate(eventDate)}
+                    </p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Horário *</Label>
+                    {eventDate && softTimesByDate[eventDate]?.length && (
+                      <div className="rounded-md border border-amber-500/60 bg-amber-500/10 px-3 py-2 text-xs text-amber-500">
+                        Atenção: já existe um show pré-reservado nesse dia e horário. A confirmação final pelo
+                        artista poderá sofrer alterações.
+                      </div>
+                    )}
+                    {eventDate ? (
+                      <TimeRangePicker
+                        start={startTime}
+                        end={endTime}
+                        previousBlocked={softTimesByDate[eventDate] ?? []}
+                        onChange={(s, e) => {
+                          setStartTime(s)
+                          setEndTime(e)
+                        }}
+                        blocked={blockedTimesByDate[eventDate] ?? []}
+                        soft={softTimesByDate[eventDate] ?? []}
+                      />
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        Escolha a data para liberar os horários disponíveis.
+                      </p>
+                    )}
+                  </div>
                 </div>
-                {eventDate && (
-                  <TimeRangePicker
-                    start={startTime}
-                    end={endTime}
-                    onChange={(s, e) => {
-                      setStartTime(s)
-                      setEndTime(e)
-                    }}
-                    blocked={blockedTimesByDate[eventDate] ?? []}
-                  />
-                )}
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="space-y-1.5">
                     <Label>Local *</Label>

@@ -551,6 +551,7 @@ export interface BusySlot {
   date: string
   startTime: string
   endTime: string
+  status: EventStatus
 }
 
 export interface ArtistContract {

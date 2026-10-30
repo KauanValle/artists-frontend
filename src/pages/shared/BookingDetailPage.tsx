@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Check, Lock, MessageSquare, Send, X } from 'lucide-react'
+import {ArrowLeft, Check, Link2, Lock, MessageSquare, Send, X} from 'lucide-react'
 import { toast } from 'sonner'
 import { bookingsApi, conversationsApi, proposalsApi } from '@/services'
 import { useAuth } from '@/hooks/useAuth'
@@ -210,8 +210,8 @@ export function BookingDetailPage() {
           <div>
             {booking.isGuest && (
               <div className="bg-orange-100 border-l-4 border-orange-500 text-orange-700 p-4" role="alert">
-                <p className="text-xs text-muted-foreground">
-                  Solicitação aberta pela página pública, esteja de acordo que todos os detalhes foram resolvidos através do WhatsApp.
+                <p className="text-xs text-black">
+                  Solicitação aberta pela página pública, o link de cadastro do contratante será gerado dentro dos detalhes do evento.
                 </p>
               </div>
             )}
@@ -246,8 +246,8 @@ export function BookingDetailPage() {
         </TabsList>
 
         <TabsContent value="resumo">
-          {booking.isGuest && <GuestContactCard booking={booking} />}
-          <Card className={booking.isGuest ? 'mt-4' : ''}>
+          {<GuestContactCard booking={booking}/>}
+          <Card className={'mt-4'}>
             <CardContent className="grid gap-4 p-6 sm:grid-cols-2">
               <Field label="Tipo de evento" value={eventTypeLabel[booking.eventType]} />
               <Field label="Público estimado" value={booking.estimatedAudience?.toLocaleString('pt-BR') ?? '—'} />
@@ -391,6 +391,7 @@ function GuestContactCard({ booking }: { booking: import('@/types').Booking }) {
           <Field label="Estabelecimento" value={booking.guestCompanyName ?? '—'} />
           <Field label="WhatsApp" value={booking.guestPhone ?? '—'} />
         </div>
+        <div className="grid gap-4 sm:grid-cols-4">
         {booking.guestPhone && (
           <Button asChild>
             <a href={whatsappLink(booking.guestPhone)} target="_blank" rel="noreferrer">
@@ -398,11 +399,39 @@ function GuestContactCard({ booking }: { booking: import('@/types').Booking }) {
             </a>
           </Button>
         )}
-        <div className="bg-orange-100 border-l-4 border-orange-500 text-orange-700 p-4" role="alert">
-          <p className="text-xs text-black">
-            Para prosseguir com a contratação do evento, peça para o contratante se cadastrar no Reprissa com os mesmos dados informados na solicitação. Assim, o artista terá acesso ao chat, propostas e contrato digital.
-          </p>
+        {booking.isGuest && (
+            <div>
+                <Button
+                    size="sm"
+                    variant="outline"
+                    title="Copia o link de cadastro pré-preenchido com os dados deste contratante"
+                    onClick={async () => {
+                        const params = new URLSearchParams({
+                            nome: booking.contractorName,
+                            empresa: booking.guestCompanyName ?? '',
+                            telefone: booking.guestPhone ?? '',
+                        })
+                        const link = window.location.origin + '/register?' + params.toString()
+                        try {
+                            await navigator.clipboard.writeText(link)
+                            toast.success('Link de cadastro copiado! Envie ao contratante.')
+                        } catch {
+                            toast.error('Não foi possível copiar o link.')
+                        }
+                    }}
+                >
+                    <Link2 /> Gerar link para o contratante se cadastrar
+                </Button>
+            </div>
+        )}
         </div>
+          {booking.isGuest && (
+            <div className="bg-orange-100 border-l-4 border-orange-500 text-orange-700 p-4" role="alert">
+              <p className="text-xs text-black">
+                Para prosseguir com a contratação do evento, peça para o contratante se cadastrar no Reprissa com os mesmos dados informados na solicitação. Assim, o artista terá acesso ao chat, propostas e contrato digital.
+              </p>
+            </div>
+            )}
       </CardContent>
     </Card>
   )
