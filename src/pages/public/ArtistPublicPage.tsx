@@ -68,6 +68,20 @@ export function ArtistPublicPage() {
     [availabilities]
   )
 
+  // Janelas de atendimento por dia (disponibilidades "Available" salvas no perfil):
+  // a contratação oferece apenas esses horários no seletor. Dia todo = 06:00–24:00.
+  const workingTimesByDate = useMemo(() => {
+    const map: Record<string, TimeInterval[]> = {}
+    for (const a of availabilities) {
+      if (a.status !== 'Available' && (a.startTime !== null && a.endTime !== null)) continue
+      const win: TimeInterval = a.isAllDay
+        ? { start: '00:00', end: '24:00' }
+        : { start: a.startTime.slice(0, 5), end: a.endTime.slice(0, 5) }
+      map[a.date] = [...(map[a.date] ?? []), win]
+    }
+    return map
+  }, [availabilities])
+
   // Janelas bloqueadas por dia: indisponibilidades declaradas + eventos, em HH:mm,
   // separadas por força — Confirmed/Scheduled travam; PreReserved é soft (com alerta).
   const { blockedTimesByDate, softTimesByDate } = useMemo(() => {
@@ -427,6 +441,7 @@ export function ArtistPublicPage() {
           blockedTimesByDate={blockedTimesByDate}
           softTimesByDate={softTimesByDate}
           workingWeekdays={workingWeekdays}
+          workingTimesByDate={workingTimesByDate}
         />
       ) : (
         <GuestBookingDialog
@@ -440,6 +455,7 @@ export function ArtistPublicPage() {
           blockedTimesByDate={blockedTimesByDate}
           softTimesByDate={softTimesByDate}
           workingWeekdays={workingWeekdays}
+          workingTimesByDate={workingTimesByDate}
         />
       )}
     </div>
@@ -456,6 +472,14 @@ function InfoRow({ label, value }: { label: string; value: ReactNode }) {
   )
 }
 
+/** Rótulo das janelas de atendimento do dia — ex.: "20:00–23:00". */
+function workingTimesLabel(windows: TimeInterval[]) {
+  return [...windows]
+    .sort((a, b) => a.start.localeCompare(b.start))
+    .map((w) => `${w.start}–${w.end}`)
+    .join(' e ')
+}
+
 export function BookingRequestDialog({
   artistId,
   artistName,
@@ -467,6 +491,7 @@ export function BookingRequestDialog({
   blockedTimesByDate = {},
   softTimesByDate = {},
   workingWeekdays = [],
+  workingTimesByDate = {},
 }: {
   artistId: string
   artistName: string
@@ -478,6 +503,7 @@ export function BookingRequestDialog({
   blockedTimesByDate?: Record<string, TimeInterval[]>
   softTimesByDate?: Record<string, TimeInterval[]>
   workingWeekdays?: number[]
+  workingTimesByDate?: Record<string, TimeInterval[]>
 }) {
   const [eventDate, setEventDate] = useState('')
   const [startTime, setStartTime] = useState<string | null>(null)
@@ -568,8 +594,15 @@ export function BookingRequestDialog({
               }}
               blocked={blockedTimesByDate[eventDate] ?? []}
               soft={softTimesByDate[eventDate] ?? []}
+              allowed={workingTimesByDate[eventDate]}
             />
           )}
+          {eventDate && workingTimesByDate[eventDate]?.length ? (
+            <p className="text-xs text-muted-foreground">
+              Horários de atendimento de {artistName} neste dia:{' '}
+              {workingTimesLabel(workingTimesByDate[eventDate])}.
+            </p>
+          ) : null}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>Local</Label>
@@ -636,6 +669,7 @@ export function GuestBookingDialog({
   blockedTimesByDate = {},
   softTimesByDate = {},
   workingWeekdays = [],
+  workingTimesByDate = {},
 }: {
   artistId: string
   artistName: string
@@ -647,6 +681,7 @@ export function GuestBookingDialog({
   blockedTimesByDate?: Record<string, TimeInterval[]>
   softTimesByDate?: Record<string, TimeInterval[]>
   workingWeekdays?: number[]
+  workingTimesByDate?: Record<string, TimeInterval[]>
 }) {
   const [step, setStep] = useState(0)
   const [guestName, setGuestName] = useState('')
@@ -958,7 +993,7 @@ export function GuestBookingDialog({
             {/* Passo 1 — Detalhes do evento */}
             {step === 1 && (
               <div className="space-y-3">
-                <div className="grid items-start gap-4 sm:grid-cols-2">
+                <div className="grid items-start gap-4 sm:grid-cols-1">
                   <div className="space-y-1.5">
                     <Label>Data do evento *</Label>
                     <DatePickerCalendar
@@ -983,9 +1018,8 @@ export function GuestBookingDialog({
                     </p>
                   </div>
                   <div className="space-y-1.5">
-                    <Label>Horário *</Label>
                     {eventDate && softTimesByDate[eventDate]?.length && (
-                      <div className="rounded-md border border-amber-500/60 bg-amber-500/10 px-3 py-2 text-xs text-amber-500">
+                      <div className="rounded-md border border-amber-500/60 bg-amber-500/10 px-3 py-2 text-xs text-amber-500 mb-4">
                         Atenção: já existe um show pré-reservado nesse dia e horário. A confirmação final pelo
                         artista poderá sofrer alterações.
                       </div>
@@ -1001,6 +1035,7 @@ export function GuestBookingDialog({
                         }}
                         blocked={blockedTimesByDate[eventDate] ?? []}
                         soft={softTimesByDate[eventDate] ?? []}
+                        allowed={workingTimesByDate[eventDate]}
                       />
                     ) : (
                       <p className="text-sm text-muted-foreground">

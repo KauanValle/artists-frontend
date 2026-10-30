@@ -8,7 +8,7 @@ export interface TimeInterval {
 }
 
 const SLOT_MINUTES = 30
-const DAY_START_MINUTES = 6 * 60 // 06:00
+const DAY_START_MINUTES = 0 * 60 // 06:00
 const DAY_END_MINUTES = 24 * 60 // 24:00 (último slot inicia 23:30)
 
 function toMinutes(time: string): number {
@@ -35,6 +35,9 @@ function durationLabel(start: string, end: string): string {
  *
  * @param blocked janelas hard (riscadas/desabilitadas — ex.: show confirmado).
  * @param soft janelas soft (ex.: show pré-reservado) — selecionáveis com destaque âmbar e aviso.
+ * @param allowed janelas de atendimento do artista no dia — quando informadas, apenas os
+ * horários dentro delas aparecem (fora do expediente não é oferecido). Sem o prop (ou vazio),
+ * mantém o grid padrão 06:00–24:00.
  */
 export function TimeRangePicker({
   start,
@@ -43,6 +46,7 @@ export function TimeRangePicker({
   blocked = [],
     previousBlocked = [],
   soft = [],
+  allowed = [],
   disabled = false,
 }: {
   start: string | null
@@ -50,18 +54,60 @@ export function TimeRangePicker({
   onChange: (start: string | null, end: string | null) => void
   blocked?: TimeInterval[]
   soft?: TimeInterval[]
-    previousBlocked?: TimeInterval[]
+  previousBlocked?: TimeInterval[]
+  allowed?: TimeInterval[]
   disabled?: boolean
 }) {
+  const windows = useMemo(
+    () =>
+      allowed
+        .filter((w) => toMinutes(w.end) > toMinutes(w.start))
+        .sort((a, b) => toMinutes(a.start) - toMinutes(b.start)),
+    [allowed]
+  )
+
   const slots = useMemo(() => {
+    if (windows.length === 0) {
+      const list: string[] = []
+        if(start && end) {
+            for (let t = DAY_START_MINUTES; t < DAY_END_MINUTES; t += SLOT_MINUTES) list.push(toTime(t))
+        }
+      return list
+    }
+    // Grade de 30 min dentro de cada janela; início alinhado para cima e fim para baixo.
+    // O limite superior fica em 23:30 — "24:00" não é um valor enviável ao backend.
     const list: string[] = []
-    for (let t = DAY_START_MINUTES; t < DAY_END_MINUTES; t += SLOT_MINUTES) list.push(toTime(t))
+    const last = DAY_END_MINUTES - SLOT_MINUTES
+    let previous = -1
+    for (const w of windows) {
+      const from = Math.max(Math.ceil(toMinutes(w.start) / SLOT_MINUTES) * SLOT_MINUTES, 0)
+      const to = Math.min(Math.floor(toMinutes(w.end) / SLOT_MINUTES) * SLOT_MINUTES, last)
+      for (let t = from; t <= to; t += SLOT_MINUTES) {
+        if (t > previous) {
+          list.push(toTime(t))
+          previous = t
+        }
+      }
+    }
     return list
-  }, [])
+  }, [windows])
+  // Uma faixa não pode atravessar um intervalo fora das janelas de atendimento.
+  const canSpan = (from: number, to: number) => {
+    if (windows.length === 0) return true
+    for (let m = from; m <= to; m += SLOT_MINUTES) {
+      if (!windows.some((w) => m >= toMinutes(w.start) && m <= toMinutes(w.end))) return false
+    }
+    return true
+  }
 
   const pick = (slot: string) => {
     // Sem início, com a faixa já completa, ou clicando antes do início: começa uma nova seleção.
     if (!start || end || toMinutes(slot) <= toMinutes(start)) {
+      onChange(slot, null)
+      return
+    }
+    // Fim fora da mesma janela de atendimento: reinicia a seleção nesse horário.
+    if (!canSpan(toMinutes(start), toMinutes(slot))) {
       onChange(slot, null)
       return
     }
@@ -131,13 +177,24 @@ export function TimeRangePicker({
           )
         })}
       </div>
-      <p className="text-xs text-muted-foreground">
-        {start && !end
-          ? 'Agora clique no horário de término.'
-          : !start
-            ? 'Clique no horário de início e depois no de término.'
-            : 'Clique em outro horário para refazer a seleção.'}
-      </p>
+        <div>
+            {slots.length != 0 ? (
+                <p className="text-xs text-muted-foreground">
+                    {start && !end
+                        ? 'Agora clique no horário de término.'
+                        : !start
+                            ? 'Clique no horário de início e depois no de término.'
+                            : 'Clique em outro horário para refazer a seleção.'}
+                </p>
+            ) : (
+                <div className="bg-red-200 border-l-4 border-red-500 text-orange-700 p-4" role="alert">
+                <p className="text-xs text-black">
+                    O artista não tem horários de atendimento disponíveis neste dia.
+                </p>
+                </div>
+            )}
+        </div>
+      
     </div>
   )
 }
