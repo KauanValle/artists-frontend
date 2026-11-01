@@ -23,5 +23,11 @@ export default defineConfig({
         changeOrigin: true,
       },
     },
+    headers: {
+      // 'Cross-Origin-Opener-Policy': 'same-origin',
+      // 'Cross-Origin-Embedder-Policy': 'require-corp',
+      'Referrer-Policy': 'strict-origin-when-cross-origin',
+      'Permissions-Policy': 'interest-cohort=()'
+    },
   },
 })

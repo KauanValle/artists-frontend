@@ -10,6 +10,8 @@ interface AuthContextValue {
   isAuthenticated: boolean
   isLoading: boolean
   login: (email: string, password: string) => Promise<User>
+  register: (payload: { name: string; email: string; password: string }) => Promise<User>
+  applySession: (data: AuthResponse) => User
   registerArtist: (payload: Record<string, unknown>) => Promise<User>
   registerContractor: (payload: Record<string, unknown>) => Promise<User>
   logout: () => void
@@ -72,6 +74,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return u
   }, [])
 
+  const register = useCallback(async (payload: { name: string; email: string; password: string }) => {
+    const { data } = await authApi.register(payload) as { data: AuthResponse }
+    const u = applyAuthResponse(data)
+    setUser(u)
+    return u
+  }, [])
+
+  // Aplica manualmente uma sessão recebida (ex.: conclusão de perfil reemite o token).
+  const applySession = useCallback((data: AuthResponse) => {
+    const u = applyAuthResponse(data)
+    setUser(u)
+    return u
+  }, [])
+
   const registerArtist = useCallback(async (payload: Record<string, unknown>) => {
     const { data } = await authApi.registerArtist(payload) as { data: AuthResponse }
     const u = applyAuthResponse(data)
@@ -99,12 +115,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isAuthenticated: !!user && !!loadSession(),
       isLoading,
       login,
+      register,
+      applySession,
       registerArtist,
       registerContractor,
       logout,
       refreshUser,
     }),
-    [user, isLoading, login, registerArtist, registerContractor, logout, refreshUser]
+    [user, isLoading, login, register, applySession, registerArtist, registerContractor, logout, refreshUser]
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

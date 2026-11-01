@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { extractApiError } from '@/services/api'
 import { homePathFor } from '@/lib/utils'
+import {GoogleLogin} from "@/components/google-button.tsx";
 
 const schema = z.object({
   email: z.string().email('E-mail inválido'),
@@ -70,6 +71,16 @@ export function LoginPage() {
             Criar conta
           </Link>
         </div>
+          <div className="mt-4 mb-4 flex w-full items-center gap-4">
+              <div className="h-px flex-1 bg-[#D1D5DB]" />
+              <span className="text-sm font-normal text-[#111827]">
+            <p className="text-muted-foreground">Ou</p>
+          </span>
+              <div className="h-px flex-1 bg-[#D1D5DB]" />
+          </div>
+          <div className="flex w-full items-center justify-center gap-4">
+              <GoogleLogin />
+          </div>
       </div>
     </div>
   )

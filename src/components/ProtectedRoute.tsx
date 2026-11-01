@@ -19,6 +19,11 @@ export function ProtectedRoute({ role }: { role?: UserRole }) {
     return <Navigate to="/login" state={{ from: location }} replace />
   }
 
+  // Cadastro unificado: sem perfil concluído, a única tela é "Completar o seu perfil".
+  if (user && !user.perfilCompleto && user.role !== 'Admin') {
+    return <Navigate to="/completar-perfil" replace />
+  }
+
   if (role && user?.role !== role) {
     return <Navigate to={homePathFor(user?.role)} replace />
   }
@@ -37,5 +42,6 @@ export function RoleRedirect() {
   }
   // Sem login, a home é a vitrine pública de artistas (não exige cadastro).
   if (!isAuthenticated) return <Navigate to="/artistas" replace />
+  if (user && !user.perfilCompleto && user.role !== 'Admin') return <Navigate to="/completar-perfil" replace />
   return <Navigate to={homePathFor(user?.role)} replace />
 }

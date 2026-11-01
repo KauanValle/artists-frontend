@@ -48,6 +48,7 @@ export interface User {
   artistId: string | null
   contractorId: string | null
   subscriptionTier: SubscriptionTier
+  perfilCompleto: boolean
 }
 
 export interface AuthResponse {
@@ -592,6 +593,7 @@ export interface ArtistContract {
 
 export interface Branding {
   logoUrl: string | null
+  assinaturaObrigatoria: boolean
 }
 
 export interface SignContractorPayload {
@@ -668,4 +670,25 @@ export interface Epk {
   youTubeUrl: string | null
   soundCloudUrl: string | null
   spotifyPlaylistUrl: string | null
+}
+
+export interface CompleteShow {
+  bookingId: string
+  status: string
+  artistConfirmed: boolean
+  contractorConfirmed: boolean
+  contractorToken: string | null
+}
+
+export interface CompletionSummary {
+  token: string
+  artistName: string
+  eventType: string
+  eventDate: string
+  startTime: string
+  endTime: string
+  location: string
+  artistConfirmed: boolean
+  contractorConfirmed: boolean
+  status: string
 }

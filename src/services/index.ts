@@ -33,8 +33,18 @@ import type {
 } from '@/types'
 
 // Auth
+interface AuthResponseLike {
+  accessToken: string
+  refreshToken: string
+  expiresAtUtc: string
+  user: import('@/types').User
+}
+
 export const authApi = {
   login: (email: string, password: string) => api.post('/auth/login', { email, password }),
+  register: (payload: { name: string; email: string; password: string }) =>
+    api.post<AuthResponseLike>('/auth/register', payload),
+  google: (idToken: string) => api.post<AuthResponseLike>('/auth/google', { idToken }),
   registerArtist: (payload: Record<string, unknown>) => api.post('/auth/register/artist', payload),
   registerContractor: (payload: Record<string, unknown>) => api.post('/auth/register/contractor', payload),
   me: () => api.get('/auth/me'),
@@ -75,16 +85,31 @@ export const availabilityApi = {
   remove: (id: string) => api.delete(`/artists/me/availability/${id}`),
 }
 
+// Conclusão do perfil pós-registro (artista ou contratante)
+export const perfilApi = {
+  completar: (payload: Record<string, unknown>) =>
+    api.post<AuthResponseLike>('/perfil/completar', payload),
+}
+
 // Bookings & Proposals
 export const bookingsApi = {
   create: (payload: CreateBookingPayload) => api.post('/bookings', payload),
-  list: (status?: string, page = 1, pageSize = 50, isGuest?: boolean) =>
-    api.get<PagedResult<import('@/types').Booking>>('/bookings', { params: { status, isGuest, page, pageSize } }),
+  list: (status?: string, page = 1, pageSize = 50, isGuest?: boolean, busca?: string, ordenarPor?: string, direcao?: string) =>
+    api.get<PagedResult<import('@/types').Booking>>('/bookings', {
+      params: { status, isGuest, page, pageSize, busca: busca || undefined, ordenarPor, direcao },
+    }),
   get: (id: string) => api.get<import('@/types').Booking>(`/bookings/${id}`),
   negotiate: (id: string) => api.post(`/bookings/${id}/negotiate`),
   accept: (id: string) => api.post<import('@/types').Booking>(`/bookings/${id}/accept`),
   reject: (id: string) => api.post(`/bookings/${id}/reject`),
   cancel: (id: string) => api.post(`/bookings/${id}/cancel`),
+  complete: (id: string) => api.post<import('@/types').CompleteShow>(`/bookings/${id}/complete`),
+}
+
+// Conclusão do show pelo link público (contratante sem login)
+export const publicCompletionApi = {
+  get: (token: string) => api.get<import('@/types').CompletionSummary>(`/public/completion/${token}`),
+  confirm: (token: string) => api.post<import('@/types').CompletionSummary>(`/public/completion/${token}/confirm`),
 }
 
 // Rota pública: solicitação de contratação sem cadastro

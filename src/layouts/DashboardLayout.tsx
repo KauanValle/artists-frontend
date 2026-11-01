@@ -1,26 +1,28 @@
 import { useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import {
-  BadgeCheck,
-  CalendarDays,
-  CalendarRange,
-  ClipboardList,
-  CreditCard,
-  Heart,
-  LayoutDashboard,
-  LogOut,
-  Megaphone,
-  Menu,
-  MessageSquare,
-  Music,
-  Newspaper,
-  Package,
-  Search,
-  Settings,
-  TriangleAlert,
-  Users,
+    BadgeCheck,
+    CalendarDays,
+    CalendarRange,
+    ClipboardList,
+    CreditCard, DollarSignIcon, GlassesIcon,
+    Heart,
+    LayoutDashboard,
+    LogOut,
+    Megaphone,
+    Menu,
+    MessageSquare, MicIcon,
+    Music,
+    Newspaper,
+    Package, PersonStandingIcon,
+    Search,
+    Settings,
+    TriangleAlert,
+    Users,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
+import { useQuery } from '@tanstack/react-query'
+import { brandingApi } from '@/services'
 import { getMissingProfileFields, useMyArtist } from '@/hooks/useArtistProfile'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
 import { BrandMark } from '@/components/ui/brand-logo'
@@ -58,7 +60,13 @@ const contractorNav = [
   { to: '/contractor/perfil', label: 'Meu perfil', icon: Settings },
 ]
 
-const adminNav = [{ to: '/admin', label: 'Painel', icon: LayoutDashboard }]
+const adminNav = [
+    { to: '/admin', label: 'Painel', icon: LayoutDashboard },
+    { to: '/solicitacoes-anonimas', label: 'Solicitações Anonimas', icon: GlassesIcon },
+    { to: '/eventos', label: 'Eventos', icon: MicIcon},
+    { to: '/financeiro', label: 'Financeiro', icon: DollarSignIcon},
+    { to: '/usuarios', label: 'Usuarios', icon: PersonStandingIcon},
+]
 
 function SidebarContent({
   nav,
@@ -114,9 +122,9 @@ function SidebarContent({
       </nav>
       <div className="border-t p-3">
         <div className="flex items-center gap-2 px-1 py-2">
-          <Avatar alt={user?.displayName} className="h-8 w-8" />
+          <Avatar alt={myArtist?.artisticName} className="h-8 w-8" />
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium">{user?.displayName}</p>
+            <p className="truncate text-sm font-medium">{myArtist?.artisticName}</p>
             <p className="truncate text-xs text-muted-foreground">
               {user?.role === 'Artist' ? 'Artista' : user?.role === 'Admin' ? 'Administrador' : 'Contratante'} | {isSubscriber ? 'Assinante' : 'Gratuito'}
             </p>
@@ -133,7 +141,13 @@ function SidebarContent({
 export function DashboardLayout() {
   const { user } = useAuth()
   const [menuOpen, setMenuOpen] = useState(false)
-  const isFreeArtist = user?.role === 'Artist' && user.subscriptionTier === 'Gratuito'
+  // Feature flag (AppSettings → /api/branding): assinatura desligada = acesso livre.
+  const { data: branding } = useQuery({
+    queryKey: ['branding'],
+    queryFn: async () => (await brandingApi.get()).data,
+  })
+  const assinaturaObrigatoria = branding?.assinaturaObrigatoria ?? false
+  const isFreeArtist = user?.role === 'Artist' && user.subscriptionTier === 'Gratuito' && assinaturaObrigatoria
   const nav = !user
     ? artistNav
     : user.role === 'Admin'

@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { addDays } from 'date-fns'
 import { CalendarDays, CalendarPlus, Check, CheckCircle2, ChevronRight, Heart, Images, Instagram, MapPin } from 'lucide-react'
 import { toast } from 'sonner'
@@ -30,6 +30,19 @@ export function ArtistPublicPage() {
   const isContractor = isAuthenticated && user?.role === 'Contractor'
   const [requestOpen, setRequestOpen] = useState(false)
   const [isFavorite, setIsFavorite] = useState(false)
+  const location = useLocation()
+
+  // A contratação exige cadastro de contratante: sem conta, redireciona para o registro
+  // (que devolve para esta página depois de concluir o cadastro).
+  const abrirContratacao = () => {
+    if (isContractor) {
+      setRequestOpen(true)
+      return
+    }
+    if (isAuthenticated) toast.info('Apenas contratantes podem solicitar contratação — entre com a conta certa.')
+    else toast.info('Crie sua conta de contratante para solicitar a contratação.')
+    navigate('/register', { state: { from: { pathname: location.pathname } } })
+  }
 
   const { data: artist, isLoading } = useQuery({
     queryKey: ['artist-slug', slug],
@@ -254,7 +267,7 @@ export function ArtistPublicPage() {
                   )}
 
                   {/* CTA visível no mobile — no desktop fica na coluna lateral */}
-                  <Button size="lg" className="mt-5 w-full lg:hidden" onClick={() => setRequestOpen(true)}>
+                  <Button size="lg" className="mt-5 w-full lg:hidden" onClick={abrirContratacao}>
                     <CalendarPlus /> Solicitar contratação
                   </Button>
                 </div>
@@ -404,12 +417,12 @@ export function ArtistPublicPage() {
                     <Heart className={isFavorite ? 'fill-destructive text-destructive' : ''} />
                   </Button>
                 )}
-                <Button size="lg" className="flex-1" onClick={() => setRequestOpen(true)}>
+                <Button size="lg" className="flex-1" onClick={abrirContratacao}>
                   <CalendarPlus /> Solicitar contratação
                 </Button>
               </div>
               <p className="mt-3 text-center text-xs text-muted-foreground">
-                Sem cadastro necessário — resposta direto com o artista.
+                Contratação com conta de contratante — resposta direto com o artista.
               </p>
             </CardContent>
           </Card>
@@ -454,35 +467,19 @@ export function ArtistPublicPage() {
         </aside>
       </div>
 
-      {isContractor ? (
-        <BookingRequestDialog
-          artistId={artist.id}
-          artistName={artist.artisticName}
-          open={requestOpen}
-          onClose={() => setRequestOpen(false)}
-          onCreated={(id) => navigate(`/contractor/solicitacoes/${id}`)}
-          fullyBlockedDates={fullyBlockedDates}
-          partialDates={partialDates}
-          blockedTimesByDate={blockedTimesByDate}
-          softTimesByDate={softTimesByDate}
-          workingWeekdays={workingWeekdays}
-          workingTimesByDate={workingTimesByDate}
-        />
-      ) : (
-        <GuestBookingDialog
-          artistId={artist.id}
-          artistName={artist.artisticName}
-          startingPrice={artist.startingPrice}
-          open={requestOpen}
-          onClose={() => setRequestOpen(false)}
-          fullyBlockedDates={fullyBlockedDates}
-          partialDates={partialDates}
-          blockedTimesByDate={blockedTimesByDate}
-          softTimesByDate={softTimesByDate}
-          workingWeekdays={workingWeekdays}
-          workingTimesByDate={workingTimesByDate}
-        />
-      )}
+      <BookingRequestDialog
+        artistId={artist.id}
+        artistName={artist.artisticName}
+        open={requestOpen}
+        onClose={() => setRequestOpen(false)}
+        onCreated={(id) => navigate(`/contractor/solicitacoes/${id}`)}
+        fullyBlockedDates={fullyBlockedDates}
+        partialDates={partialDates}
+        blockedTimesByDate={blockedTimesByDate}
+        softTimesByDate={softTimesByDate}
+        workingWeekdays={workingWeekdays}
+        workingTimesByDate={workingTimesByDate}
+      />
     </div>
   )
 }

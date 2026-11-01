@@ -6,6 +6,7 @@ import { CalendarDays, Check, CreditCard, Music2, Plus, Trash2, TriangleAlert, U
 import { toast } from 'sonner'
 import { artistsApi, availabilityApi, feesApi, uploadsApi } from '@/services'
 import { useAuth } from '@/hooks/useAuth'
+import { useAssinaturaObrigatoria } from '@/hooks/useAssinatura'
 import { requiredProfileFields } from '@/hooks/useArtistProfile'
 import { ChipMultiSelect } from '@/components/ui/chip-multi-select'
 import { InfoTooltip } from '@/components/ui/info-tooltip'
@@ -41,7 +42,8 @@ const STEP_REQUIRED_FIELDS: string[][] = [
 export function ArtistProfilePage() {
   const { refreshUser, user } = useAuth()
   const queryClient = useQueryClient()
-  const isFreeArtist = user?.subscriptionTier === 'Gratuito'
+  const assinaturaObrigatoria = useAssinaturaObrigatoria()
+  const isFreeArtist = user?.subscriptionTier === 'Gratuito' && assinaturaObrigatoria
 
   const { data: artist, isLoading } = useQuery({
     queryKey: ['my-artist'],
@@ -238,8 +240,7 @@ export function ArtistProfilePage() {
             Campo{missingFields.length > 1 ? 's' : ''} obrigatório{missingFields.length > 1 ? 's' : ''} sem preencher
           </p>
           <p className="mt-1 text-amber-800/90 dark:text-amber-200/90">
-            Faltam: <strong>{missingFields.map((f) => f.label).join(', ')}</strong>. O back-end exige nome, nome
-            artístico e categoria para salvar; cidade e descrição para publicar.
+            Faltam: <strong>{missingFields.map((f) => f.label).join(', ')}</strong>. O sistema exige informações complementares para o seu perfil.
           </p>
         </div>
       )}

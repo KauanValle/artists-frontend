@@ -7,11 +7,13 @@ import { LoginPage } from '@/pages/auth/LoginPage'
 import { RegisterPage } from '@/pages/auth/RegisterPage'
 import { ForgotPasswordPage } from '@/pages/auth/ForgotPasswordPage'
 import { ResetPasswordPage } from '@/pages/auth/ResetPasswordPage'
+import { CompleteProfilePage } from '@/pages/auth/CompleteProfilePage'
 import { ArtistPublicPage } from '@/pages/public/ArtistPublicPage'
 import { EpkPublicPage } from '@/pages/public/EpkPublicPage'
 import { ArtistsDirectoryPage } from '@/pages/public/ArtistsDirectoryPage'
 import { SubscriptionCallbackPage } from '@/pages/public/SubscriptionCallbackPages'
 import { ContractorSigningPage } from '@/pages/public/ContractorSigningPage'
+import { CompletionConfirmPage } from '@/pages/public/CompletionConfirmPage'
 
 import { ArtistDashboardPage } from '@/pages/artist/ArtistDashboardPage'
 import { AgendaPage } from '@/pages/artist/AgendaPage'
@@ -33,6 +35,10 @@ import { ContractorProfilePage } from '@/pages/contractor/ContractorProfilePage'
 
 import { BookingDetailPage } from '@/pages/shared/BookingDetailPage'
 import { AdminDashboardPage } from '@/pages/admin/AdminDashboardPage'
+import {GuestSolicitationPage} from "@/pages/admin/GuestSolicitationPage.tsx";
+import {BookingsAnalysisPage} from "@/pages/admin/BookingsAnalysisPage.tsx";
+import {FinancialAdminPage} from "@/pages/admin/FinancialPage.tsx";
+import {UsersPage} from "@/pages/admin/UsersPage.tsx";
 
 export const router = createBrowserRouter([
   {
@@ -40,6 +46,7 @@ export const router = createBrowserRouter([
     children: [
       { path: '/login', element: <LoginPage /> },
       { path: '/register', element: <RegisterPage /> },
+      { path: '/completar-perfil', element: <CompleteProfilePage /> },
       { path: '/forgot-password', element: <ForgotPasswordPage /> },
       { path: '/reset-password', element: <ResetPasswordPage /> },
       { path: '/artistas', element: <ArtistsDirectoryPage /> },
@@ -48,6 +55,7 @@ export const router = createBrowserRouter([
       { path: '/assinatura/cancelado', element: <SubscriptionCallbackPage outcome="cancel" /> },
       { path: '/assinatura/expirado', element: <SubscriptionCallbackPage outcome="expired" /> },
       { path: '/contrato/:token', element: <ContractorSigningPage /> },
+      { path: '/confirmar-conclusao/:token', element: <CompletionConfirmPage /> },
       { path: '/', element: <RoleRedirect /> },
     ],
   },
@@ -103,6 +111,10 @@ export const router = createBrowserRouter([
         element: <DashboardLayout />,
         children: [
           { path: '/admin', element: <AdminDashboardPage /> },
+          { path: '/solicitacoes-anonimas', element: <GuestSolicitationPage /> },
+          { path: '/eventos', element: <BookingsAnalysisPage /> },
+          { path: '/financeiro', element: <FinancialAdminPage /> },
+          { path: '/usuarios', element: <UsersPage /> },
         ],
       },
     ],

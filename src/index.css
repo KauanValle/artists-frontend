@@ -58,3 +58,15 @@
     --brand-blue: 223 100% 62%;
   }
 }
+
+.google-login-button {
+    width: 100%;
+    max-width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.google-login-button iframe {
+    max-width: 100%;
+}

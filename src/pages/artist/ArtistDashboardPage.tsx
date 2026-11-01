@@ -3,12 +3,14 @@ import { Link } from 'react-router-dom'
 import { CalendarDays, CreditCard, Lock, Megaphone, TrendingUp, Wallet } from 'lucide-react'
 import { bookingsApi, eventsApi, financialApi } from '@/services'
 import { useAuth } from '@/hooks/useAuth'
+import { useAssinaturaObrigatoria } from '@/hooks/useAssinatura'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { BookingStatusBadge, eventTypeLabel } from '@/components/badges'
 import { EmptyState } from '@/components/badges'
 import { formatMoney, toDateInput } from '@/lib/utils'
 import YampiBuyButton from '@/components/ui/yampi-button'
+import {useMyArtist} from "@/hooks/useArtistProfile.ts";
 
 /** Visão do artista com conta gratuita: sem dados, só o convite para assinar. */
 function FreeArtistDashboard({ name }: { name?: string }) {
@@ -42,7 +44,7 @@ function FreeArtistDashboard({ name }: { name?: string }) {
   )
 }
 
-export function StatCard({ title, value, icon, hint }: { title: string; value: string; icon?: React.ReactNode; hint?: string }) {
+export function StatCard({ title, value, icon, hint }: { title: string; value: string | number; icon?: React.ReactNode; hint?: string }) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -59,8 +61,10 @@ export function StatCard({ title, value, icon, hint }: { title: string; value: s
 
 export function ArtistDashboardPage() {
   const { user } = useAuth()
-  const isFreeArtist = user?.subscriptionTier === 'Gratuito'
+  const assinaturaObrigatoria = useAssinaturaObrigatoria()
+  const isFreeArtist = user?.subscriptionTier === 'Gratuito' && assinaturaObrigatoria
   const today = new Date()
+  const { data: myArtist } = useMyArtist(user?.role === 'Artist')
   const monthStart = new Date(today.getFullYear(), today.getMonth(), 1)
   const fmt = (d: Date) => toDateInput(d)
 
@@ -92,7 +96,7 @@ export function ArtistDashboardPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Olá, {user?.displayName} 👋</h1>
+        <h1 className="text-2xl font-bold">Olá, {myArtist?.artisticName} 👋</h1>
         <p className="text-sm text-muted-foreground">Visão geral do mês (semana/mês/ano via filtro do financeiro)</p>
       </div>
 

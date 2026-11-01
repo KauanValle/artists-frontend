@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import {ArrowLeft, Check, Link2, Lock, MessageSquare, Send, X} from 'lucide-react'
+import { ArrowLeft, Check, CheckCircle2, Copy, Link2, Lock, MessageSquare, Send, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { bookingsApi, conversationsApi, proposalsApi } from '@/services'
 import { useAuth } from '@/hooks/useAuth'
@@ -65,6 +65,29 @@ export function BookingDetailPage() {
       toast.success('Show cancelado. A agenda do artista foi liberada.')
       setCancelConfirmedOpen(false)
       invalidate()
+    },
+    onError: (e) => toast.error(extractApiError(e)),
+  })
+
+  // Conclusão em dupla confirmação: artista + contratante. Enquanto falta o
+  // contratante, guardamos o link público de confirmação para o artista enviar.
+  const [completeOpen, setCompleteOpen] = useState(false)
+  const [completionLink, setCompletionLink] = useState<string | null>(null)
+  const complete = useMutation({
+    mutationFn: async () => (await bookingsApi.complete(id!)).data,
+    onSuccess: (data) => {
+      invalidate()
+      if (data.status === 'Completed') {
+        toast.success('Show concluído! As duas partes confirmaram.')
+        setCompletionLink(null)
+        return
+      }
+      if (data.contractorToken) {
+        setCompletionLink(`${window.location.origin}/confirmar-conclusao/${data.contractorToken}`)
+        toast.warning('Falta a confirmação do contratante — envie o link gerado.')
+      } else {
+        toast.info('Sua confirmação foi registrada. Aguardando o contratante.')
+      }
     },
     onError: (e) => toast.error(extractApiError(e)),
   })
@@ -142,8 +165,18 @@ export function BookingDetailPage() {
           </Button>
         )}
         {isArtist && booking.status === 'Confirmed' && (
-          <Button variant="destructive" onClick={() => setCancelConfirmedOpen(true)} disabled={cancelConfirmed.isPending}>
-            <X /> Cancelar show
+          <>
+            <Button onClick={() => setCompleteOpen(true)} disabled={complete.isPending}>
+              <CheckCircle2 /> Concluir show
+            </Button>
+            <Button variant="destructive" onClick={() => setCancelConfirmedOpen(true)} disabled={cancelConfirmed.isPending}>
+              <X /> Cancelar show
+            </Button>
+          </>
+        )}
+        {!isArtist && user?.role === 'Contractor' && booking.status === 'Confirmed' && (
+          <Button onClick={() => setCompleteOpen(true)} disabled={complete.isPending}>
+            <CheckCircle2 /> Confirmar conclusão
           </Button>
         )}
         {canAct && (
@@ -185,6 +218,60 @@ export function BookingDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={completeOpen} onOpenChange={(o) => !o && setCompleteOpen(false)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{isArtist ? 'Concluir show' : 'Confirmar conclusão do show'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 text-sm text-muted-foreground">
+            <p>
+              Confirma que o show de <strong className="text-foreground">{formatDate(booking.eventDate)}</strong> às{' '}
+              <strong className="text-foreground">{formatTime(booking.startTime)}</strong> ({booking.location})
+              aconteceu como combinado?
+            </p>
+            <p>
+              A conclusão só é efetivada quando <strong className="text-foreground">as duas partes</strong>{' '}
+              confirmarem — você e o contratante.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCompleteOpen(false)}>Voltar</Button>
+            <Button
+              onClick={() =>
+                complete.mutate(undefined, {
+                  onSuccess: () => setCompleteOpen(false),
+                })
+              }
+              disabled={complete.isPending}
+            >
+              {complete.isPending ? 'Confirmando...' : 'Confirmar'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {completionLink && booking.status === 'Confirmed' && (
+        <Card className="border-amber-500/40 bg-amber-500/5">
+          <CardContent className="flex flex-wrap items-center gap-3 py-4">
+            <Link2 className="h-4 w-4 shrink-0 text-amber-500" />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium">Falta a confirmação do contratante</p>
+              <p className="truncate text-xs text-muted-foreground">{completionLink}</p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                navigator.clipboard.writeText(completionLink)
+                toast.success('Link de confirmação copiado! Envie para o contratante.')
+              }}
+            >
+              <Copy className="h-4 w-4" /> Copiar link
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       <Dialog open={acceptOpen} onOpenChange={(o) => !o && setAcceptOpen(false)}>
         <DialogContent className="max-w-md">
