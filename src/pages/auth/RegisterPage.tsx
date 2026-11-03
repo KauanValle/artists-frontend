@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useAuth } from '@/hooks/useAuth'
+import { homePathFor } from '@/lib/utils'
 import { extractApiError } from '@/services/api'
 import { GoogleLogin, googleClientIdConfigurado } from '@/components/google-button'
 
@@ -22,10 +23,17 @@ const schema = z.object({
  * conta o usuário é levado a "Completar o seu perfil" (artista ou contratante).
  */
 export function RegisterPage() {
-  const { register: criarConta } = useAuth()
+  const { register: criarConta, user, isAuthenticated, isLoading } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const [searchParams] = useSearchParams()
+
+  // Já autenticado? Registro não se aplica — vai para o painel (ou completar o perfil).
+  useEffect(() => {
+    if (!isLoading && isAuthenticated && user) {
+      navigate(user.perfilCompleto ? homePathFor(user.role) : '/completar-perfil', { replace: true })
+    }
+  }, [isAuthenticated, isLoading, user, navigate])
 
   // Pré-preenchimento via link gerado no admin (contratante visitante → cadastro)
   const prefillName = searchParams.get('nome') ?? ''

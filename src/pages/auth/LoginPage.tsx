@@ -1,15 +1,15 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
 import { useAuth } from '@/hooks/useAuth'
+import { homePathFor } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { extractApiError } from '@/services/api'
-import { homePathFor } from '@/lib/utils'
 import {GoogleLogin} from "@/components/google-button.tsx";
 
 const schema = z.object({
@@ -20,10 +20,15 @@ const schema = z.object({
 type FormData = z.infer<typeof schema>
 
 export function LoginPage() {
-  const { login } = useAuth()
+  const { login, user, isAuthenticated, isLoading } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const [error, setError] = useState('')
+
+  // Já autenticado? Nada a fazer aqui — vai direto para o painel.
+  useEffect(() => {
+    if (!isLoading && isAuthenticated && user) navigate(homePathFor(user.role), { replace: true })
+  }, [isAuthenticated, isLoading, user, navigate])
 
   const { register, handleSubmit, formState: { isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
