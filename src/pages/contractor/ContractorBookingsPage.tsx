@@ -1,12 +1,15 @@
 import { useState } from 'react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import { ClipboardList } from 'lucide-react'
+import { ClipboardList, CreditCard, Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
 import { bookingsApi } from '@/services'
+import { extractApiError } from '@/services/api'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { BookingStatusBadge, EmptyState } from '@/components/badges'
-import { formatDate, formatTime } from '@/lib/utils'
+import { formatDate, formatMoney, formatTime } from '@/lib/utils'
 import type { BookingStatus } from '@/types'
 
 const tabs: { value: string; label: string; status?: BookingStatus }[] = [
@@ -14,6 +17,7 @@ const tabs: { value: string; label: string; status?: BookingStatus }[] = [
   { value: 'requested', label: 'Enviadas', status: 'Requested' },
   { value: 'negotiating', label: 'Em negociação', status: 'Negotiating' },
   { value: 'proposed', label: 'Com proposta', status: 'Proposed' },
+  { value: 'awaitingPayment', label: 'Aguardando pagamento', status: 'AwaitingPayment' },
   { value: 'confirmed', label: 'Confirmadas', status: 'Confirmed' },
   { value: 'completed', label: 'Concluídas', status: 'Completed' },
   { value: 'cancelled', label: 'Canceladas', status: 'Cancelled' },
@@ -21,6 +25,7 @@ const tabs: { value: string; label: string; status?: BookingStatus }[] = [
 
 export function ContractorBookingsPage() {
   const [tab, setTab] = useState('all')
+  const [pagandoId, setPagandoId] = useState<string | null>(null)
   const status = tabs.find((t) => t.value === tab)?.status
 
   const { data, isLoading } = useQuery({
@@ -28,6 +33,19 @@ export function ContractorBookingsPage() {
     queryFn: async () => (await bookingsApi.list(status, 1, 50)).data,
     placeholderData: keepPreviousData,
   })
+
+  // Gera o checkout no InfinityPay e leva o contratante para pagar.
+  const realizarPagamento = async (id: string) => {
+    setPagandoId(id)
+    try {
+      const { data } = await bookingsApi.startPayment(id)
+      toast.success('Checkout gerado — redirecionando para o InfinityPay...')
+      window.location.href = data.checkoutUrl
+    } catch (err) {
+      toast.error(extractApiError(err))
+      setPagandoId(null)
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -57,7 +75,7 @@ export function ContractorBookingsPage() {
       ) : (
         <div className="space-y-2">
           {data!.items.map((booking) => (
-            <Link key={booking.id} to={`/contractor/solicitacoes/${booking.id}`}>
+            <Link key={booking.id} to={`/contractor/solicitacoes/${booking.id}`} className="block">
               <Card className="mb-2 hover:shadow-md">
                 <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
                   <div className="min-w-0">
@@ -69,10 +87,27 @@ export function ContractorBookingsPage() {
                   <div className="flex items-center gap-3">
                     {booking.budget !== null && (
                       <span className="text-sm text-muted-foreground">
-                        Orçamento: R$ {booking.budget.toLocaleString('pt-BR')}
+                        Orçamento: {formatMoney(booking.budget)}
                       </span>
                     )}
                     <BookingStatusBadge status={booking.status} />
+                    {booking.status === 'AwaitingPayment' && (
+                      <Button
+                        size="sm"
+                        onClick={(e) => {
+                          e.preventDefault()
+                          void realizarPagamento(booking.id)
+                        }}
+                        disabled={pagandoId !== null}
+                      >
+                        {pagandoId === booking.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <CreditCard className="h-4 w-4" />
+                        )}
+                        Realizar pagamento
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>

@@ -14,6 +14,7 @@ import { ArtistsDirectoryPage } from '@/pages/public/ArtistsDirectoryPage'
 import { SubscriptionCallbackPage } from '@/pages/public/SubscriptionCallbackPages'
 import { ContractorSigningPage } from '@/pages/public/ContractorSigningPage'
 import { CompletionConfirmPage } from '@/pages/public/CompletionConfirmPage'
+import { PaymentCallbackPage } from '@/pages/public/PaymentCallbackPage'
 
 import { ArtistDashboardPage } from '@/pages/artist/ArtistDashboardPage'
 import { AgendaPage } from '@/pages/artist/AgendaPage'
@@ -56,6 +57,7 @@ export const router = createBrowserRouter([
       { path: '/assinatura/expirado', element: <SubscriptionCallbackPage outcome="expired" /> },
       { path: '/contrato/:token', element: <ContractorSigningPage /> },
       { path: '/confirmar-conclusao/:token', element: <CompletionConfirmPage /> },
+      { path: '/pagamento-concluido', element: <PaymentCallbackPage /> },
       { path: '/', element: <RoleRedirect /> },
     ],
   },

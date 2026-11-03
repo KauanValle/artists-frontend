@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge'
 
 const bookingLabels: Record<BookingStatus, { label: string; variant: 'secondary' | 'warning' | 'info' | 'success' | 'destructive' | 'muted' }> = {
   AwaitingAccount: { label: 'Aguardando conta', variant: 'warning' },
+  AwaitingPayment: { label: 'Aguardando pagamento', variant: 'warning' },
   Requested: { label: 'Solicitado', variant: 'info' },
   Negotiating: { label: 'Em negociação', variant: 'warning' },
   Proposed: { label: 'Proposta enviada', variant: 'warning' },

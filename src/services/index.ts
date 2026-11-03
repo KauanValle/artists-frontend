@@ -103,6 +103,8 @@ export const bookingsApi = {
   accept: (id: string) => api.post<import('@/types').Booking>(`/bookings/${id}/accept`),
   reject: (id: string) => api.post(`/bookings/${id}/reject`),
   cancel: (id: string) => api.post(`/bookings/${id}/cancel`),
+  startPayment: (id: string) =>
+    api.post<{ checkoutUrl: string }>(`/payments/booking/${id}/checkout`),
   complete: (id: string) => api.post<import('@/types').CompleteShow>(`/bookings/${id}/complete`),
 }
 
