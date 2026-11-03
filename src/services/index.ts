@@ -243,6 +243,7 @@ export const epkApi = {
     youTubeUrl: string | null
     soundCloudUrl: string | null
     spotifyPlaylistUrl: string | null
+    corDestaque: string | null
   }) => api.put<import('@/types').Epk>('/epk', payload),
 }
 

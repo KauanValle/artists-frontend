@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Check, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -21,6 +21,13 @@ export function ChipMultiSelect({
 }) {
   const [custom, setCustom] = useState('')
 
+  // Valores próprios adicionados ficam em "selected" — precisam renderizar também,
+  // senão o chip é salvo mas fica invisível (e some ao recarregar a página).
+  const valores = useMemo(() => {
+    const proprios = selected.filter((s) => !options.some((o) => o.toLowerCase() === s.toLowerCase()))
+    return [...options, ...proprios]
+  }, [options, selected])
+
   const addCustom = () => {
     const value = custom.trim()
     if (value && !selected.some((s) => s.toLowerCase() === value.toLowerCase())) {
@@ -35,7 +42,7 @@ export function ChipMultiSelect({
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap gap-2">
-        {options.map((option) => {
+        {valores.map((option) => {
           const active = selected.includes(option)
           return (
             <button

@@ -115,7 +115,6 @@ export function ContractorEventsPage() {
                       {eventTypeLabel[booking.eventType]} • {formatDate(booking.eventDate)} • {formatTime(booking.startTime)} • {booking.location}
                     </p>
                   </div>
-                  <BookingStatusBadge status={booking.status} />
                   <EventStatusBadge status={booking.status === 'Confirmed' ? 'Confirmed' : 'Completed'} />
                 </CardContent>
               </Card>

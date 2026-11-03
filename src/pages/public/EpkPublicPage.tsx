@@ -90,7 +90,7 @@ export function EpkPublicPage() {
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#0a0a12]">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-violet-500 border-t-transparent" />
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-[var(--epk-accent)] border-t-transparent" />
       </div>
     )
   }
@@ -166,6 +166,16 @@ export function EpkPublicPage() {
   ].filter((p) => !!p.url)
   const temRepertorio = epkSongs.length > 0 || plataformas.length > 0 || !!epk?.spotifyPlaylistUrl
 
+  // Cor de destaque personalizada (Meu EPK → Personalização); padrão = violeta da plataforma.
+  const corDestaque = epk?.corDestaque || '#7c3aed'
+  const hexParaRgba = (hex: string, alpha: number) => {
+    const limpo = hex.replace('#', '')
+    const r = parseInt(limpo.slice(0, 2), 16)
+    const g = parseInt(limpo.slice(2, 4), 16)
+    const b = parseInt(limpo.slice(4, 6), 16)
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`
+  }
+
   // Galeria — derivados de filtro (os hooks estão no topo do componente).
   const mostrarVideos = temGaleria && (tabMidia === 'todos' || tabMidia === 'videos') && videosGaleria.length > 0
   const mostrarFotos = temGaleria && (tabMidia === 'todos' || tabMidia === 'fotos') && fotosGaleria.length > 0
@@ -223,9 +233,18 @@ export function EpkPublicPage() {
   ]
 
   return (
-    <div className="min-h-screen scroll-smooth bg-[#0a0a12] font-sans text-white">
+    <div
+      className="min-h-screen scroll-smooth bg-[#0a0a12] font-sans text-white"
+      style={
+        {
+          '--epk-accent': corDestaque,
+          '--epk-accent-soft': hexParaRgba(corDestaque, 0.12),
+          '--epk-accent-glow': hexParaRgba(corDestaque, 0.4),
+        } as React.CSSProperties
+      }
+    >
       {/* ───────────────────────── Header fixo ───────────────────────── */}
-      <header className="fixed inset-x-0 top-0 z-40 border-b border-white/10 bg-[#0a0a12]/80 backdrop-blur">
+      <header className="fixed inset-x-0 top-0 z-40 border-b border-white/10 bg-black/50 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
           <Link to="/" className="flex items-center gap-2">
             <BrandLogo className="h-8 w-8" />
@@ -247,12 +266,12 @@ export function EpkPublicPage() {
                 target="_blank"
                 rel="noopener noreferrer"
                 title={`@${instagram.handle} no Instagram`}
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-white/15 text-white/70 transition-colors hover:border-violet-400/60 hover:text-white"
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-white/15 text-white/70 transition-colors hover:border-[color-mix(in_srgb,var(--epk-accent)_60%,transparent)] hover:text-white"
               >
                 <Instagram className="h-4 w-4" />
               </a>
             )}
-            <Button asChild className="rounded-full bg-violet-600 px-5 hover:bg-violet-500">
+            <Button asChild className="rounded-full bg-[var(--epk-accent)] px-5 hover:brightness-110">
               <a href="#epk-contratacao">Contratar</a>
             </Button>
           </div>
@@ -264,11 +283,11 @@ export function EpkPublicPage() {
         {/* brilho violeta ao fundo */}
         <div
           aria-hidden
-          className="pointer-events-none absolute -top-40 left-1/2 h-[420px] w-[720px] -translate-x-1/2 rounded-full bg-violet-600/20 blur-[120px]"
+          className="pointer-events-none absolute -top-40 left-1/2 h-[420px] w-[720px] -translate-x-1/2 rounded-full bg-[color-mix(in_srgb,var(--epk-accent)_20%,transparent)] blur-[120px]"
         />
         <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 pb-16 pt-14 lg:grid-cols-2 lg:pb-24 lg:pt-20">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-violet-400">
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[color:var(--epk-accent)]">
               {artist.categoryName} · {tipo}
             </p>
             <h1 className="mt-3 text-4xl font-black leading-tight tracking-tight sm:text-5xl lg:text-6xl">
@@ -276,10 +295,10 @@ export function EpkPublicPage() {
             </h1>
             <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-1 text-sm text-white/60">
               <span className="flex items-center gap-1.5">
-                <MapPin className="h-4 w-4 text-violet-400" /> {artist.city}, {artist.state}
+                <MapPin className="h-4 w-4 text-[color:var(--epk-accent)]" /> {artist.city}, {artist.state}
               </span>
               <span className="flex items-center gap-1.5">
-                <Music className="h-4 w-4 text-violet-400" /> {artist.categoryName}
+                <Music className="h-4 w-4 text-[color:var(--epk-accent)]" /> {artist.categoryName}
               </span>
             </div>
 
@@ -288,7 +307,7 @@ export function EpkPublicPage() {
             )}
 
             <div className="mt-7 flex flex-wrap gap-3">
-              <Button asChild size="lg" className="rounded-full bg-violet-600 px-7 hover:bg-violet-500">
+              <Button asChild size="lg" className="rounded-full bg-[var(--epk-accent)] px-7 hover:brightness-110">
                 <a href="#epk-contratacao">
                   Entrar em contato <ArrowRight className="h-4 w-4" />
                 </a>
@@ -316,7 +335,7 @@ export function EpkPublicPage() {
               {artist.averageRating != null && (
                 <div>
                   <div className="flex items-center gap-1.5">
-                    <Star className="h-5 w-5 fill-violet-400 text-violet-400" />
+                    <Star className="h-5 w-5 fill-[color:var(--epk-accent)] text-[color:var(--epk-accent)]" />
                     <span className="text-2xl font-bold">{artist.averageRating.toFixed(1)}</span>
                   </div>
                   <p className="mt-1 text-xs text-white/50">{artist.reviewCount} avaliações</p>
@@ -329,7 +348,7 @@ export function EpkPublicPage() {
           <div className="relative mx-auto w-full max-w-md lg:max-w-none">
             <div
               aria-hidden
-              className="absolute -inset-4 rounded-[2rem] bg-gradient-to-tr from-violet-600/40 via-fuchsia-500/20 to-transparent blur-2xl"
+              className="absolute -inset-4 rounded-[2rem] bg-gradient-to-tr from-[var(--epk-accent-glow)] to-transparent blur-2xl"
             />
             {artist.profilePhotoUrl ? (
               <img
@@ -347,18 +366,18 @@ export function EpkPublicPage() {
       </section>
 
       {/* ───────────────────────── Sobre ───────────────────────── */}
-      <section id="epk-sobre" className="scroll-mt-16 bg-[#0d0a14] py-16 lg:py-24 border-t border-white/5">
+      <section id="epk-sobre" className="scroll-mt-16 bg-white/[0.02] py-16 lg:py-24 border-t border-white/5">
         <div className="mx-auto grid max-w-6xl gap-12 px-4 lg:grid-cols-[1.5fr_1fr]">
           {/* Texto */}
           <div>
-            <p className="flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.18em] text-violet-400">
-              <span className="h-px w-6 bg-violet-500" />
+            <p className="flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--epk-accent)]">
+              <span className="h-px w-6 bg-[var(--epk-accent)]" />
               Sobre o artista
             </p>
             <h2 className="mt-4 text-3xl font-medium leading-tight tracking-tight text-white sm:text-4xl">
               Mais que música,
               <br />
-              <span className="font-bold text-violet-400">é um estilo de vida.</span>
+              <span className="font-bold text-[color:var(--epk-accent)]">é um estilo de vida.</span>
             </h2>
             {bioParagrafos.length > 0 && (
               <div className="mt-6 max-w-xl space-y-4 text-[15px] leading-relaxed text-white/60">
@@ -375,7 +394,7 @@ export function EpkPublicPage() {
             <ul className="space-y-6">
               {infoRows.map((row) => (
                 <li key={row.label} className="flex items-start gap-4">
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-violet-600/15 text-violet-400">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[color-mix(in_srgb,var(--epk-accent)_15%,transparent)] text-[color:var(--epk-accent)]">
                     <row.icon className="h-4 w-4" />
                   </span>
                   <span>
@@ -389,7 +408,7 @@ export function EpkPublicPage() {
             {habilidades.length > 0 && (
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wider text-white">
-                  Habilidades principais
+                  Estilos principais
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {habilidades.map((s) => (
@@ -414,7 +433,7 @@ export function EpkPublicPage() {
             {/* Cabeçalho */}
             <div className="flex flex-wrap items-end justify-between gap-4">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-violet-400">Galeria</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--epk-accent)]">Galeria</p>
                 <h2 className="mt-2 text-3xl font-bold tracking-tight text-white sm:text-4xl">Fotos &amp; Vídeos</h2>
                 <p className="mt-2 text-sm text-white/50">
                   Confira alguns registros de shows, bastidores e trabalhos do artista.
@@ -447,7 +466,7 @@ export function EpkPublicPage() {
                   onClick={() => setTabMidia(id)}
                   className={cn(
                     'flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors',
-                    tabMidia === id ? 'bg-violet-600 text-white' : 'text-white/60 hover:text-white'
+                    tabMidia === id ? 'bg-[var(--epk-accent)] text-white' : 'text-white/60 hover:text-white'
                   )}
                 >
                   <Icon className="h-4 w-4" /> {label}
@@ -468,7 +487,7 @@ export function EpkPublicPage() {
               <div className="mt-10">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="flex items-center gap-2 text-lg font-bold text-white">
-                    <Clapperboard className="h-5 w-5 text-violet-400" /> Vídeos
+                    <Clapperboard className="h-5 w-5 text-[color:var(--epk-accent)]" /> Vídeos
                     <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs font-semibold text-white/70">
                       {videosGaleria.length}
                     </span>
@@ -478,7 +497,7 @@ export function EpkPublicPage() {
                       href={epk.youTubeUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-sm font-semibold text-violet-400 hover:text-violet-300"
+                      className="text-sm font-semibold text-[color:var(--epk-accent)] hover:text-white"
                     >
                       Ver todos os vídeos →
                     </a>
@@ -566,7 +585,7 @@ export function EpkPublicPage() {
                         {/* Progresso */}
                         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1 bg-white/15">
                           <div
-                            className="h-full bg-violet-500 transition-[width] duration-200"
+                            className="h-full bg-[var(--epk-accent)] transition-[width] duration-200"
                             style={{ width: `${Math.min(100, (progressoVideo[url] ?? 0) * 100)}%` }}
                           />
                         </div>
@@ -579,7 +598,7 @@ export function EpkPublicPage() {
                         rel="noopener noreferrer"
                         className="group relative flex aspect-video items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-[#151221]"
                       >
-                        <span className="flex h-14 w-14 items-center justify-center rounded-full bg-violet-600 text-white shadow-[0_0_24px_-4px_rgba(139,92,246,0.9)] transition-transform group-hover:scale-110">
+                        <span className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--epk-accent)] text-white shadow-[0_0_24px_-4px_var(--epk-accent-glow)] transition-transform group-hover:scale-110">
                           <Play className="h-6 w-6" />
                         </span>
                         <span className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-black/85 to-transparent px-4 pb-3 pt-8">
@@ -598,7 +617,7 @@ export function EpkPublicPage() {
               <div className={cn('mt-10', mostrarVideos && 'border-t border-white/5 pt-10')}>
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="flex items-center gap-2 text-lg font-bold text-white">
-                    <Images className="h-5 w-5 text-violet-400" /> Fotos
+                    <Images className="h-5 w-5 text-[color:var(--epk-accent)]" /> Fotos
                     <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs font-semibold text-white/70">
                       {fotosGaleria.length}
                     </span>
@@ -607,7 +626,7 @@ export function EpkPublicPage() {
                     href={fotosGaleria[Math.min(fotoIndex, fotosGaleria.length - 1)]}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-sm font-semibold text-violet-400 hover:text-violet-300"
+                    className="text-sm font-semibold text-[color:var(--epk-accent)] hover:text-white"
                   >
                     Ver todas as fotos →
                   </a>
@@ -657,7 +676,7 @@ export function EpkPublicPage() {
                           className={cn(
                             'overflow-hidden rounded-xl border transition-colors',
                             indiceReal === fotoIndex
-                              ? 'border-violet-500 ring-1 ring-violet-500'
+                              ? 'border-[var(--epk-accent)] ring-1 ring-[var(--epk-accent)]'
                               : 'border-white/10 opacity-80 hover:opacity-100'
                           )}
                         >
@@ -691,7 +710,7 @@ export function EpkPublicPage() {
                           className={cn(
                             'h-16 w-24 shrink-0 overflow-hidden rounded-lg border transition-colors',
                             i === fotoIndex
-                              ? 'border-violet-500 ring-1 ring-violet-500'
+                              ? 'border-[var(--epk-accent)] ring-1 ring-[var(--epk-accent)]'
                               : 'border-white/10 opacity-70 hover:opacity-100'
                           )}
                         >
@@ -717,10 +736,10 @@ export function EpkPublicPage() {
 
       {/* ───────────────────────── Músicas e Repertório ───────────────────────── */}
       {temRepertorio && (
-        <section id="epk-musicas" className="scroll-mt-16 border-t border-white/5 bg-[#101018] py-16 lg:py-20">
+        <section id="epk-musicas" className="scroll-mt-16 border-t border-white/5 bg-white/[0.02] py-16 lg:py-20">
           <div className="mx-auto max-w-6xl px-4">
-            <p className="flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.18em] text-violet-400">
-              <span className="h-px w-6 bg-violet-500" />
+            <p className="flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--epk-accent)]">
+              <span className="h-px w-6 bg-[var(--epk-accent)]" />
               Músicas e repertório
             </p>
             <h2 className="mt-4 text-3xl font-bold tracking-tight text-white sm:text-4xl">
@@ -757,7 +776,7 @@ export function EpkPublicPage() {
                         href={url!}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-5 py-3 text-sm font-semibold text-white transition-colors hover:border-violet-500/50 hover:bg-violet-600/10"
+                        className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-5 py-3 text-sm font-semibold text-white transition-colors hover:border-[color-mix(in_srgb,var(--epk-accent)_50%,transparent)] hover:bg-[color-mix(in_srgb,var(--epk-accent)_10%,transparent)]"
                       >
                         <Icon className="h-5 w-5" /> {nome}
                       </a>
@@ -781,21 +800,21 @@ export function EpkPublicPage() {
                       className="absolute inset-0 h-full w-full object-cover opacity-50 transition-transform duration-300 group-hover:scale-105"
                     />
                   ) : (
-                    <div className="absolute inset-0 bg-gradient-to-tr from-violet-700/40 to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-tr from-[var(--epk-accent-glow)] to-transparent" />
                   )}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-black/20" />
                   <div className="relative flex min-h-48 flex-col justify-end p-5">
                     <p className="text-lg font-black uppercase leading-tight text-white">
                       {artist.artisticName}
                     </p>
-                    <p className="mt-0.5 text-xs font-semibold uppercase tracking-[0.2em] text-violet-300">
+                    <p className="mt-0.5 text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--epk-accent)]">
                       Playlist oficial
                     </p>
                     <div className="mt-3 flex items-center justify-between">
                       <span className="flex items-center gap-1.5 text-sm font-semibold text-white">
                         <SpotifyIcon className="h-5 w-5" /> Spotify
                       </span>
-                      <span className="flex h-10 w-10 items-center justify-center rounded-full bg-violet-600 text-white shadow-[0_0_20px_-4px_rgba(139,92,246,0.9)] transition-transform group-hover:scale-110">
+                      <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--epk-accent)] text-white shadow-[0_0_20px_-4px_var(--epk-accent-glow)] transition-transform group-hover:scale-110">
                         <Play className="h-4 w-4" />
                       </span>
                     </div>
@@ -812,8 +831,8 @@ export function EpkPublicPage() {
         <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 lg:grid-cols-[1.6fr_1fr]">
           {/* Informações comerciais */}
           <div>
-            <p className="flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.18em] text-violet-400">
-              <span className="h-px w-6 bg-violet-500" />
+            <p className="flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--epk-accent)]">
+              <span className="h-px w-6 bg-[var(--epk-accent)]" />
               Contratação
             </p>
             <h2 className="mt-4 text-3xl font-bold tracking-tight text-white sm:text-4xl">
@@ -823,7 +842,7 @@ export function EpkPublicPage() {
             <div className="mt-10 grid grid-cols-2 gap-x-8 gap-y-10 lg:grid-cols-4">
               {comercial.map((item) => (
                 <div key={item.label}>
-                  <span className="flex h-11 w-11 items-center justify-center rounded-xl border border-violet-500/30 bg-violet-600/10 text-violet-400">
+                  <span className="flex h-11 w-11 items-center justify-center rounded-xl border border-[color-mix(in_srgb,var(--epk-accent)_30%,transparent)] bg-[color-mix(in_srgb,var(--epk-accent)_10%,transparent)] text-[color:var(--epk-accent)]">
                     <item.icon className="h-5 w-5" />
                   </span>
                   <p className="mt-4 text-sm font-semibold text-white">{item.label}</p>
@@ -834,7 +853,7 @@ export function EpkPublicPage() {
           </div>
 
           {/* Painel de contato */}
-          <div className="rounded-2xl border border-[#2c2640] bg-[#151221] p-6 shadow-[0_0_40px_-12px_rgba(139,92,246,0.35)]">
+          <div className="rounded-2xl border border-[#2c2640] bg-[#151221] p-6 shadow-[0_0_40px_-12px_var(--epk-accent-glow)]">
             <h3 className="text-lg font-semibold text-white">Entre em contato</h3>
             <p className="mt-2 text-[13px] leading-relaxed text-white/50">
               Solicite um orçamento ou tire suas dúvidas sobre disponibilidade e condições.
@@ -842,7 +861,7 @@ export function EpkPublicPage() {
             <Button
               asChild
               size="lg"
-              className="mt-6 w-full rounded-xl bg-violet-600 shadow-[0_0_24px_-6px_rgba(139,92,246,0.8)] hover:bg-violet-500"
+              className="mt-6 w-full rounded-xl bg-[var(--epk-accent)] shadow-[0_0_24px_-6px_var(--epk-accent-glow)] hover:brightness-110"
             >
               <Link to={`/artistas/${artist.slug}`}>
                 <Send className="h-4 w-4" /> Solicitar orçamento

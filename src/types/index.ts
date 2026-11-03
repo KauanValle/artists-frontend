@@ -674,6 +674,7 @@ export interface Epk {
   youTubeUrl: string | null
   soundCloudUrl: string | null
   spotifyPlaylistUrl: string | null
+  corDestaque: string | null
 }
 
 export interface CompleteShow {

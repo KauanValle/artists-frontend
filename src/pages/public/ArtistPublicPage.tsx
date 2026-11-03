@@ -228,7 +228,7 @@ export function ArtistPublicPage() {
                     <div>
                       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                         {artist.styles.length > 0 && (
-                          <p className="text-sm text-muted-foreground">Habilidades principais</p>
+                          <p className="text-sm text-muted-foreground">Estilos principais</p>
                         )}
                         {instagram && (
                           <a
