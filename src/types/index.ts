@@ -90,6 +90,7 @@ export interface Artist {
   reviewCount: number
   startingPrice: number | null
   travelTimeMinutes: number
+  aceitaNegociarPropostas: boolean
 }
 
 export interface ArtistCard {
@@ -160,6 +161,7 @@ export interface ArtistDetailPublic {
   averageRating: number | null
   reviewCount: number
   startingPrice: number | null
+  aceitaNegociarPropostas: boolean
   fees: Fee[]
   reviews: Review[]
 }
@@ -517,6 +519,7 @@ export interface SaveArtistPayload {
   galleryUrls: string[]
   videoUrls: string[]
   travelTimeMinutes: number
+  aceitaNegociarPropostas: boolean
 }
 
 export interface SaveFeePayload {

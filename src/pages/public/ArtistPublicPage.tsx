@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { addDays } from 'date-fns'
@@ -21,7 +21,7 @@ import { RatingStars } from '@/components/ui/rating-stars'
 import { EmptyState, eventTypeLabel } from '@/components/badges'
 import { cn, formatDate, formatMoney, minutesToLabel, toDateInput } from '@/lib/utils'
 import { extractApiError } from '@/services/api'
-import type { AddonItemType, BookingAddonItem, EventType } from '@/types'
+import type { AddonItemType, BookingAddonItem, EventType, Fee } from '@/types'
 
 export function ArtistPublicPage() {
   const { slug } = useParams<{ slug: string }>()
@@ -479,6 +479,8 @@ export function ArtistPublicPage() {
         softTimesByDate={softTimesByDate}
         workingWeekdays={workingWeekdays}
         workingTimesByDate={workingTimesByDate}
+        fees={artist.fees}
+        aceitaNegociar={artist.aceitaNegociarPropostas}
       />
     </div>
   )
@@ -514,6 +516,8 @@ export function BookingRequestDialog({
   softTimesByDate = {},
   workingWeekdays = [],
   workingTimesByDate = {},
+  fees = [],
+  aceitaNegociar = true,
 }: {
   artistId: string
   artistName: string
@@ -526,6 +530,8 @@ export function BookingRequestDialog({
   softTimesByDate?: Record<string, TimeInterval[]>
   workingWeekdays?: number[]
   workingTimesByDate?: Record<string, TimeInterval[]>
+  fees?: Fee[]
+  aceitaNegociar?: boolean
 }) {
   const [eventDate, setEventDate] = useState('')
   const [startTime, setStartTime] = useState<string | null>(null)
@@ -540,6 +546,65 @@ export function BookingRequestDialog({
   const [estimatedAudience, setEstimatedAudience] = useState('')
   const [budget, setBudget] = useState('')
   const [message, setMessage] = useState('')
+  const [selectedAddons, setSelectedAddons] = useState<BookingAddonItem[]>([])
+
+  const { data: addons } = useQuery({
+    queryKey: ['artist-addons', artistId],
+    queryFn: async () => (await addonsApi.list(artistId)).data,
+    enabled: open && !!artistId,
+  })
+
+  // Duração selecionada em minutos → cachê correspondente pré-preenche o orçamento.
+  const duracaoMinutos = useMemo(() => {
+    if (!startTime || !endTime) return null
+    const [sh, sm] = startTime.split(':').map(Number)
+    const [eh, em] = endTime.split(':').map(Number)
+    return eh * 60 + em - (sh * 60 + sm)
+  }, [startTime, endTime])
+  const feeDaDuracao = duracaoMinutos ? fees.find((f) => f.durationMinutes === duracaoMinutos) : undefined
+
+  useEffect(() => {
+    if (feeDaDuracao) setBudget(String(feeDaDuracao.price))
+  }, [feeDaDuracao])
+
+  const baseBudget = Number(budget.replace(',', '.')) || 0
+
+  // Prévia dos adicionais — mesma fórmula do servidor: percentual sobre a proposta, fixo somado.
+  const addonDetails = useMemo(() => {
+    const details: { itemType: AddonItemType; itemId: string; name: string; label: string; amount: number }[] = []
+    for (const sel of selectedAddons) {
+      if (sel.itemType === 'TeamMember') {
+        const member = addons?.teamMembers.find((t) => t.id === sel.itemId)
+        if (member) {
+          const amount =
+            member.shareType === 'Percentage'
+              ? Math.round((baseBudget * member.shareValue) / 100 * 100) / 100
+              : member.shareValue
+          details.push({ itemType: sel.itemType, itemId: sel.itemId, name: member.name, label: member.role || 'Equipe externa', amount })
+        }
+      } else {
+        const equipment = addons?.equipment.find((t) => t.id === sel.itemId)
+        if (equipment) {
+          const amount =
+            equipment.shareType === 'Percentage'
+              ? Math.round((baseBudget * equipment.shareValue) / 100 * 100) / 100
+              : equipment.shareValue
+          details.push({ itemType: sel.itemType, itemId: sel.itemId, name: equipment.name, label: equipment.category || 'Equipamento externo', amount })
+        }
+      }
+    }
+    return details
+  }, [selectedAddons, addons, baseBudget])
+
+  const addonsTotal = addonDetails.reduce((sum, a) => sum + a.amount, 0)
+
+  const toggleAddon = (itemType: AddonItemType, itemId: string) => {
+    setSelectedAddons((current) =>
+      current.some((a) => a.itemType === itemType && a.itemId === itemId)
+        ? current.filter((a) => !(a.itemType === itemType && a.itemId === itemId))
+        : [...current, { itemType, itemId }]
+    )
+  }
 
   const create = useMutation({
     mutationFn: () =>
@@ -553,6 +618,7 @@ export function BookingRequestDialog({
         estimatedAudience: estimatedAudience ? Number(estimatedAudience) : null,
         budget: budget ? Number(budget.replace(',', '.')) : null,
         message,
+        addons: selectedAddons,
       }),
     onSuccess: ({ data }) => {
       toast.success('Solicitação enviada! Aguarde o retorno do artista.')
@@ -563,7 +629,10 @@ export function BookingRequestDialog({
   })
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+    <Dialog open={open} onOpenChange={(o) => {
+      if (!o) setSelectedAddons([])
+      onClose()
+    }}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Solicitar contratação — {artistName}</DialogTitle>
@@ -653,13 +722,148 @@ export function BookingRequestDialog({
             </div>
             <div className="space-y-1.5">
               <Label>Orçamento (R$)</Label>
-              <Input value={budget} onChange={(e) => setBudget(e.target.value)} placeholder="Opcional" />
+              <Input
+                value={budget}
+                onChange={(e) => aceitaNegociar && setBudget(e.target.value)}
+                placeholder="Opcional"
+                readOnly={!aceitaNegociar}
+                className={cn(!aceitaNegociar && 'cursor-not-allowed bg-muted')}
+              />
+              {feeDaDuracao && (
+                <p className="text-xs text-muted-foreground">
+                  {aceitaNegociar
+                    ? `Valor sugerido pelo cachê de ${minutesToLabel(duracaoMinutos!)} — você pode ajustar.`
+                    : `Valor fixo do cachê de ${minutesToLabel(duracaoMinutos!)} — não negociável.`}
+                </p>
+              )}
             </div>
           </div>
           <div className="space-y-1.5">
             <Label>Mensagem</Label>
             <Textarea value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Conte os detalhes do evento..." />
           </div>
+
+          {/* Adicionais — equipe e equipamentos externos (percentual sobre o orçamento ou valor fixo) */}
+          {((addons?.teamMembers.length ?? 0) > 0 || (addons?.equipment.length ?? 0) > 0) && (
+            <div className="space-y-3 rounded-xl border p-4">
+              <div>
+                <p className="text-sm font-semibold">Adicionais para o seu evento</p>
+                <p className="text-xs text-muted-foreground">
+                  Profissionais e equipamentos extras oferecidos por {artistName}. O valor entra na proposta
+                  (percentual sobre o orçamento ou valor fixo).
+                </p>
+              </div>
+
+              {addons!.teamMembers.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Equipe externa</p>
+                  {addons!.teamMembers.map((member) => {
+                    const selected = selectedAddons.some((a) => a.itemType === 'TeamMember' && a.itemId === member.id)
+                    return (
+                      <button
+                        key={member.id}
+                        type="button"
+                        onClick={() => toggleAddon('TeamMember', member.id)}
+                        className={cn(
+                          'flex w-full items-center justify-between gap-3 rounded-lg border p-3 text-left transition-colors',
+                          selected ? 'border-primary bg-primary/5' : 'hover:bg-accent'
+                        )}
+                      >
+                        <div className="flex items-center gap-3">
+                          <span
+                            className={cn(
+                              'flex h-5 w-5 items-center justify-center rounded border',
+                              selected ? 'border-primary bg-primary text-primary-foreground' : 'bg-background'
+                            )}
+                          >
+                            {selected && <Check className="h-3.5 w-3.5" />}
+                          </span>
+                          <div>
+                            <p className="text-sm font-medium">{member.name}</p>
+                            <p className="text-xs text-muted-foreground">{member.role || 'Equipe externa'}</p>
+                          </div>
+                        </div>
+                        <span className="text-sm font-semibold">
+                          {member.shareType === 'Percentage'
+                            ? '+ ' + member.shareValue + '%'
+                            : '+ ' + formatMoney(member.shareValue)}
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+
+              {addons!.equipment.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Equipamentos externos
+                  </p>
+                  {addons!.equipment.map((equipment) => {
+                    const selected = selectedAddons.some((a) => a.itemType === 'Equipment' && a.itemId === equipment.id)
+                    return (
+                      <button
+                        key={equipment.id}
+                        type="button"
+                        onClick={() => toggleAddon('Equipment', equipment.id)}
+                        className={cn(
+                          'flex w-full items-center justify-between gap-3 rounded-lg border p-3 text-left transition-colors',
+                          selected ? 'border-primary bg-primary/5' : 'hover:bg-accent'
+                        )}
+                      >
+                        <div className="flex items-center gap-3">
+                          <span
+                            className={cn(
+                              'flex h-5 w-5 items-center justify-center rounded border',
+                              selected ? 'border-primary bg-primary text-primary-foreground' : 'bg-background'
+                            )}
+                          >
+                            {selected && <Check className="h-3.5 w-3.5" />}
+                          </span>
+                          <div>
+                            <p className="text-sm font-medium">{equipment.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {equipment.category || 'Equipamento'}
+                            </p>
+                          </div>
+                        </div>
+                        <span className="text-sm font-semibold">
+                          {equipment.shareType === 'Percentage'
+                            ? '+ ' + equipment.shareValue + '%'
+                            : '+ ' + formatMoney(equipment.shareValue)}
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+
+              {selectedAddons.length > 0 && (
+                <div className="rounded-lg bg-muted/50 p-3 text-sm">
+                  {addonDetails.map((detail, i) => (
+                    <p key={`${detail.itemType}-${detail.itemId}-${i}`} className="flex justify-between">
+                      <span className="text-muted-foreground">
+                        {detail.name} ({detail.label})
+                      </span>
+                      <span className="font-medium">{formatMoney(detail.amount)}</span>
+                    </p>
+                  ))}
+                  {baseBudget > 0 && (
+                    <p className="mt-2 flex justify-between border-t pt-2 font-semibold">
+                      <span>Total com adicionais</span>
+                      <span className="text-primary">{formatMoney(baseBudget + addonsTotal)}</span>
+                    </p>
+                  )}
+                  {baseBudget <= 0 && (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Informe o orçamento acima para ver o cálculo dos adicionais em percentual.
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           <Button type="submit" className="w-full" disabled={create.isPending}>
             {create.isPending ? 'Enviando...' : 'Enviar solicitação'}
           </Button>

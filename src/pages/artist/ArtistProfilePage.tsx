@@ -73,6 +73,7 @@ export function ArtistProfilePage() {
       description: artist.description,
       profilePhotoUrl: artist.profilePhotoUrl ?? '',
       travelTimeMinutes: String(artist.travelTimeMinutes ?? 0),
+      aceitaNegociarPropostas: artist.aceitaNegociarPropostas ? 'true' : 'false',
     })
     setStyles(artist.styles)
     setSpecialties(artist.specialties)
@@ -105,6 +106,7 @@ export function ArtistProfilePage() {
         galleryUrls: artist?.galleryUrls ?? [],
         videoUrls: artist?.videoUrls ?? [],
         travelTimeMinutes: Number(f.travelTimeMinutes) || 0,
+        aceitaNegociarPropostas: f.aceitaNegociarPropostas === 'true',
       }
       await artistsApi.saveOnboarding(payload as never)
     },
@@ -412,6 +414,21 @@ export function ArtistProfilePage() {
         <div className="space-y-3">
           <p className="text-sm text-muted-foreground">Defina as faixas de cachê exibidas no seu perfil público.</p>
           <FeesCard artistId={artist.id} />
+          <label className="flex cursor-pointer items-start gap-3 rounded-lg border p-3">
+            <input
+              type="checkbox"
+              className="mt-0.5 h-4 w-4 accent-violet-600"
+              checked={form!.aceitaNegociarPropostas === 'true'}
+              onChange={(e) => setForm({ ...form!, aceitaNegociarPropostas: e.target.checked ? 'true' : 'false' })}
+            />
+            <span>
+              <span className="text-sm font-medium">Aceito negociar propostas</span>
+              <span className="block text-xs text-muted-foreground">
+                Quando desmarcado, o contratante vê o valor do cachê fixo conforme as horas selecionadas e não
+                pode alterá-lo na solicitação.
+              </span>
+            </span>
+          </label>
         </div>
       )}
 
