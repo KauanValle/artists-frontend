@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useEffect, useMemo, useState } from 'react'
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { endOfMonth, endOfYear, startOfMonth, startOfYear } from 'date-fns'
-import { Plus, Wallet } from 'lucide-react'
+import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Plus, Wallet } from 'lucide-react'
 import { toast } from 'sonner'
 import { eventsApi, financialApi } from '@/services'
 import { Button } from '@/components/ui/button'
@@ -15,7 +15,7 @@ import { EmptyState, TransactionStatusBadge } from '@/components/badges'
 import { StatCard } from '@/pages/artist/ArtistDashboardPage'
 import { formatDate, formatMoney, toDateInput } from '@/lib/utils'
 import { extractApiError } from '@/services/api'
-import type { TransactionType } from '@/types'
+import type { TransactionStatus, TransactionType } from '@/types'
 
 type Period = 'month' | 'year' | 'all' | 'custom'
 
@@ -25,6 +25,13 @@ export function FinancialPage() {
   const [customFrom, setCustomFrom] = useState('')
   const [customTo, setCustomTo] = useState('')
   const [createOpen, setCreateOpen] = useState(false)
+  // Filtros e ordenação (server-side)
+  const [statusFiltro, setStatusFiltro] = useState<string>('all')
+  const [tipoFiltro, setTipoFiltro] = useState<string>('all')
+  const [ordenar, setOrdenar] = useState('vencimento')
+  const [decrescente, setDecrescente] = useState(true)
+  const [page, setPage] = useState(1)
+  const PER_PAGE = 10
 
   const { from, to } = useMemo(() => {
     const now = new Date()
@@ -42,10 +49,29 @@ export function FinancialPage() {
     queryFn: async () => (await financialApi.summary(fmt(from), fmt(to))).data,
   })
 
-  const { data: transactions, isLoading } = useQuery({
-    queryKey: ['transactions', from?.toISOString(), to?.toISOString()],
-    queryFn: async () => (await financialApi.list({ from: fmt(from), to: fmt(to), pageSize: 100 })).data,
+  const { data: transactions, isLoading, isFetching } = useQuery({
+    queryKey: ['transactions', from?.toISOString(), to?.toISOString(), statusFiltro, tipoFiltro, page, ordenar, decrescente],
+    queryFn: async () =>
+      (
+        await financialApi.list({
+          from: fmt(from),
+          to: fmt(to),
+          status: statusFiltro === 'all' ? undefined : statusFiltro,
+          type: tipoFiltro === 'all' ? undefined : tipoFiltro,
+          page,
+          pageSize: PER_PAGE,
+          ordenarPor: ordenar === 'vencimento' ? 'vencimento' : ordenar,
+          direcao: decrescente ? 'desc' : 'asc',
+        })
+      ).data,
+    placeholderData: keepPreviousData,
   })
+
+  // Filtros mudaram → volta para a primeira página.
+  useEffect(() => setPage(1), [period, customFrom, customTo, statusFiltro, tipoFiltro, ordenar, decrescente])
+
+  const totalItens = transactions?.totalCount ?? 0
+  const totalPaginas = Math.max(1, Math.ceil(totalItens / PER_PAGE))
 
   const settle = useMutation({
     mutationFn: (id: string) => financialApi.settle(id),
@@ -86,8 +112,58 @@ export function FinancialPage() {
         </div>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      {/* Filtros e ordenação */}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-sm text-muted-foreground">Status</span>
+        <Select value={statusFiltro} onValueChange={setStatusFiltro}>
+          <SelectTrigger className="w-40">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos</SelectItem>
+            <SelectItem value="Pending">Pendente</SelectItem>
+            <SelectItem value="Received">Recebido</SelectItem>
+            <SelectItem value="Paid">Pago</SelectItem>
+            <SelectItem value="Overdue">Atrasado</SelectItem>
+          </SelectContent>
+        </Select>
+        <span className="text-sm text-muted-foreground">Tipo</span>
+        <Select value={tipoFiltro} onValueChange={setTipoFiltro}>
+          <SelectTrigger className="w-40">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos</SelectItem>
+            <SelectItem value="Income">Receita</SelectItem>
+            <SelectItem value="Expense">Despesa</SelectItem>
+          </SelectContent>
+        </Select>
+        <span className="text-sm text-muted-foreground">Ordenar por</span>
+        <Select value={ordenar} onValueChange={setOrdenar}>
+          <SelectTrigger className="w-40">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="vencimento">Vencimento</SelectItem>
+            <SelectItem value="valor">Valor</SelectItem>
+          </SelectContent>
+        </Select>
+        {ordenar !== 'vencimento' && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setDecrescente((d) => !d)}
+            title={decrescente ? 'Ordem decrescente' : 'Ordem crescente'}
+          >
+            {decrescente ? <ArrowDown className="h-4 w-4" /> : <ArrowUp className="h-4 w-4" />}
+            {decrescente ? 'Decrescente' : 'Crescente'}
+          </Button>
+        )}
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
         <StatCard title="Receita prevista" value={formatMoney(summary?.incomeExpected)} hint="Inclui pendentes" />
+        <StatCard title="Cache" value={formatMoney(summary?.incomeReceived)} />
         <StatCard title="Recebido" value={formatMoney(summary?.incomeReceived)} />
         <StatCard title="Despesas" value={formatMoney(summary?.expenseTotal)} hint={`Pagas: ${formatMoney(summary?.expensePaid)}`} />
         <StatCard title="Contas a receber" value={formatMoney(summary?.accountsReceivable)} hint="Pendentes + atrasadas" />
@@ -100,10 +176,11 @@ export function FinancialPage() {
             <p className="p-10 text-center text-sm text-muted-foreground">Carregando...</p>
           ) : (transactions?.items.length ?? 0) === 0 ? (
             <div className="p-6">
-              <EmptyState title="Nenhuma transação no período" icon={<Wallet />} />
+              <EmptyState title="Nenhuma transação encontrada" description="Ajuste os filtros ou o período." icon={<Wallet />} />
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <>
+            <div className={`overflow-x-auto transition-opacity ${isFetching ? 'opacity-60' : ''}`}>
               <table className="w-full min-w-[36rem] text-sm">
               <thead>
                 <tr className="border-b text-left text-muted-foreground">
@@ -144,6 +221,34 @@ export function FinancialPage() {
               </tbody>
             </table>
             </div>
+
+            {/* Paginação */}
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t p-3">
+              <p className="text-sm text-muted-foreground">
+                {totalItens} {totalItens === 1 ? 'transação' : 'transações'} • página {page} de {totalPaginas}
+              </p>
+              {totalPaginas > 1 && (
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={page <= 1 || isFetching}
+                  >
+                    <ChevronLeft className="h-4 w-4" /> Anterior
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage((p) => Math.min(totalPaginas, p + 1))}
+                    disabled={page >= totalPaginas || isFetching}
+                  >
+                    Próxima <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+            </div>
+            </>
           )}
         </CardContent>
       </Card>

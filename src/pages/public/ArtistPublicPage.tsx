@@ -4,7 +4,7 @@ import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { addDays } from 'date-fns'
 import { CalendarDays, CalendarPlus, Check, CheckCircle2, ChevronRight, Heart, Images, Instagram, MapPin } from 'lucide-react'
 import { toast } from 'sonner'
-import { addonsApi, artistsApi, availabilityApi, bookingsApi, favoritesApi, publicBookingsApi, socialLinksApi } from '@/services'
+import { addonsApi, artistsApi, availabilityApi, bookingsApi, brandingApi, favoritesApi, publicBookingsApi, socialLinksApi } from '@/services'
 import { useAuth } from '@/hooks/useAuth'
 import { Avatar } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
@@ -31,6 +31,14 @@ export function ArtistPublicPage() {
   const [requestOpen, setRequestOpen] = useState(false)
   const [isFavorite, setIsFavorite] = useState(false)
   const location = useLocation()
+
+  // Taxa administrativa da plataforma (configurável pelo admin) — exibida no orçamento.
+  const { data: branding } = useQuery({
+    queryKey: ['branding'],
+    queryFn: async () => (await brandingApi.get()).data,
+    staleTime: 60_000,
+  })
+  const taxaAdministrativa = branding?.taxaAdministrativa ?? 0
 
   // A contratação exige cadastro de contratante: sem conta, redireciona para o registro
   // (que devolve para esta página depois de concluir o cadastro).
@@ -481,6 +489,7 @@ export function ArtistPublicPage() {
         workingTimesByDate={workingTimesByDate}
         fees={artist.fees}
         aceitaNegociar={artist.aceitaNegociarPropostas}
+        taxaAdministrativa={taxaAdministrativa}
       />
     </div>
   )
@@ -518,6 +527,7 @@ export function BookingRequestDialog({
   workingTimesByDate = {},
   fees = [],
   aceitaNegociar = true,
+  taxaAdministrativa = 0,
 }: {
   artistId: string
   artistName: string
@@ -532,6 +542,7 @@ export function BookingRequestDialog({
   workingTimesByDate?: Record<string, TimeInterval[]>
   fees?: Fee[]
   aceitaNegociar?: boolean
+  taxaAdministrativa?: number
 }) {
   const [eventDate, setEventDate] = useState('')
   const [startTime, setStartTime] = useState<string | null>(null)
@@ -547,6 +558,10 @@ export function BookingRequestDialog({
   const [budget, setBudget] = useState('')
   const [message, setMessage] = useState('')
   const [selectedAddons, setSelectedAddons] = useState<BookingAddonItem[]>([])
+  const [step, setStep] = useState(0)
+  const [error, setError] = useState('')
+
+  const STEP_TITLES = ['Detalhes do evento', 'Orçamento & adicionais', 'Confirmação']
 
   const { data: addons } = useQuery({
     queryKey: ['artist-addons', artistId],
@@ -628,15 +643,66 @@ export function BookingRequestDialog({
     onError: (e) => toast.error(extractApiError(e)),
   })
 
+  const handleContinue = () => {
+    if (step === 0) {
+      if (!eventDate) {
+        toast.warning('Escolha o dia na agenda')
+        return
+      }
+      if (!startTime || !endTime) {
+        toast.warning('Selecione o horário de início e fim do evento')
+        return
+      }
+      if (!location.trim()) {
+        toast.warning('Informe o local do evento')
+        return
+      }
+    }
+    setStep((s) => s + 1)
+  }
+
   return (
     <Dialog open={open} onOpenChange={(o) => {
-      if (!o) setSelectedAddons([])
+      if (!o) {
+        setSelectedAddons([])
+        setStep(0)
+      }
       onClose()
     }}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Solicitar contratação — {artistName}</DialogTitle>
         </DialogHeader>
+
+        {/* Indicador de passos */}
+        <ol className="flex items-center gap-2">
+          {STEP_TITLES.map((title, index) => {
+            const done = index < step
+            const active = index === step
+            return (
+              <li key={title} className="flex items-center gap-2">
+                <span
+                  className={cn(
+                    'flex h-6 w-6 items-center justify-center rounded-full border text-xs font-semibold',
+                    active && 'border-primary bg-primary text-primary-foreground',
+                    done && 'border-primary/40 bg-primary/10 text-primary',
+                    !active && !done && 'bg-muted text-muted-foreground'
+                  )}
+                >
+                  {done ? <Check className="h-3 w-3" /> : index + 1}
+                </span>
+                <span className={cn('hidden text-xs sm:block', active ? 'font-semibold text-foreground' : 'text-muted-foreground')}>
+                  {title}
+                </span>
+                {index < STEP_TITLES.length - 1 && <span className="h-px w-4 bg-border" />}
+              </li>
+            )
+          })}
+        </ol>
+        <p className="-mt-2 text-center text-xs text-muted-foreground">
+          Passo {step + 1} de {STEP_TITLES.length} — {STEP_TITLES[step]}
+        </p>
+
         <form
           className="space-y-3"
           onSubmit={(e) => {
@@ -652,6 +718,9 @@ export function BookingRequestDialog({
             create.mutate()
           }}
         >
+          {/* Passo 1 — Detalhes do evento */}
+          {step === 0 && (
+          <>
           <div className="space-y-1.5">
             <Label>Data *</Label>
             <DatePickerCalendar
@@ -697,7 +766,7 @@ export function BookingRequestDialog({
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>Local</Label>
-              <Input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Endereço do evento" required />
+              <Input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Endereço do evento" />
             </div>
             <div className="space-y-1.5">
               <Label>Tipo de evento</Label>
@@ -716,35 +785,41 @@ export function BookingRequestDialog({
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label>Público estimado</Label>
-              <Input type="number" min={0} value={estimatedAudience} onChange={(e) => setEstimatedAudience(e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Orçamento (R$)</Label>
-              <Input
-                value={budget}
-                onChange={(e) => aceitaNegociar && setBudget(e.target.value)}
-                placeholder="Opcional"
-                readOnly={!aceitaNegociar}
-                className={cn(!aceitaNegociar && 'cursor-not-allowed bg-muted')}
-              />
-              {feeDaDuracao && (
-                <p className="text-xs text-muted-foreground">
-                  {aceitaNegociar
-                    ? `Valor sugerido pelo cachê de ${minutesToLabel(duracaoMinutos!)} — você pode ajustar.`
-                    : `Valor fixo do cachê de ${minutesToLabel(duracaoMinutos!)} — não negociável.`}
-                </p>
-              )}
-            </div>
+              <div className="space-y-1.5">
+                  <Label>Público estimado</Label>
+                  <Input
+                      type="number"
+                      min={0}
+                      value={estimatedAudience}
+                      onChange={(e) => setEstimatedAudience(e.target.value)}
+                  />
+              </div>
+              <div className="space-y-1.5">
+                  <Label>Cache do artista (R$)</Label>
+                  <Input
+                      value={budget}
+                      onChange={(e) => aceitaNegociar && setBudget(e.target.value)}
+                      placeholder="Opcional"
+                      readOnly={!aceitaNegociar}
+                      className={cn(!aceitaNegociar && 'cursor-not-allowed bg-muted')}
+                  />
+                  {feeDaDuracao && (
+                      <p className="text-xs text-muted-foreground">
+                          {aceitaNegociar
+                              ? `Valor sugerido pelo cachê de ${minutesToLabel(duracaoMinutos!)} — você pode ajustar.`
+                              : `Valor fixo do cachê de ${minutesToLabel(duracaoMinutos!)} — não negociável.`}
+                      </p>
+                  )}
+              </div>
           </div>
           <div className="space-y-1.5">
             <Label>Mensagem</Label>
             <Textarea value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Conte os detalhes do evento..." />
           </div>
-
+          </>
+          )}
           {/* Adicionais — equipe e equipamentos externos (percentual sobre o orçamento ou valor fixo) */}
-          {((addons?.teamMembers.length ?? 0) > 0 || (addons?.equipment.length ?? 0) > 0) && (
+          {(step === 1 && ((addons?.teamMembers.length ?? 0) > 0 || (addons?.equipment.length ?? 0) > 0)) && (
             <div className="space-y-3 rounded-xl border p-4">
               <div>
                 <p className="text-sm font-semibold">Adicionais para o seu evento</p>
@@ -864,9 +939,153 @@ export function BookingRequestDialog({
             </div>
           )}
 
-          <Button type="submit" className="w-full" disabled={create.isPending}>
-            {create.isPending ? 'Enviando...' : 'Enviar solicitação'}
-          </Button>
+          {/* Transparência: taxa administrativa da plataforma sobre o orçamento */}
+          {baseBudget > 0 && taxaAdministrativa > 0 && (
+            <div className="rounded-lg border p-3 text-sm">
+              <p className="flex justify-between">
+                <span className="text-muted-foreground">Orçamento do show</span>
+                <span className="font-medium">{formatMoney(baseBudget)}</span>
+              </p>
+              {addonsTotal > 0 && (
+                <p className="flex justify-between">
+                  <span className="text-muted-foreground">Adicionais</span>
+                  <span className="font-medium">{formatMoney(addonsTotal)}</span>
+                </p>
+              )}
+              <p className="flex justify-between">
+                <span className="text-muted-foreground">
+                  Taxa administrativa ({taxaAdministrativa.toString().replace('.', ',')}%)
+                </span>
+                <span className="font-medium">
+                  {formatMoney(((baseBudget + addonsTotal) * taxaAdministrativa) / 100)}
+                </span>
+              </p>
+              <p className="mt-1 flex justify-between border-t pt-2 font-semibold">
+                <span>Total a pagar</span>
+                <span className="text-primary">
+                  {formatMoney((baseBudget + addonsTotal) * (1 + taxaAdministrativa / 100))}
+                </span>
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                A taxa administrativa é da plataforma e é cobrada no pagamento do show.
+              </p>
+            </div>
+          )}
+
+          {/* Passo 3 — Confirmação (revisão) */}
+          {step === 2 && (
+            <div className="space-y-3">
+              <div className="space-y-2 rounded-lg border p-3 text-sm">
+                <p className="flex justify-between">
+                  <span className="text-muted-foreground">Artista</span>
+                  <span className="font-medium">{artistName}</span>
+                </p>
+                <p className="flex justify-between">
+                  <span className="text-muted-foreground">Data</span>
+                  <span className="font-medium">{formatDate(eventDate)}</span>
+                </p>
+                <p className="flex justify-between">
+                  <span className="text-muted-foreground">Horário</span>
+                  <span className="font-medium">{startTime}–{endTime}</span>
+                </p>
+                <p className="flex justify-between">
+                  <span className="text-muted-foreground">Local</span>
+                  <span className="font-medium">{location}</span>
+                </p>
+                <p className="flex justify-between">
+                  <span className="text-muted-foreground">Tipo de evento</span>
+                  <span className="font-medium">{eventTypeLabel[eventType]}</span>
+                </p>
+                {estimatedAudience && (
+                  <p className="flex justify-between">
+                    <span className="text-muted-foreground">Público estimado</span>
+                    <span className="font-medium">{estimatedAudience} pessoas</span>
+                  </p>
+                )}
+                {message && (
+                  <p className="flex justify-between gap-6">
+                    <span className="shrink-0 text-muted-foreground">Mensagem</span>
+                    <span className="text-right">{message}</span>
+                  </p>
+                )}
+              </div>
+
+              <div className="rounded-lg border p-3 text-sm">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Valores
+                </p>
+                <p className="flex justify-between">
+                  <span className="text-muted-foreground">
+                    Orçamento {feeDaDuracao ? `(cachê de ${minutesToLabel(duracaoMinutos!)})` : ''}
+                  </span>
+                  <span className="font-medium">{baseBudget > 0 ? formatMoney(baseBudget) : 'A combinar'}</span>
+                </p>
+                {addonDetails.map((detail, i) => (
+                  <p key={`${detail.itemType}-${detail.itemId}-${i}`} className="flex justify-between">
+                    <span className="text-muted-foreground">{detail.name} ({detail.label})</span>
+                    <span className="font-medium">{formatMoney(detail.amount)}</span>
+                  </p>
+                ))}
+                {taxaAdministrativa > 0 && baseBudget + addonsTotal > 0 && (
+                  <p className="flex justify-between">
+                    <span className="text-muted-foreground">
+                      Taxa administrativa ({taxaAdministrativa.toString().replace('.', ',')}%)
+                    </span>
+                    <span className="font-medium">
+                      {formatMoney(((baseBudget + addonsTotal) * taxaAdministrativa) / 100)}
+                    </span>
+                  </p>
+                )}
+                <p className="mt-2 flex justify-between border-t pt-2 font-semibold">
+                  <span>Total a pagar no checkout</span>
+                  <span className="text-primary">
+                    {formatMoney((baseBudget + addonsTotal) * (1 + taxaAdministrativa / 100))}
+                  </span>
+                </p>
+              </div>
+
+              {error && <p className="text-sm text-destructive">{error}</p>}
+
+              <p className="text-xs text-muted-foreground">
+                Após o envio, o artista aciona o pagamento; você paga o valor acima pelo checkout
+                seguro (InfinityPay) e o show é confirmado automaticamente.
+              </p>
+            </div>
+          )}
+
+          {/* Navegação dos passos */}
+          {step < STEP_TITLES.length - 1 ? (
+            <div className="flex items-center gap-2">
+              {step > 0 && (
+                <Button type="button" variant="outline" className="flex-1" onClick={() => setStep((s) => s - 1)}>
+                  Voltar
+                </Button>
+              )}
+              <Button type="button" className="flex-1" onClick={handleContinue}>
+                Continuar
+              </Button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Button type="button" variant="outline" className="flex-1" onClick={() => setStep((s) => s - 1)}>
+                Voltar
+              </Button>
+              <Button
+                type="button"
+                className="flex-1"
+                disabled={create.isPending}
+                onClick={() => {
+                  if (fullyBlockedDates.includes(eventDate)) {
+                    toast.warning('O artista está indisponível nessa data. Escolha outro dia na agenda.')
+                    return
+                  }
+                  create.mutate()
+                }}
+              >
+                {create.isPending ? 'Enviando...' : 'Enviar solicitação'}
+              </Button>
+            </div>
+          )}
         </form>
       </DialogContent>
     </Dialog>
@@ -1303,15 +1522,7 @@ export function GuestBookingDialog({
                     </Select>
                   </div>
                 </div>
-                <div className="space-y-1.5">
-                  <Label>Público estimado</Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    value={estimatedAudience}
-                    onChange={(e) => setEstimatedAudience(e.target.value)}
-                  />
-                </div>
+                
                 <div className="space-y-1.5">
                   <Label>Mensagem</Label>
                   <Textarea

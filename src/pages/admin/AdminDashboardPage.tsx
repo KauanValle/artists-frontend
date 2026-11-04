@@ -10,6 +10,7 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { bookingsApi } from '@/services'
 import { Link } from 'react-router-dom'
 import { BookingStatusBadge, EmptyState, eventTypeLabel } from '@/components/badges'
+import { TaxaAdministrativaCard } from '@/pages/admin/TaxaAdministrativaCard'
 import { formatDate, formatMoney, formatTime } from '@/lib/utils'
 import type { Booking } from '@/types'
 import {StatCard} from "@/pages/artist/ArtistDashboardPage.tsx";
@@ -39,6 +40,8 @@ export function AdminDashboardPage() {
           </div>
         </CardContent>
       </Card>
+
+      <TaxaAdministrativaCard />
 
       <TotalBookingsSection />
     </div>

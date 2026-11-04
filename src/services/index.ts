@@ -164,7 +164,7 @@ export const eventsApi = {
 
 // Financial
 export const financialApi = {
-  list: (params: { type?: string; status?: string; from?: string; to?: string; page?: number; pageSize?: number }) =>
+  list: (params: { type?: string; status?: string; from?: string; to?: string; page?: number; pageSize?: number; ordenarPor?: string; direcao?: string }) =>
     api.get<PagedResult<Transaction>>('/financial/transactions', { params }),
   create: (payload: { type: string; category: string; amount: number; dueDate?: string | null; eventId?: string | null; notes?: string }) =>
     api.post<Transaction>('/financial/transactions', payload),
@@ -256,6 +256,8 @@ export const socialLinksApi = {
 // Identidade visual da plataforma
 export const brandingApi = {
   get: () => api.get<import('@/types').Branding>('/branding'),
+  getTaxaAdministrativa: () => api.get<{ percentual: number }>('/admin/taxa'),
+  saveTaxaAdministrativa: (percentual: number) => api.put<{ percentual: number }>('/admin/taxa', { percentual }),
   uploadLogo: (file: File) => {
     const form = new FormData()
     form.append('file', file)

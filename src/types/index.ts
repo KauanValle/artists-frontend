@@ -598,6 +598,7 @@ export interface ArtistContract {
 export interface Branding {
   logoUrl: string | null
   assinaturaObrigatoria: boolean
+  taxaAdministrativa: number
 }
 
 export interface SignContractorPayload {
