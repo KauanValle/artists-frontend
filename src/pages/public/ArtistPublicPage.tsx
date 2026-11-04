@@ -4,7 +4,10 @@ import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { addDays } from 'date-fns'
 import { CalendarDays, CalendarPlus, Check, CheckCircle2, ChevronRight, Heart, Images, Instagram, MapPin } from 'lucide-react'
 import { toast } from 'sonner'
-import { addonsApi, artistsApi, availabilityApi, bookingsApi, brandingApi, favoritesApi, publicBookingsApi, socialLinksApi } from '@/services'
+import {
+    addonsApi, artistsApi, availabilityApi, bookingsApi, brandingApi, favoritesApi, publicBookingsApi, socialLinksApi,
+    viaCepApi
+} from '@/services'
 import { useAuth } from '@/hooks/useAuth'
 import { Avatar } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
@@ -21,7 +24,7 @@ import { RatingStars } from '@/components/ui/rating-stars'
 import { EmptyState, eventTypeLabel } from '@/components/badges'
 import { cn, formatDate, formatMoney, minutesToLabel, toDateInput } from '@/lib/utils'
 import { extractApiError } from '@/services/api'
-import type { AddonItemType, BookingAddonItem, EventType, Fee } from '@/types'
+import {AddonItemType, BookingAddonItem, EventType, Fee, LocationCompleteItem} from '@/types'
 
 export function ArtistPublicPage() {
   const { slug } = useParams<{ slug: string }>()
@@ -105,8 +108,15 @@ export function ArtistPublicPage() {
       if (a.status !== 'Available' && (a.startTime !== null && a.endTime !== null)) continue
       const win: TimeInterval = a.isAllDay
         ? { start: '00:00', end: '24:00' }
-        : { start: a.startTime.slice(0, 5), end: a.endTime.slice(0, 5) }
-      map[a.date] = [...(map[a.date] ?? []), win]
+        : a.endTime > a.startTime
+        ? { start: a.startTime.slice(0, 5), end: a.endTime.slice(0, 5) }
+        : { start: a.startTime.slice(0, 5), end: '24:00' }
+
+      if (a.endTime <= a.startTime && !a.isAllDay) {
+        map[a.date] = [...(map[a.date] ?? []), win, { start: '00:00', end: a.endTime.slice(0, 5) }]
+      } else {
+        map[a.date] = [...(map[a.date] ?? []), win]
+      }
     }
     return map
   }, [availabilities])
@@ -553,6 +563,8 @@ export function BookingRequestDialog({
     eventDate !== '' &&
     !workingWeekdays.includes(new Date(`${eventDate}T00:00:00`).getDay())
   const [location, setLocation] = useState('')
+  const [locationComplete, setLocationComplete] = useState<LocationCompleteItem | null>(null)
+  const [cep, setCep] = useState('')
   const [eventType, setEventType] = useState<EventType>('Show')
   const [estimatedAudience, setEstimatedAudience] = useState('')
   const [budget, setBudget] = useState('')
@@ -560,8 +572,7 @@ export function BookingRequestDialog({
   const [selectedAddons, setSelectedAddons] = useState<BookingAddonItem[]>([])
   const [step, setStep] = useState(0)
   const [error, setError] = useState('')
-
-  const STEP_TITLES = ['Detalhes do evento', 'Orçamento & adicionais', 'Confirmação']
+  const [addressNumber, setAddressNumber] = useState('')
 
   const { data: addons } = useQuery({
     queryKey: ['artist-addons', artistId],
@@ -569,12 +580,16 @@ export function BookingRequestDialog({
     enabled: open && !!artistId,
   })
 
-  // Duração selecionada em minutos → cachê correspondente pré-preenche o orçamento.
+    const STEP_TITLES = (addons?.equipment.length == 0 && addons?.teamMembers.length == 0) ? ['Detalhes do evento', 'Endereço', 'Orçamento', 'Confirmação'] : ['Detalhes do evento', 'Endereço', 'Orçamento & Adicionais', 'Confirmação']
+
+    // Duração selecionada em minutos → cachê correspondente pré-preenche o orçamento.
   const duracaoMinutos = useMemo(() => {
     if (!startTime || !endTime) return null
     const [sh, sm] = startTime.split(':').map(Number)
     const [eh, em] = endTime.split(':').map(Number)
-    return eh * 60 + em - (sh * 60 + sm)
+    const minutos = eh * 60 + em - (sh * 60 + sm)
+    // Show que cruza a meia-noite (ex.: 23:00 → 02:00 = 3h).
+    return minutos > 0 ? minutos : minutos + 1440
   }, [startTime, endTime])
   const feeDaDuracao = duracaoMinutos ? fees.find((f) => f.durationMinutes === duracaoMinutos) : undefined
 
@@ -583,6 +598,21 @@ export function BookingRequestDialog({
   }, [feeDaDuracao])
 
   const baseBudget = Number(budget.replace(',', '.')) || 0
+    
+    const getLocation = async (cepCompleto: string) => {
+      try {
+          const data = await viaCepApi.getAddress({
+              cep: cepCompleto
+          }).then(result => {
+              console.log(result.data)
+              setLocationComplete(result.data)
+              setLocation(result.data.logradouro)
+          })
+      }catch (e) {
+          console.error('Error getLocation')
+      }
+    }
+
 
   // Prévia dos adicionais — mesma fórmula do servidor: percentual sobre a proposta, fixo somado.
   const addonDetails = useMemo(() => {
@@ -653,10 +683,12 @@ export function BookingRequestDialog({
         toast.warning('Selecione o horário de início e fim do evento')
         return
       }
-      if (!location.trim()) {
-        toast.warning('Informe o local do evento')
-        return
-      }
+    }
+    if(step === 1) {
+        if (!location.trim()) {
+            toast.warning('Informe o local do evento')
+            return
+        }
     }
     setStep((s) => s + 1)
   }
@@ -758,16 +790,13 @@ export function BookingRequestDialog({
             />
           )}
           {eventDate && workingTimesByDate[eventDate]?.length ? (
-            <p className="text-xs text-muted-foreground">
-              Horários de atendimento de {artistName} neste dia:{' '}
-              {workingTimesLabel(workingTimesByDate[eventDate])}.
-            </p>
+                  <p className="text-xs text-muted-foreground">
+                      Horários de atendimento de {artistName} neste dia:{' '}
+                      {workingTimesLabel(workingTimesByDate[eventDate])}.
+                  </p>
           ) : null}
           <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label>Local</Label>
-              <Input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Endereço do evento" />
-            </div>
+            
             <div className="space-y-1.5">
               <Label>Tipo de evento</Label>
               <Select value={eventType} onValueChange={(v) => setEventType(v as EventType)}>
@@ -783,8 +812,6 @@ export function BookingRequestDialog({
                 </SelectContent>
               </Select>
             </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                   <Label>Público estimado</Label>
                   <Input
@@ -794,153 +821,215 @@ export function BookingRequestDialog({
                       onChange={(e) => setEstimatedAudience(e.target.value)}
                   />
               </div>
-              <div className="space-y-1.5">
-                  <Label>Cache do artista (R$)</Label>
-                  <Input
-                      value={budget}
-                      onChange={(e) => aceitaNegociar && setBudget(e.target.value)}
-                      placeholder="Opcional"
-                      readOnly={!aceitaNegociar}
-                      className={cn(!aceitaNegociar && 'cursor-not-allowed bg-muted')}
-                  />
-                  {feeDaDuracao && (
-                      <p className="text-xs text-muted-foreground">
-                          {aceitaNegociar
-                              ? `Valor sugerido pelo cachê de ${minutesToLabel(duracaoMinutos!)} — você pode ajustar.`
-                              : `Valor fixo do cachê de ${minutesToLabel(duracaoMinutos!)} — não negociável.`}
-                      </p>
-                  )}
-              </div>
           </div>
+         
           <div className="space-y-1.5">
             <Label>Mensagem</Label>
             <Textarea value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Conte os detalhes do evento..." />
           </div>
           </>
           )}
+
+            {step === 1 && (
+                <div className="space-y-3 rounded-xl border p-4 ">
+                    <div>
+                        <p className="text-sm font-semibold">Informações do endereço</p>
+                        <p className="text-xs text-muted-foreground">
+                            Preencha as informações de endereço do seu evento
+                        </p>
+                    </div>
+                    <div className="grid grid-cols-1 gap-3">
+                        <div className="space-y-1.5">
+                            <Label>CEP</Label>
+                            <Input
+                                value={cep}
+                                maxLength={8}
+                                onChange={(e) => {
+                                    setCep(e.target.value)
+                                    if (e.target.value.replace(/\D/g, "").length === 8) {
+                                        getLocation(e.target.value);
+                                    }
+                                }}
+                                placeholder="CEP do evento"
+                            />
+                        </div>
+                        
+                        {locationComplete && locationComplete.logradouro != null && (
+                            <div>
+                                <div className="space-y-1.5">
+                                    <Label>Número</Label>
+                                    <Input value={addressNumber} onChange={(e) => (
+                                        setAddressNumber(e.target.value),
+                                        setLocation(`${locationComplete.logradouro}, ${e.target.value}`)
+                                    )} placeholder="Endereço do evento" />
+                                </div>
+                                <div className="space-y-1.5 mt-2">
+                                    <Label>Logradouro</Label>
+                                    <Input value={location} onChange={(e) => setLocation(`${e.target.value}, ${addressNumber}`)} placeholder="Endereço do evento" readOnly={true} className="cursor-not-allowed bg-muted"/>
+                                </div>
+                                
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
           {/* Adicionais — equipe e equipamentos externos (percentual sobre o orçamento ou valor fixo) */}
-          {(step === 1 && ((addons?.teamMembers.length ?? 0) > 0 || (addons?.equipment.length ?? 0) > 0)) && (
-            <div className="space-y-3 rounded-xl border p-4">
+          {(step === 2 && (
               <div>
-                <p className="text-sm font-semibold">Adicionais para o seu evento</p>
-                <p className="text-xs text-muted-foreground">
-                  Profissionais e equipamentos extras oferecidos por {artistName}. O valor entra na proposta
-                  (percentual sobre o orçamento ou valor fixo).
-                </p>
-              </div>
+                <div className="space-y-3 rounded-xl border p-4 mb-4">
+                      <div>
+                          <p className="text-sm font-semibold">Negociação do cache</p>
+                          <p className="text-xs text-muted-foreground">
+                              Profissionais e equipamentos extras oferecidos por {artistName}. O valor entra na proposta
+                              (percentual sobre o orçamento ou valor fixo).
+                          </p>
+                          <div className="space-y-1.5 mt-4">
+                              <Label>Valor da proposta de negociação (R$)</Label>
+                              <Input
+                                  value={budget}
+                                  onChange={(e) => aceitaNegociar && setBudget(budget)}
+                                  placeholder="Opcional"
+                                  readOnly={!aceitaNegociar}
+                                  className={cn(!aceitaNegociar && 'cursor-not-allowed bg-muted')}
+                              />
+                              {feeDaDuracao && (
+                                  <p className="text-xs text-muted-foreground">
+                                      {aceitaNegociar
+                                          ? `Valor sugerido pelo cachê de ${minutesToLabel(duracaoMinutos!)} — você pode ajustar.`
+                                          : `Valor fixo do cachê de ${minutesToLabel(duracaoMinutos!)} — não negociável.`}
+                                  </p>
+                              )}
+                          </div>
+                      </div>
+                  </div>
 
-              {addons!.teamMembers.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Equipe externa</p>
-                  {addons!.teamMembers.map((member) => {
-                    const selected = selectedAddons.some((a) => a.itemType === 'TeamMember' && a.itemId === member.id)
-                    return (
-                      <button
-                        key={member.id}
-                        type="button"
-                        onClick={() => toggleAddon('TeamMember', member.id)}
-                        className={cn(
-                          'flex w-full items-center justify-between gap-3 rounded-lg border p-3 text-left transition-colors',
-                          selected ? 'border-primary bg-primary/5' : 'hover:bg-accent'
-                        )}
-                      >
-                        <div className="flex items-center gap-3">
-                          <span
+                  {(addons?.teamMembers.length ?? 0) > 0 || (addons?.equipment.length ?? 0) > 0 && (
+                <div className="space-y-3 rounded-xl border p-4">
+                    
+                  <div>
+                    <p className="text-sm font-semibold">Adicionais para o seu evento</p>
+                    <p className="text-xs text-muted-foreground">
+                      Profissionais e equipamentos extras oferecidos por {artistName}. O valor entra na proposta
+                      (percentual sobre o orçamento ou valor fixo).
+                    </p>
+                  </div>
+                    
+    
+                  {addons!.teamMembers.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Equipe externa</p>
+                      {addons!.teamMembers.map((member) => {
+                        const selected = selectedAddons.some((a) => a.itemType === 'TeamMember' && a.itemId === member.id)
+                        return (
+                          <button
+                            key={member.id}
+                            type="button"
+                            onClick={() => toggleAddon('TeamMember', member.id)}
                             className={cn(
-                              'flex h-5 w-5 items-center justify-center rounded border',
-                              selected ? 'border-primary bg-primary text-primary-foreground' : 'bg-background'
+                              'flex w-full items-center justify-between gap-3 rounded-lg border p-3 text-left transition-colors',
+                              selected ? 'border-primary bg-primary/5' : 'hover:bg-accent'
                             )}
                           >
-                            {selected && <Check className="h-3.5 w-3.5" />}
-                          </span>
-                          <div>
-                            <p className="text-sm font-medium">{member.name}</p>
-                            <p className="text-xs text-muted-foreground">{member.role || 'Equipe externa'}</p>
-                          </div>
-                        </div>
-                        <span className="text-sm font-semibold">
-                          {member.shareType === 'Percentage'
-                            ? '+ ' + member.shareValue + '%'
-                            : '+ ' + formatMoney(member.shareValue)}
-                        </span>
-                      </button>
-                    )
-                  })}
-                </div>
-              )}
-
-              {addons!.equipment.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Equipamentos externos
-                  </p>
-                  {addons!.equipment.map((equipment) => {
-                    const selected = selectedAddons.some((a) => a.itemType === 'Equipment' && a.itemId === equipment.id)
-                    return (
-                      <button
-                        key={equipment.id}
-                        type="button"
-                        onClick={() => toggleAddon('Equipment', equipment.id)}
-                        className={cn(
-                          'flex w-full items-center justify-between gap-3 rounded-lg border p-3 text-left transition-colors',
-                          selected ? 'border-primary bg-primary/5' : 'hover:bg-accent'
-                        )}
-                      >
-                        <div className="flex items-center gap-3">
-                          <span
+                            <div className="flex items-center gap-3">
+                              <span
+                                className={cn(
+                                  'flex h-5 w-5 items-center justify-center rounded border',
+                                  selected ? 'border-primary bg-primary text-primary-foreground' : 'bg-background'
+                                )}
+                              >
+                                {selected && <Check className="h-3.5 w-3.5" />}
+                              </span>
+                              <div>
+                                <p className="text-sm font-medium">{member.name}</p>
+                                <p className="text-xs text-muted-foreground">{member.role || 'Equipe externa'}</p>
+                              </div>
+                            </div>
+                            <span className="text-sm font-semibold">
+                              {member.shareType === 'Percentage'
+                                ? '+ ' + member.shareValue + '%'
+                                : '+ ' + formatMoney(member.shareValue)}
+                            </span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
+    
+                  {addons!.equipment.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        Equipamentos externos
+                      </p>
+                      {addons!.equipment.map((equipment) => {
+                        const selected = selectedAddons.some((a) => a.itemType === 'Equipment' && a.itemId === equipment.id)
+                        return (
+                          <button
+                            key={equipment.id}
+                            type="button"
+                            onClick={() => toggleAddon('Equipment', equipment.id)}
                             className={cn(
-                              'flex h-5 w-5 items-center justify-center rounded border',
-                              selected ? 'border-primary bg-primary text-primary-foreground' : 'bg-background'
+                              'flex w-full items-center justify-between gap-3 rounded-lg border p-3 text-left transition-colors',
+                              selected ? 'border-primary bg-primary/5' : 'hover:bg-accent'
                             )}
                           >
-                            {selected && <Check className="h-3.5 w-3.5" />}
+                            <div className="flex items-center gap-3">
+                              <span
+                                className={cn(
+                                  'flex h-5 w-5 items-center justify-center rounded border',
+                                  selected ? 'border-primary bg-primary text-primary-foreground' : 'bg-background'
+                                )}
+                              >
+                                {selected && <Check className="h-3.5 w-3.5" />}
+                              </span>
+                              <div>
+                                <p className="text-sm font-medium">{equipment.name}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {equipment.category || 'Equipamento'}
+                                </p>
+                              </div>
+                            </div>
+                            <span className="text-sm font-semibold">
+                              {equipment.shareType === 'Percentage'
+                                ? '+ ' + equipment.shareValue + '%'
+                                : '+ ' + formatMoney(equipment.shareValue)}
+                            </span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
+    
+                  {selectedAddons.length > 0 && (
+                    <div className="rounded-lg bg-muted/50 p-3 text-sm">
+                      {addonDetails.map((detail, i) => (
+                        <p key={`${detail.itemType}-${detail.itemId}-${i}`} className="flex justify-between">
+                          <span className="text-muted-foreground">
+                            {detail.name} ({detail.label})
                           </span>
-                          <div>
-                            <p className="text-sm font-medium">{equipment.name}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {equipment.category || 'Equipamento'}
-                            </p>
-                          </div>
-                        </div>
-                        <span className="text-sm font-semibold">
-                          {equipment.shareType === 'Percentage'
-                            ? '+ ' + equipment.shareValue + '%'
-                            : '+ ' + formatMoney(equipment.shareValue)}
-                        </span>
-                      </button>
-                    )
-                  })}
-                </div>
-              )}
-
-              {selectedAddons.length > 0 && (
-                <div className="rounded-lg bg-muted/50 p-3 text-sm">
-                  {addonDetails.map((detail, i) => (
-                    <p key={`${detail.itemType}-${detail.itemId}-${i}`} className="flex justify-between">
-                      <span className="text-muted-foreground">
-                        {detail.name} ({detail.label})
-                      </span>
-                      <span className="font-medium">{formatMoney(detail.amount)}</span>
-                    </p>
-                  ))}
-                  {baseBudget > 0 && (
-                    <p className="mt-2 flex justify-between border-t pt-2 font-semibold">
-                      <span>Total com adicionais</span>
-                      <span className="text-primary">{formatMoney(baseBudget + addonsTotal)}</span>
-                    </p>
-                  )}
-                  {baseBudget <= 0 && (
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Informe o orçamento acima para ver o cálculo dos adicionais em percentual.
-                    </p>
+                          <span className="font-medium">{formatMoney(detail.amount)}</span>
+                        </p>
+                      ))}
+                      {baseBudget > 0 && (
+                        <p className="mt-2 flex justify-between border-t pt-2 font-semibold">
+                          <span>Total com adicionais</span>
+                          <span className="text-primary">{formatMoney(baseBudget + addonsTotal)}</span>
+                        </p>
+                      )}
+                      {baseBudget <= 0 && (
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          Informe o orçamento acima para ver o cálculo dos adicionais em percentual.
+                        </p>
+                      )}
+                    </div>
                   )}
                 </div>
-              )}
-            </div>
-          )}
+                  )}
+                </div>
+                      
+          ))}
 
           {/* Transparência: taxa administrativa da plataforma sobre o orçamento */}
-          {baseBudget > 0 && taxaAdministrativa > 0 && (
+          {baseBudget > 0 && taxaAdministrativa > 0 && [2, 3].includes(step) && (
             <div className="rounded-lg border p-3 text-sm">
               <p className="flex justify-between">
                 <span className="text-muted-foreground">Orçamento do show</span>
@@ -973,7 +1062,7 @@ export function BookingRequestDialog({
           )}
 
           {/* Passo 3 — Confirmação (revisão) */}
-          {step === 2 && (
+          {step === 3 && (
             <div className="space-y-3">
               <div className="space-y-2 rounded-lg border p-3 text-sm">
                 <p className="flex justify-between">
@@ -1252,14 +1341,12 @@ export function GuestBookingDialog({
         toast.warning('O artista não atende nesse dia da semana. Escolha outro dia.')
         return
       }
-      if (!startTime || !endTime) {
-        toast.warning('Selecione o horário de início e término do evento')
-        return
-      }
-      if (!location.trim()) {
-        toast.warning('Informe o local do evento')
-        return
-      }
+    }
+    if(step === 2) {
+        if (!location.trim()) {
+            toast.warning('Informe o local do evento')
+            return
+        }
     }
     setStep((s) => s + 1)
   }

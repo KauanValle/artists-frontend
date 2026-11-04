@@ -16,6 +16,8 @@ interface CalendarBaseProps {
   disabledDates?: string[]
   /** Datas com bloqueio parcial de horário — continuam selecionáveis, mas marcadas com texto âmbar. */
   partialDates?: string[]
+  /** Datas com subtítulo de horário agendado (ex.: "20:00–23:00") — exibido sob o dia no modo mensal. */
+  markedDates?: Record<string, string>
   /** Dias da semana (0=Dom..6=Sáb) que o artista atende — quando informado, os demais ficam bloqueados. */
   workingWeekdays?: number[]
 }
@@ -38,6 +40,7 @@ export function DatePickerCalendar({
   disabledDates,
   partialDates,
   workingWeekdays,
+  markedDates,
 }: {
   value?: string
   onChange: (date: string) => void
@@ -53,6 +56,7 @@ export function DatePickerCalendar({
       disabledDates={disabledDates}
       partialDates={partialDates}
       workingWeekdays={workingWeekdays}
+      markedDates={markedDates}
       selectedKeys={value ? [value] : []}
       onPick={onChange}
     />
@@ -70,6 +74,7 @@ export function MultiDatePickerCalendar({
   minDate,
   disabledDates,
   partialDates,
+  markedDates,
 }: {
   selected: string[]
   onChange: (dates: string[]) => void
@@ -78,8 +83,29 @@ export function MultiDatePickerCalendar({
     selected.length > 0 ? new Date(`${selected[0]}T00:00:00`) : new Date()
   )
 
-  const onPick = (key: string) =>
-    onChange(selected.includes(key) ? selected.filter((d) => d !== key) : [...selected, key].sort())
+  const onPick = (key: string) => {
+    const updatedSelection = selected.includes(key)
+      ? selected.filter((d) => d !== key)
+      : [...selected, key];
+
+      const toMinutes = (time: string) => {
+          const [hours, minutes] = time.split(':').map(Number);
+          return hours * 60 + minutes;
+      };
+
+    // Custom sort logic to handle evening and overnight events
+      updatedSelection.sort((a, b) => {
+          const timeA = toMinutes(a);
+          const timeB = toMinutes(b);
+
+          const adjustedTimeA = timeA < 240 ? timeA + 1440 : timeA;
+          const adjustedTimeB = timeB < 240 ? timeB + 1440 : timeB;
+
+          return adjustedTimeA - adjustedTimeB;
+      });
+
+    onChange(updatedSelection);
+  };
 
   return (
     <CalendarView
@@ -104,6 +130,7 @@ function CalendarView({
   disabledDates,
   partialDates,
   workingWeekdays,
+  markedDates,
   selectedKeys,
   onPick,
 }: {
@@ -114,9 +141,11 @@ function CalendarView({
   disabledDates?: string[]
   partialDates?: string[]
   workingWeekdays?: number[]
+  markedDates?: Record<string, string>
   selectedKeys: string[]
   onPick: (key: string) => void
 }) {
+  const markedSubtitles = markedDates ?? {}
   const range = useMemo(() => {
     if (mode === 'monthly') return { from: startOfMonth(cursor), to: endOfMonth(cursor) }
     return { from: startOfWeek(cursor, { weekStartsOn: 0 }), to: endOfWeek(cursor, { weekStartsOn: 0 }) }
@@ -230,6 +259,16 @@ function CalendarView({
                 </span>
               )}
               {format(day, 'dd')}
+              {mode === 'monthly' && markedSubtitles[key] && (
+                <span
+                  className={cn(
+                    'block text-[9px] leading-tight font-medium',
+                    isSelected ? 'text-primary-foreground' : 'text-emerald-600 dark:text-emerald-400'
+                  )}
+                >
+                  {markedSubtitles[key]}
+                </span>
+              )}
             </button>
           )
         })}

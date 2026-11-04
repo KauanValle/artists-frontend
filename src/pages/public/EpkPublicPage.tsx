@@ -25,7 +25,7 @@ import {
 import { toast } from 'sonner'
 import { artistsApi, epkApi, socialLinksApi } from '@/services'
 import { SoundCloudIcon, SpotifyIcon, YoutubeIcon } from '@/components/ui/streaming-icons'
-import { BrandLogo } from '@/components/ui/brand-logo'
+import {BrandLogo, BrandMark} from '@/components/ui/brand-logo'
 import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/badges'
 import { formatMoney } from '@/lib/utils'
@@ -247,8 +247,7 @@ export function EpkPublicPage() {
       <header className="fixed inset-x-0 top-0 z-40 border-b border-white/10 bg-black/50 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
           <Link to="/" className="flex items-center gap-2">
-            <BrandLogo className="h-8 w-8" />
-            <span className="text-xl font-extrabold lowercase tracking-tight text-white">reprissa</span>
+              <BrandMark className="h-8 w-8" />
           </Link>
 
           <nav className="hidden items-center gap-6 text-sm font-medium text-white/60 md:flex">

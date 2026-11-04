@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
+import {Slot} from "@radix-ui/react-slot";
 
 export interface TimeInterval {
   start: string // 'HH:mm'
@@ -23,7 +24,7 @@ function toTime(minutes: number): string {
 }
 
 function durationLabel(start: string, end: string): string {
-  const total = toMinutes(end) - toMinutes(start)
+  const total = toMinutes(end) - toMinutes(start) + (toMinutes(end) < toMinutes(start) ? 1440 : 0)
   const hours = Math.floor(total / 60)
   const minutes = total % 60
   return minutes === 0 ? `${hours}h` : `${hours}h${String(minutes).padStart(2, '0')}`
@@ -60,23 +61,38 @@ export function TimeRangePicker({
 }) {
   const windows = useMemo(
     () =>
-      allowed
-        .filter((w) => toMinutes(w.end) > toMinutes(w.start))
-        .sort((a, b) => toMinutes(a.start) - toMinutes(b.start)),
+      [...allowed].sort((a, b) => toMinutes(a.start) - toMinutes(b.start)),
     [allowed]
   )
 
   const slots = useMemo(() => {
     if (windows.length === 0) {
-      const list: string[] = []
-        if(start && end) {
-            for (let t = DAY_START_MINUTES; t < DAY_END_MINUTES; t += SLOT_MINUTES) list.push(toTime(t))
+      const list: string[] = [];
+      if (start && end) {
+        const startMinutes = toMinutes(start);
+        const endMinutes = toMinutes(end);
+
+        if (endMinutes > startMinutes) {
+          // Normal case: end is after start
+          for (let t = startMinutes; t < endMinutes; t += SLOT_MINUTES) {
+            list.push(toTime(t));
+          }
+        } else {
+          // Crosses midnight: split into two loops
+          for (let t = startMinutes; t < DAY_END_MINUTES; t += SLOT_MINUTES) {
+            list.push(toTime(t));
+          }
+          for (let t = 0; t < endMinutes; t += SLOT_MINUTES) {
+            list.push(toTime(t));
+          }
         }
-      return list
+      }
+      return list;
     }
+
     // Grade de 30 min dentro de cada janela; início alinhado para cima e fim para baixo.
     // O limite superior fica em 23:30 — "24:00" não é um valor enviável ao backend.
-    const list: string[] = []
+    const gerados: { min: number; label: string }[] = []
     const last = DAY_END_MINUTES - SLOT_MINUTES
     let previous = -1
     for (const w of windows) {
@@ -84,12 +100,16 @@ export function TimeRangePicker({
       const to = Math.min(Math.floor(toMinutes(w.end) / SLOT_MINUTES) * SLOT_MINUTES, last)
       for (let t = from; t <= to; t += SLOT_MINUTES) {
         if (t > previous) {
-          list.push(toTime(t))
+          gerados.push({ min: t, label: toTime(t) })
           previous = t
         }
       }
     }
-    return list
+    // Ordenação noturna (casa noturna): noite (18:00+) primeiro, tarde no meio,
+    // madrugada (00:00–05:59) por último — ex.: 18:00…23:30, 00:00…03:00.
+    const bucket = (min: number) => (min >= 1080 ? 0 : min < 360 ? 2 : 1)
+    gerados.sort((a, b) => bucket(a.min) - bucket(b.min) || a.min - b.min)
+    return gerados.map((s) => s.label)
   }, [windows])
   // Uma faixa não pode atravessar um intervalo fora das janelas de atendimento.
   const canSpan = (from: number, to: number) => {
@@ -101,8 +121,11 @@ export function TimeRangePicker({
   }
 
   const pick = (slot: string) => {
+    // Por índice na lista ordenada: permite selecionar faixas que cruzam a meia-noite.
+    const inicioIdx = start ? slots.indexOf(start) : -1
+    const slotIdx = slots.indexOf(slot)
     // Sem início, com a faixa já completa, ou clicando antes do início: começa uma nova seleção.
-    if (!start || end || toMinutes(slot) <= toMinutes(start)) {
+    if (!start || end || inicioIdx === -1 || slotIdx <= inicioIdx) {
       onChange(slot, null)
       return
     }
@@ -131,10 +154,21 @@ export function TimeRangePicker({
   return (
     <div className={cn('space-y-2', disabled && 'pointer-events-none opacity-50')}>
       <div className="flex items-center justify-between">
-        <Label>Horário do evento</Label>
+          <div>
+              <Label>Horários disponiveis</Label>
+              <p className="text-xs text-muted-foreground mb-4">
+                  {start && !end
+                      ? 'Agora clique no horário de término.'
+                      : !start
+                          ? 'Clique no horário de início e depois no de término.'
+                          : 'Clique em outro horário para refazer a seleção.'}
+              </p>
+          </div>
+        
+          
         {start && end && (
           <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary">
-            {start} – {end} · {durationLabel(start, end)}
+            {start} – {end}
           </span>
         )}
       </div>
@@ -160,7 +194,7 @@ export function TimeRangePicker({
                 s === 'range' && 'border-primary/40 bg-primary/10 text-primary',
                 s === 'soft' && 'border-amber-500/60 bg-amber-500/10 text-amber-500',
                 s === 'free' && 'hover:bg-accent',
-                blockedState && 'cursor-not-allowed line-through opacity-40 hover:bg-transparent',
+                blockedState && 'cursor-not-allowed hidden line-through opacity-40 hover:bg-transparent',
                   previousBlockedState
                       ? start === slot || end === slot
                           ? 'border-primary bg-primary text-primary-foreground'
@@ -178,19 +212,11 @@ export function TimeRangePicker({
         })}
       </div>
         <div>
-            {slots.length != 0 ? (
-                <p className="text-xs text-muted-foreground">
-                    {start && !end
-                        ? 'Agora clique no horário de término.'
-                        : !start
-                            ? 'Clique no horário de início e depois no de término.'
-                            : 'Clique em outro horário para refazer a seleção.'}
-                </p>
-            ) : (
+            {slots.length == 0 && (
                 <div className="bg-red-200 border-l-4 border-red-500 text-orange-700 p-4" role="alert">
-                <p className="text-xs text-black">
-                    O artista não tem horários de atendimento disponíveis neste dia.
-                </p>
+                    <p className="text-xs text-black">
+                        O artista não tem horários de atendimento disponíveis neste dia.
+                    </p>
                 </div>
             )}
         </div>

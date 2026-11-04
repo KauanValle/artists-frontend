@@ -1,6 +1,7 @@
 import axios, { AxiosError, AxiosRequestConfig } from 'axios'
 
 export const API_BASE = import.meta.env.VITE_API_URL ?? '/api'
+export const API_VIACEP = import.meta.env.VITE_VIACEP_URL
 
 export interface StoredSession {
   accessToken: string
@@ -30,6 +31,11 @@ export function clearSession() {
 export const api = axios.create({
   baseURL: API_BASE,
   headers: { 'Content-Type': 'application/json' },
+})
+
+export const apiViaCep = axios.create({
+    baseURL: API_VIACEP,
+    headers: { 'Content-Type': 'application/json' },
 })
 
 let onSessionExpired: (() => void) | null = null

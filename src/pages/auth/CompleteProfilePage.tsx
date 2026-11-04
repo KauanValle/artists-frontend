@@ -243,7 +243,7 @@ export function CompleteProfilePage() {
                       {done ? <Check className="h-4 w-4" /> : index + 1}
                     </span>
                     <span className={cn('hidden text-xs sm:block', active ? 'font-semibold text-foreground' : 'text-muted-foreground')}>
-                      {s.title}
+                      {s.title ?? null}
                     </span>
                     {index < ARTIST_STEPS.length - 1 && <span className="h-px flex-1 bg-border" />}
                   </li>
@@ -355,9 +355,15 @@ export function CompleteProfilePage() {
                   <ChevronLeft /> Voltar
                 </Button>
               )}
+                {step === 0 && (
+                    <Button type="button" variant="outline" className="flex-1" onClick={() => setPerfil(null)}>
+                        <ChevronLeft /> Voltar
+                    </Button>
+                )}
               <Button type="button" className="flex-1" onClick={handleContinue} disabled={isSubmitting}>
                 Continuar
               </Button>
+                
             </div>
           )}
 

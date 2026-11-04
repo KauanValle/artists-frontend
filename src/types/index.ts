@@ -223,6 +223,15 @@ export interface BookingAddonItem {
   itemId: string
 }
 
+export interface LocationCompleteItem {
+    cep: string,
+    logradouro: string,
+    complemento: string,
+    bairro: string,
+    localidade: string,
+    uf: string,
+    estado: string
+}
 export interface ArtistAddons {
   teamMembers: {
     id: string

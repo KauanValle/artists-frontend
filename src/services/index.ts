@@ -1,35 +1,35 @@
-import { api } from './api'
-import type {
-  Artist,
-  ArtistCard,
-  ArtistDetailPublic,
-  Availability,
-  Category,
-  Contractor,
-  CreateBookingPayload,
-  CreateGuestBookingPayload,
-  CreateProposalPayload,
-  Conversation,
-  Equipment,
-  EventDetail,
-  EventItem,
-  Favorite,
-  Fee,
-  FinancialSummary,
-  Message,
-  Notification,
-  PagedResult,
-  Proposal,
-  Review,
-  SaveEquipmentPayload,
-  SaveTeamMemberPayload,
-  SaveArtistPayload,
-  SaveAvailabilityPayload,
-  SaveAvailabilityBatchPayload,
-  SaveContractorPayload,
-  SaveFeePayload,
-  SearchArtistsParams,
-  Transaction,
+import {api, apiViaCep} from './api'
+import {
+    Artist,
+    ArtistCard,
+    ArtistDetailPublic,
+    Availability,
+    Category,
+    Contractor,
+    CreateBookingPayload,
+    CreateGuestBookingPayload,
+    CreateProposalPayload,
+    Conversation,
+    Equipment,
+    EventDetail,
+    EventItem,
+    Favorite,
+    Fee,
+    FinancialSummary,
+    Message,
+    Notification,
+    PagedResult,
+    Proposal,
+    Review,
+    SaveEquipmentPayload,
+    SaveTeamMemberPayload,
+    SaveArtistPayload,
+    SaveAvailabilityPayload,
+    SaveAvailabilityBatchPayload,
+    SaveContractorPayload,
+    SaveFeePayload,
+    SearchArtistsParams,
+    Transaction, LocationCompleteItem,
 } from '@/types'
 
 // Auth
@@ -71,6 +71,11 @@ export const feesApi = {
   update: (id: string, payload: SaveFeePayload) => api.put<Fee>(`/artists/me/fees/${id}`, payload),
   remove: (id: string) => api.delete(`/artists/me/fees/${id}`),
 }
+
+export const viaCepApi = {
+    getAddress: (cep: { cep: string }) =>
+        apiViaCep.get(`/${cep.cep}/json`)
+};
 
 export const availabilityApi = {
   listByArtist: (artistId: string, from?: string, to?: string) =>
