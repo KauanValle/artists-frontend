@@ -18,6 +18,7 @@ export type BookingStatus =
   | 'Cancelled'
   | 'Rejected'
   | 'Expired'
+  | 'AwaitingCompletionAccept'
 export type ProposalStatus = 'Pending' | 'Accepted' | 'Rejected' | 'Expired' | 'Cancelled'
 export type TransactionType = 'Income' | 'Expense'
 export type TransactionStatus = 'Pending' | 'Received' | 'Paid' | 'Overdue' | 'Cancelled'

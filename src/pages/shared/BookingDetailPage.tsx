@@ -164,7 +164,7 @@ export function BookingDetailPage() {
             Recusar
           </Button>
         )}
-        {isArtist && booking.status === 'Confirmed' && (
+        {isArtist && (booking.status === 'Confirmed' || booking.status === "AwaitingCompletionAccept") && (
           <>
             <Button onClick={() => setCompleteOpen(true)} disabled={complete.isPending}>
               <CheckCircle2 /> Concluir show
@@ -175,9 +175,14 @@ export function BookingDetailPage() {
           </>
         )}
         {!isArtist && user?.role === 'Contractor' && booking.status === 'Confirmed' && (
+            <>
           <Button onClick={() => setCompleteOpen(true)} disabled={complete.isPending}>
             <CheckCircle2 /> Confirmar conclusão
-          </Button>
+              </Button>
+                <Button variant="destructive" onClick={() => setCancelConfirmedOpen(true)} disabled={cancelConfirmed.isPending}>
+                  <X /> Cancelar show
+              </Button>
+            </>
         )}
         {canAct && (
           <Button variant="outline" onClick={() => act.mutate({ action: 'cancel' })} disabled={act.isPending}>
