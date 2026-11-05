@@ -264,7 +264,6 @@ function EquipmentDialog({ open, onClose, editing }: { open: boolean; onClose: (
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Fixed">Valor fixo (R$)</SelectItem>
-                      <SelectItem value="Percentage">Percentual (%)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -287,20 +286,6 @@ function EquipmentDialog({ open, onClose, editing }: { open: boolean; onClose: (
             <div className="space-y-1.5">
               <Label>Modelo</Label>
               <Input value={form.model} onChange={(e) => set('model', e.target.value)} />
-            </div>
-          </div>
-          <div className="grid grid-cols-3 gap-3">
-            <div className="space-y-1.5">
-              <Label>Identificador</Label>
-              <Input value={form.identifier} onChange={(e) => set('identifier', e.target.value)} placeholder="Nº de série" />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Peso (kg)</Label>
-              <Input value={form.weightKg} onChange={(e) => set('weightKg', e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Valor (R$)</Label>
-              <Input value={form.value} onChange={(e) => set('value', e.target.value)} />
             </div>
           </div>
           <div className="space-y-1.5">

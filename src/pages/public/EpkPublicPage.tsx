@@ -300,7 +300,7 @@ export function EpkPublicPage() {
                 <Music className="h-4 w-4 text-[color:var(--epk-accent)]" /> {artist.categoryName}
               </span>
             </div>
-
+            
             {artist.description && (
               <p className="mt-5 max-w-lg text-base leading-relaxed text-white/70">{artist.description}</p>
             )}
@@ -379,12 +379,13 @@ export function EpkPublicPage() {
               <span className="font-bold text-[color:var(--epk-accent)]">é um estilo de vida.</span>
             </h2>
             {bioParagrafos.length > 0 && (
-              <div className="mt-6 max-w-xl space-y-4 text-[15px] leading-relaxed text-white/60">
-                {bioParagrafos.map((paragrafo, i) => (
-                  // eslint-disable-next-line react/no-array-index-key
-                  <p key={i}>{destaqueNome(paragrafo)}</p>
-                ))}
-              </div>
+                <div className="mt-6 max-w-xl space-y-4 text-[15px] leading-relaxed text-white/60 break-words [overflow-wrap:anywhere]">
+                    {bioParagrafos.map((paragrafo, i) => (
+                        <p key={i} className="min-w-0">
+                            {destaqueNome(paragrafo)}
+                        </p>
+                    ))}
+                </div>
             )}
           </div>
 
@@ -883,16 +884,19 @@ export function EpkPublicPage() {
       </section>
 
       {/* ───────────────────────── Footer ───────────────────────── */}
-      <footer className="border-t border-white/10 py-10">
-        <div className="mx-auto flex max-w-6xl flex-col items-center gap-3 px-4 text-center">
-          <Link to="/" className="flex items-center gap-2">
-            <BrandLogo className="h-7 w-7" />
-            <span className="text-lg font-extrabold lowercase tracking-tight text-white">reprissa</span>
-          </Link>
-          <p className="text-sm text-white/40">
-            EPK de {artist.artisticName} · conectando talentos a oportunidades
-          </p>
-        </div>
+      <footer className="border-t border-white/10 py-10 flex flex-col justify-center items-center">
+          <div className="flex flex-col justify-center items-center">
+              <div className="">
+                  <Link to="/" className="flex items-center gap-2">
+                      <BrandMark />
+                  </Link>
+              </div>
+              <div>
+                  <p className="text-sm text-white/40">
+                      EPK de {artist.artisticName} · conectando talentos a oportunidades
+                  </p>
+              </div>
+          </div>
       </footer>
     </div>
   )

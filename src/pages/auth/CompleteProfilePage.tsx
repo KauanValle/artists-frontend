@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
 import { Check, ChevronLeft, Mic2, User, Wallet } from 'lucide-react'
-import { artistsApi, perfilApi } from '@/services'
+import { artistsApi, perfilApi, viaCepApi } from '@/services'
 import { useAuth } from '@/hooks/useAuth'
 import { homePathFor } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -74,6 +74,7 @@ export function CompleteProfilePage() {
     handleSubmit,
     trigger,
     getValues,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<Record<string, string>>({
     resolver: zodResolver(schema) as never,
@@ -81,6 +82,20 @@ export function CompleteProfilePage() {
   })
 
   const fieldError = (name: string) => errors[name]?.message as string | undefined
+
+  // Preenche cidade e UF automaticamente quando o CEP tem 8 dígitos (ViaCEP).
+  const getLocation = async (cepDigitado: string) => {
+    const digits = cepDigitado.replace(/\D/g, '')
+    if (digits.length !== 8) return
+    try {
+      const { data } = await viaCepApi.getAddress({ cep: digits })
+      if (data?.erro) return
+      if (data.localidade) setValue('city', data.localidade)
+      if (data.uf) setValue('state', data.uf)
+    } catch {
+      // CEP não encontrado — o usuário preenche manualmente.
+    }
+  }
 
   // Sem sessão → login (volta aqui). Perfil já concluído → área logada.
   useEffect(() => {
@@ -200,15 +215,6 @@ export function CompleteProfilePage() {
             </CardContent>
           </Card>
         </div>
-        <p className="mt-4 text-center text-xs text-muted-foreground">
-          Errou a conta?{' '}
-          <Link to="/login" className="text-primary hover:underline" onClick={() => {
-            // sair da conta recém-criada para entrar com outra
-            toast.info('Use "Encerrar sessão" após entrar para trocar de conta.')
-          }}>
-            Entrar com outra conta
-          </Link>
-        </p>
       </div>
     )
   }
@@ -273,7 +279,15 @@ export function CompleteProfilePage() {
               </div>
               <div className="space-y-1.5">
                 <Label>CEP</Label>
-                <Input placeholder="00000-000" {...register('cep')} />
+                <Input
+                  placeholder="00000-000"
+                  {...register('cep', {
+                    onChange: (e) => {
+                      const digits = e.target.value.replace(/\D/g, '')
+                      if (digits.length === 8) void getLocation(digits)
+                    },
+                  })}
+                />
                 {fieldError('cep') && <p className="text-xs text-destructive">{fieldError('cep')}</p>}
               </div>
             </div>
@@ -368,9 +382,16 @@ export function CompleteProfilePage() {
           )}
 
           {perfil === 'Contratante' && (
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? 'Concluindo...' : 'Concluir perfil'}
-            </Button>
+              <div className="flex items-center gap-2">
+                  <Button type="button" variant="outline" className="flex-1" onClick={() => setPerfil(null)}>
+                      <ChevronLeft /> Voltar
+                  </Button>
+                    <Button type="submit" className="flex-1" disabled={isSubmitting}>
+                      {isSubmitting ? 'Concluindo...' : 'Concluir perfil'}
+                    </Button>
+                  
+              </div>
+              
           )}
         </form>
 
@@ -425,6 +446,7 @@ export function CompleteProfilePage() {
               >
                 {isSubmitting ? 'Concluindo...' : 'Concluir perfil'}
               </Button>
+                
             </div>
           </div>
         )}

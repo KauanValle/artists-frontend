@@ -5,7 +5,7 @@ import {
     CalendarDays,
     CalendarRange,
     ClipboardList,
-    CreditCard, DollarSignIcon, GlassesIcon,
+    CreditCard, DollarSignIcon, GlassesIcon, Guitar,
     Heart,
     LayoutDashboard,
     LogOut,
@@ -37,11 +37,11 @@ const artistNav = [
   { to: '/artist/shows', label: 'Shows', icon: Megaphone },
   { to: '/artist/financeiro', label: 'Financeiro', icon: CreditCard },
   { to: '/artist/equipe', label: 'Equipe', icon: Users },
-  { to: '/artist/equipamentos', label: 'Equipamentos', icon: Package },
+  { to: '/artist/equipamentos', label: 'Equipamentos', icon: Guitar },
   { to: '/artist/perfil', label: 'Meu Perfil', icon: Music },
   { to: '/artist/epk', label: 'Meu EPK', icon: Newspaper },
   { to: '/artist/configuracoes', label: 'Configurações', icon: Settings },
-  { to: '/artist/assinatura', label: 'Assinatura', icon: BadgeCheck },
+  // { to: '/artist/assinatura', label: 'Assinatura', icon: BadgeCheck },
 ]
 
 // Conta gratuita: só dashboard e assinatura até o pagamento ser confirmado.

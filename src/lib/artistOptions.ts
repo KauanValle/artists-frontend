@@ -10,7 +10,6 @@ export const EVENT_TYPES = [
   'Feira',
   'Evento empresarial',
   'Evento escolar',
-  'Outro',
 ]
 
 const MUSICAL_STYLES = [
@@ -28,7 +27,6 @@ const MUSICAL_STYLES = [
   'Anos 80',
   'Samba',
   'Pagode',
-  'Outro',
 ]
 
 const ACTING_STYLES = [
@@ -40,7 +38,6 @@ const ACTING_STYLES = [
   'Improviso',
   'Teatro infantil',
   'Dublagem',
-  'Outro',
 ]
 
 const COMEDY_STYLES = [
@@ -51,7 +48,6 @@ const COMEDY_STYLES = [
   'Humor corporativo',
   'Humor limpo',
   'Roasts',
-  'Outro',
 ]
 
 const DANCE_STYLES = [
@@ -64,7 +60,6 @@ const DANCE_STYLES = [
   'Dança do ventre',
   'Zouk',
   'Forró',
-  'Outro',
 ]
 
 const MAGIC_STYLES = [
@@ -74,7 +69,6 @@ const MAGIC_STYLES = [
   'Magia infantil',
   'Mentalismo',
   'Cardismo',
-  'Outro',
 ]
 
 function normalizeCategory(name: string | undefined): string {

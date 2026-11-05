@@ -232,16 +232,17 @@ export function ArtistProfilePage() {
                       )}
                   >
                       {done ? <Check className="h-4 w-4" /> : index + 1}
+                      
                   </button>
-
-                  <span
-                      className={cn(
-                          'text-sm',
-                          active ? 'font-semibold text-foreground' : 'hidden text-muted-foreground sm:inline'
-                      )}
-                  >
-    {s.title}
-  </span>
+                  <button
+                      type="button"
+                      onClick={() => setStep(index)}
+                      title={`Ir para ${s.title}`}
+                      >
+                      <span className={cn('text-sm', active ? 'font-semibold text-foreground' : 'hidden text-muted-foreground sm:inline')}>
+                              {s.title}
+                      </span>
+                  </button>
 
                   {index < STEPS.length - 1 && (
                       <span className="hidden h-px w-8 bg-border sm:block" />
@@ -278,12 +279,17 @@ export function ArtistProfilePage() {
               )}
               <div>
                 <Label>Foto de perfil</Label>
-                <Input
-                  type="file"
-                  accept="image/*"
-                  className="mt-1 w-64"
-                  onChange={(e) => e.target.files?.[0] && uploadPhoto.mutate(e.target.files[0])}
-                />
+                  <div>
+                    <label className="mt-2 inline-flex w-fit items-center cursor-pointer rounded-lg border border-gray-700 px-3 py-1.5 text-sm text-foreground hover:bg-white/5">
+                      Selecionar arquivo
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => e.target.files?.[0] && uploadPhoto.mutate(e.target.files[0])}
+                    />
+                  </label>
+                  </div>
               </div>
             </div>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -391,39 +397,55 @@ export function ArtistProfilePage() {
                 <MissingHint message="Escreva a descrição — obrigatória para publicar o perfil" />
               )}
             </div>
-
-            <div>
-              <Label className="mb-2">Estilos</Label>
-              {styleOptions ? (
-                <>
-                  <ChipMultiSelect
-                    options={styleOptions}
-                    selected={styles}
-                    onChange={setStyles}
-                    addLabel="Adicionar outro estilo"
-                  />
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    Clique para selecionar; use “Adicionar” para estilos próprios.
+              <div>
+                <Label>Estilos</Label>
+                  <p className=" text-xs text-muted-foreground">
+                      Clique para selecionar; use “Adicionar” para estilos próprios.
                   </p>
-                </>
-              ) : (
-                <TagListEditor label="Estilos (preenchimento livre)" values={styles} onChange={setStyles} />
-              )}
-            </div>
-
-            <TagListEditor label="Especialidades" values={specialties} onChange={setSpecialties} />
+                <div className="min-w-0 rounded-lg border p-3 mt-4">
+                  
+                  {styleOptions ? (
+                    <>
+                      <ChipMultiSelect
+                        options={styleOptions}
+                        selected={styles}
+                        onChange={setStyles}
+                        addLabel="Adicionar"
+                        placeholder="Adicionar estilo"
+                      />
+                      
+                    </>
+                  ) : (
+                    <TagListEditor label="Estilos (preenchimento livre)" values={styles} onChange={setStyles} />
+                  )}
+                    <div className="min-w-0 rounded-lg border p-3 mt-4">
+                        <p className="text-sm font-semibold">Especialidades</p>
+                        <p className="text-xs text-muted-foreground mb-4">
+                            Adicione as especialidades do seu estilo musical
+                        </p>
+                        <TagListEditor label="" values={specialties} onChange={setSpecialties} />
+                    </div>
+                    
+                </div>
+                      
+    
+                
+              </div>
 
             <div>
-              <Label className="mb-2">Tipos de evento atendidos</Label>
-              <ChipMultiSelect
-                options={EVENT_TYPES}
-                selected={eventTypes}
-                onChange={setEventTypes}
-                addLabel="Adicionar outro tipo"
-              />
-              <p className="mt-2 text-xs text-muted-foreground">
-                Em quais ocasiões você se apresenta? Aparecem como “Ideal para” no seu perfil público.
-              </p>
+                <Label className="mb-2">Tipos de evento atendidos</Label>
+                <p className=" text-xs text-muted-foreground">
+                    Em quais ocasiões você se apresenta? Aparecem como “Ideal para” no seu perfil público.
+                </p>
+                <div className="min-w-0 rounded-lg border p-3 mt-4">
+                  <ChipMultiSelect
+                    options={EVENT_TYPES}
+                    selected={eventTypes}
+                    onChange={setEventTypes}
+                    addLabel="Adicionar"
+                    placeholder="Adicionar evento"
+                  />
+                </div>
             </div>
           </CardContent>
         </Card>

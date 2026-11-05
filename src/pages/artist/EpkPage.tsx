@@ -25,7 +25,7 @@ import { artistsApi, epkApi, uploadsApi } from '@/services'
 import { extractApiError } from '@/services/api'
 import { formatMoney } from '@/lib/utils'
 
-const BIO_MAX = 4000
+const BIO_MAX = 300
 const PHOTOS_MAX = 12
 const VIDEOS_MAX = 4
 const SONGS_MAX = 15
@@ -197,17 +197,12 @@ export function EpkPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <FileText className="h-4 w-4" /> Sobre o artista
+              <FileText className="h-4 w-4" /> Resumo da sua carreira
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="epk-bio">Descrição do EPK</Label>
-                <span className="text-xs text-muted-foreground">
-                  {bio.length}/{BIO_MAX}
-                </span>
-              </div>
+              
               <Textarea
                 id="epk-bio"
                 value={bio}
@@ -219,10 +214,17 @@ export function EpkPage() {
                 rows={8}
                 maxLength={BIO_MAX}
               />
-              <p className="text-xs text-muted-foreground">
-                Essa descrição é exclusiva do EPK e não altera o seu perfil. Você pode separar em
-                parágrafos com quebras de linha.
-              </p>
+              
+                <div className="flex items-center justify-between">
+                    <p className="text-xs text-muted-foreground">
+                        Essa descrição é exclusiva do EPK e não altera o seu perfil. Você pode separar em
+                        parágrafos com quebras de linha.
+                    </p>
+                    {/*<Label htmlFor="epk-bio">Resumo do artista no EPK</Label>*/}
+                    <span className="text-xs text-muted-foreground">
+                  {bio.length}/{BIO_MAX}
+                </span>
+                </div>
             </div>
           </CardContent>
         </Card>
@@ -390,60 +392,64 @@ export function EpkPage() {
             </div>
 
             <div className="space-y-2">
-              <Label>Ouça também nas plataformas</Label>
-              <p className="text-xs text-muted-foreground">
-                Links que aparecem como botões na seção de repertório do EPK.
-              </p>
-              <div className="grid gap-3 sm:grid-cols-3">
-                <div className="space-y-1">
-                  <span className="text-xs text-muted-foreground">Spotify</span>
-                  <Input
-                    value={spotifyUrl}
-                    onChange={(e) => {
-                      setSpotifyUrl(e.target.value)
-                      markDirty()
-                    }}
-                    placeholder="https://open.spotify.com/artist/..."
-                  />
+                <div className="rounded-lg border bg-card space-y-3 p-4 text-sm">
+                  <Label>Ouça também nas plataformas</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Links que aparecem como botões na seção de repertório do EPK.
+                  </p>
+                  <div className="grid gap-3 sm:grid-cols-3 mt-4">
+                    <div className="space-y-1">
+                      <span className="text-xs text-muted-foreground">Spotify</span>
+                      <Input
+                        value={spotifyUrl}
+                        onChange={(e) => {
+                          setSpotifyUrl(e.target.value)
+                          markDirty()
+                        }}
+                        placeholder="https://open.spotify.com/artist/..."
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <span className="text-xs text-muted-foreground">YouTube</span>
+                      <Input
+                        value={youTubeUrl}
+                        onChange={(e) => {
+                          setYouTubeUrl(e.target.value)
+                          markDirty()
+                        }}
+                        placeholder="https://youtube.com/@..."
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <span className="text-xs text-muted-foreground">SoundCloud</span>
+                      <Input
+                        value={soundCloudUrl}
+                        onChange={(e) => {
+                          setSoundCloudUrl(e.target.value)
+                          markDirty()
+                        }}
+                        placeholder="https://soundcloud.com/..."
+                      />
+                    </div>
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <span className="text-xs text-muted-foreground">YouTube</span>
-                  <Input
-                    value={youTubeUrl}
-                    onChange={(e) => {
-                      setYouTubeUrl(e.target.value)
-                      markDirty()
-                    }}
-                    placeholder="https://youtube.com/@..."
-                  />
-                </div>
-                <div className="space-y-1">
-                  <span className="text-xs text-muted-foreground">SoundCloud</span>
-                  <Input
-                    value={soundCloudUrl}
-                    onChange={(e) => {
-                      setSoundCloudUrl(e.target.value)
-                      markDirty()
-                    }}
-                    placeholder="https://soundcloud.com/..."
-                  />
-                </div>
-              </div>
             </div>
 
             <div className="space-y-1.5">
-              <Label>Playlist oficial do Spotify</Label>
-              <Input
-                value={spotifyPlaylistUrl}
-                onChange={(e) => {
-                  setSpotifyPlaylistUrl(e.target.value)
-                  markDirty()
-                }}
-                placeholder="https://open.spotify.com/playlist/..."
-              />
-              <p className="text-xs text-muted-foreground">
-                Aparece no banner "Playlist oficial" do seu EPK.
-              </p>
+                <div className="rounded-lg border bg-card space-y-3 p-4 text-sm">
+                  <Label>Playlist oficial do Spotify</Label>
+                  <Input
+                    value={spotifyPlaylistUrl}
+                    onChange={(e) => {
+                      setSpotifyPlaylistUrl(e.target.value)
+                      markDirty()
+                    }}
+                    placeholder="https://open.spotify.com/playlist/..."
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Aparece no banner "Playlist oficial" do seu EPK.
+                  </p>
+                </div>
             </div>
           </CardContent>
         </Card>
