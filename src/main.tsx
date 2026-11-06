@@ -7,6 +7,7 @@ import { router } from './routes'
 import { AuthProvider } from '@/hooks/useAuth'
 import { ThemeProvider, initTheme } from '@/hooks/useTheme'
 import './index.css'
+import {WhatsAppSupportButton} from "@/components/WhatsAppSupportButton.tsx";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -26,6 +27,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       <ThemeProvider>
         <AuthProvider>
           <RouterProvider router={router} />
+            <WhatsAppSupportButton />
           <Toaster richColors position="top-right" />
         </AuthProvider>
       </ThemeProvider>

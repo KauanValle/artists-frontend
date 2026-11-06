@@ -5,13 +5,14 @@ import { ThemeToggle } from '@/components/ui/theme-toggle'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/hooks/useAuth'
 import { homePathFor } from '@/lib/utils'
+import { SiteFooter } from '@/components/SiteFooter'
 
 export function PublicLayout() {
   const { user, isAuthenticated, isLoading, logout } = useAuth()
   const navigate = useNavigate()
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="flex min-h-screen flex-col bg-background">
       <header className="border-b">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
           <Link to="/" className="flex items-center gap-2">
@@ -62,9 +63,7 @@ export function PublicLayout() {
         </div>
       </header>
       <Outlet />
-      <footer className="border-t py-8 text-center text-sm text-muted-foreground">
-        reprissa — conectando talentos a oportunidades
-      </footer>
+      <SiteFooter />
     </div>
   )
 }

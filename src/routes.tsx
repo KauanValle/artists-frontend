@@ -33,6 +33,10 @@ import { ContractorBookingsPage } from '@/pages/contractor/ContractorBookingsPag
 import { FavoritesPage } from '@/pages/contractor/FavoritesPage'
 import { ConversationsPage } from '@/pages/contractor/ConversationsPage'
 import { ContractorProfilePage } from '@/pages/contractor/ContractorProfilePage'
+import { ReviewsPage } from '@/pages/shared/ReviewsPage'
+import { SobrePage } from '@/pages/public/SobrePage'
+import { FaqPage } from '@/pages/public/FaqPage'
+import { TermosPage } from '@/pages/public/TermosPage'
 
 import { BookingDetailPage } from '@/pages/shared/BookingDetailPage'
 import { AdminDashboardPage } from '@/pages/admin/AdminDashboardPage'
@@ -51,6 +55,9 @@ export const router = createBrowserRouter([
       { path: '/forgot-password', element: <ForgotPasswordPage /> },
       { path: '/reset-password', element: <ResetPasswordPage /> },
       { path: '/artistas', element: <ArtistsDirectoryPage /> },
+      { path: '/sobre', element: <SobrePage /> },
+      { path: '/faq', element: <FaqPage /> },
+      { path: '/termos-de-uso', element: <TermosPage /> },
       { path: '/artistas/:slug', element: <ArtistPublicPage /> },
       { path: '/assinatura/sucesso', element: <SubscriptionCallbackPage outcome="success" /> },
       { path: '/assinatura/cancelado', element: <SubscriptionCallbackPage outcome="cancel" /> },
@@ -84,6 +91,16 @@ export const router = createBrowserRouter([
           { path: '/artist/configuracoes', element: <SettingsPage /> },
           { path: '/artist/assinatura', element: <SubscriptionPage /> },
         ],
+      },
+    ],
+  },
+  {
+    // Avaliações: contratante avalia shows concluídos; artista só visualiza as recebidas.
+    element: <ProtectedRoute />,
+    children: [
+      {
+        element: <DashboardLayout />,
+        children: [{ path: '/avaliacoes', element: <ReviewsPage /> }],
       },
     ],
   },

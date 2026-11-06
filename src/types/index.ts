@@ -51,6 +51,8 @@ export interface User {
   contractorId: string | null
   subscriptionTier: SubscriptionTier
   perfilCompleto: boolean
+  tutorialFeito: boolean
+  tutorialPassos: string[]
 }
 
 export interface AuthResponse {
@@ -141,6 +143,18 @@ export interface Review {
   communication: number
   comment: string
   createdAt: string
+  photos: string[]
+}
+
+/// <summary>Show concluído aguardando avaliação do contratante.</summary>
+export interface PendingReview {
+  eventId: string
+  artistId: string
+  artistName: string
+  artistPhotoUrl: string | null
+  eventTitle: string
+  eventDate: string
+  location: string
 }
 
 export interface ArtistDetailPublic {

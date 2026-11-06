@@ -1,4 +1,5 @@
 import {api, apiViaCep} from './api'
+import * as demo from '../lib/demo-data'
 import {
     Artist,
     ArtistCard,
@@ -21,6 +22,7 @@ import {
     PagedResult,
     Proposal,
     Review,
+    PendingReview,
     SaveEquipmentPayload,
     SaveTeamMemberPayload,
     SaveArtistPayload,
@@ -48,6 +50,8 @@ export const authApi = {
   registerArtist: (payload: Record<string, unknown>) => api.post('/auth/register/artist', payload),
   registerContractor: (payload: Record<string, unknown>) => api.post('/auth/register/contractor', payload),
   me: () => api.get('/auth/me'),
+  salvarTutorial: (payload: { feito: boolean; passos: string[] }) =>
+    api.put<import('@/types').User>('/auth/tutorial', payload),
   forgotPassword: (email: string) => api.post<{ token: string | null }>('/auth/forgot-password', { email }),
   resetPassword: (payload: { email: string; token: string; newPassword: string }) =>
     api.post('/auth/reset-password', payload),
@@ -98,19 +102,30 @@ export const perfilApi = {
 
 // Bookings & Proposals
 export const bookingsApi = {
-  create: (payload: CreateBookingPayload) => api.post('/bookings', payload),
+  create: (payload: CreateBookingPayload) =>
+    demo.demoAtivo() ? demo.demoResposta(null) : api.post('/bookings', payload),
   list: (status?: string, page = 1, pageSize = 50, isGuest?: boolean, busca?: string, ordenarPor?: string, direcao?: string) =>
-    api.get<PagedResult<import('@/types').Booking>>('/bookings', {
-      params: { status, isGuest, page, pageSize, busca: busca || undefined, ordenarPor, direcao },
-    }),
-  get: (id: string) => api.get<import('@/types').Booking>(`/bookings/${id}`),
-  negotiate: (id: string) => api.post(`/bookings/${id}/negotiate`),
-  accept: (id: string) => api.post<import('@/types').Booking>(`/bookings/${id}/accept`),
-  reject: (id: string) => api.post(`/bookings/${id}/reject`),
-  cancel: (id: string) => api.post(`/bookings/${id}/cancel`),
+    demo.demoAtivo()
+      ? demo.demoBookingsList({ status, page, pageSize, busca, ordenarPor, direcao })
+      : api.get<PagedResult<import('@/types').Booking>>('/bookings', {
+          params: { status, isGuest, page, pageSize, busca: busca || undefined, ordenarPor, direcao },
+        }),
+  get: (id: string) =>
+    demo.demoAtivo() ? demo.demoBookingsGet(id) : api.get<import('@/types').Booking>(`/bookings/${id}`),
+  negotiate: (id: string) =>
+    demo.demoAtivo() ? (demo.demoBookingAcao(id, 'Negotiating'), demo.demoBookingsGet(id)) : api.post(`/bookings/${id}/negotiate`),
+  accept: (id: string) =>
+    demo.demoAtivo() ? (demo.demoBookingAcao(id, 'Accepted'), demo.demoBookingsGet(id)) : api.post<import('@/types').Booking>(`/bookings/${id}/accept`),
+  reject: (id: string) =>
+    demo.demoAtivo() ? (demo.demoBookingAcao(id, 'Rejected'), demo.demoBookingsGet(id)) : api.post(`/bookings/${id}/reject`),
+  cancel: (id: string) =>
+    demo.demoAtivo() ? (demo.demoBookingAcao(id, 'Cancelled'), demo.demoBookingsGet(id)) : api.post(`/bookings/${id}/cancel`),
   startPayment: (id: string) =>
-    api.post<{ checkoutUrl: string }>(`/payments/booking/${id}/checkout`),
-  complete: (id: string) => api.post<import('@/types').CompleteShow>(`/bookings/${id}/complete`),
+    demo.demoAtivo() ? demo.demoBookingStartPayment(id) : api.post<{ checkoutUrl: string }>(`/payments/booking/${id}/checkout`),
+  complete: (id: string) =>
+    demo.demoAtivo()
+      ? (demo.demoBookingAcao(id, 'AwaitingCompletionAccept'), demo.demoBookingsGet(id))
+      : api.post<import('@/types').CompleteShow>(`/bookings/${id}/complete`),
 }
 
 // Conclusão do show pelo link público (contratante sem login)
@@ -131,29 +146,47 @@ export const billingApi = {
 }
 
 export const proposalsApi = {
-  create: (payload: CreateProposalPayload) => api.post<Proposal>('/proposals', payload),
+  create: (payload: CreateProposalPayload) =>
+    demo.demoAtivo()
+      ? demo.demoProposalCreate(
+          payload.bookingRequestId,
+          payload.items.reduce((s, i) => s + i.amount, 0) + payload.travelCost + payload.equipmentCost - payload.discount
+        )
+      : api.post<Proposal>('/proposals', payload),
   get: (id: string) => api.get<Proposal>(`/proposals/${id}`),
-  listForBooking: (bookingId: string) => api.get<Proposal[]>(`/proposals/booking/${bookingId}`),
-  accept: (id: string) => api.post<Proposal>(`/proposals/${id}/accept`),
-  reject: (id: string) => api.post<Proposal>(`/proposals/${id}/reject`),
+  listForBooking: (bookingId: string) =>
+    demo.demoAtivo() ? demo.demoProposalsForBooking(bookingId) : api.get<Proposal[]>(`/proposals/booking/${bookingId}`),
+  accept: (id: string) =>
+    demo.demoAtivo() ? demo.demoProposalAccept(id) : api.post<Proposal>(`/proposals/${id}/accept`),
+  reject: (id: string) =>
+    demo.demoAtivo() ? demo.demoProposalReject(id) : api.post<Proposal>(`/proposals/${id}/reject`),
 }
 
 // Chat
 export const conversationsApi = {
   list: () => api.get<Conversation[]>('/conversations'),
-  get: (id: string) => api.get<{ conversation: Conversation; messages: Message[] }>(`/conversations/${id}`),
-  send: (id: string, content: string) => api.post<Message>(`/conversations/${id}/messages`, { content }),
+  get: (id: string) =>
+    demo.demoAtivo()
+      ? demo.demoConversationGet(id) ?? api.get<{ conversation: Conversation; messages: Message[] }>(`/conversations/${id}`)
+      : api.get<{ conversation: Conversation; messages: Message[] }>(`/conversations/${id}`),
+  send: (id: string, content: string) =>
+    demo.demoAtivo()
+      ? demo.demoMessageSend(id, content).then((m) => demo.demoResposta(m))
+      : api.post<Message>(`/conversations/${id}/messages`, { content }),
   markRead: (id: string) => api.put(`/conversations/${id}/read`),
 }
 
 // Events / Agenda
 export const eventsApi = {
   list: (params: { from?: string; to?: string; type?: string; status?: string }) =>
-    api.get<EventItem[]>('/events', { params }),
+    demo.demoAtivo() ? demo.demoEventsList(params) : api.get<EventItem[]>('/events', { params }),
   get: (id: string) => api.get<EventDetail>(`/events/${id}`),
-  create: (payload: Partial<EventItem>) => api.post<EventItem>('/events', payload),
-  update: (id: string, payload: Partial<EventItem>) => api.put<EventItem>(`/events/${id}`, payload),
-  remove: (id: string) => api.delete(`/events/${id}`),
+  create: (payload: Partial<EventItem>) =>
+    demo.demoAtivo() ? demo.demoEventCreate(payload).then((e) => demo.demoResposta(e)) : api.post<EventItem>('/events', payload),
+  update: (id: string, payload: Partial<EventItem>) =>
+    demo.demoAtivo() ? (demo.demoEventUpdate(id, payload), demo.demoResposta(null)) : api.put<EventItem>(`/events/${id}`, payload),
+  remove: (id: string) =>
+    demo.demoAtivo() ? (demo.demoEventRemove(id), demo.demoResposta(null)) : api.delete(`/events/${id}`),
   addEquipment: (eventId: string, equipmentId: string, notes = '') =>
     api.post(`/events/${eventId}/equipment`, { equipmentId, notes }),
   toggleEquipment: (eventId: string, eventEquipmentId: string) =>
@@ -170,35 +203,52 @@ export const eventsApi = {
 // Financial
 export const financialApi = {
   list: (params: { type?: string; status?: string; from?: string; to?: string; page?: number; pageSize?: number; ordenarPor?: string; direcao?: string }) =>
-    api.get<PagedResult<Transaction>>('/financial/transactions', { params }),
+    demo.demoAtivo()
+      ? demo.demoTransactionsList(params)
+      : api.get<PagedResult<Transaction>>('/financial/transactions', { params }),
   create: (payload: { type: string; category: string; amount: number; dueDate?: string | null; eventId?: string | null; notes?: string }) =>
-    api.post<Transaction>('/financial/transactions', payload),
-  update: (id: string, payload: Record<string, unknown>) => api.put<Transaction>(`/financial/transactions/${id}`, payload),
-  remove: (id: string) => api.delete(`/financial/transactions/${id}`),
-  settle: (id: string) => api.post<Transaction>(`/financial/transactions/${id}/settle`),
-  summary: (from?: string, to?: string) => api.get<FinancialSummary>('/financial/summary', { params: { from, to } }),
+    demo.demoAtivo() ? demo.demoTransactionCreate(payload) : api.post<Transaction>('/financial/transactions', payload),
+  update: (id: string, payload: Record<string, unknown>) =>
+    demo.demoAtivo() ? demo.demoTransactionUpdate(id, payload) : api.put<Transaction>(`/financial/transactions/${id}`, payload),
+  remove: (id: string) =>
+    demo.demoAtivo() ? (demo.demoTransactionRemove(id), demo.demoResposta(null)) : api.delete(`/financial/transactions/${id}`),
+  settle: (id: string) =>
+    demo.demoAtivo() ? demo.demoTransactionSettle(id) : api.post<Transaction>(`/financial/transactions/${id}/settle`),
+  summary: (from?: string, to?: string) =>
+    demo.demoAtivo() ? demo.demoFinancialSummary(from, to) : api.get<FinancialSummary>('/financial/summary', { params: { from, to } }),
 }
 
 // Team & Equipment
 export const teamApi = {
-  list: () => api.get<import('@/types').TeamMember[]>('/team'),
-  create: (payload: SaveTeamMemberPayload) => api.post('/team', payload),
-  update: (id: string, payload: SaveTeamMemberPayload) => api.put(`/team/${id}`, payload),
-  remove: (id: string) => api.delete(`/team/${id}`),
+  list: () => (demo.demoAtivo() ? demo.demoTeamList() : api.get<import('@/types').TeamMember[]>('/team')),
+  create: (payload: SaveTeamMemberPayload) =>
+    demo.demoAtivo() ? demo.demoTeamCreate(payload) : api.post('/team', payload),
+  update: (id: string, payload: SaveTeamMemberPayload) =>
+    demo.demoAtivo() ? demo.demoTeamUpdate(id, payload) : api.put(`/team/${id}`, payload),
+  remove: (id: string) =>
+    demo.demoAtivo() ? (demo.demoTeamRemove(id), demo.demoResposta(null)) : api.delete(`/team/${id}`),
 }
 
 export const equipmentApi = {
-  list: (status?: string) => api.get<Equipment[]>('/equipment', { params: { status } }),
-  create: (payload: SaveEquipmentPayload) => api.post<Equipment>('/equipment', payload),
-  update: (id: string, payload: SaveEquipmentPayload) => api.put<Equipment>(`/equipment/${id}`, payload),
-  remove: (id: string) => api.delete(`/equipment/${id}`),
+  list: (status?: string) =>
+    demo.demoAtivo() ? demo.demoEquipmentList(status) : api.get<Equipment[]>('/equipment', { params: { status } }),
+  create: (payload: SaveEquipmentPayload) =>
+    demo.demoAtivo() ? demo.demoEquipmentCreate(payload) : api.post<Equipment>('/equipment', payload),
+  update: (id: string, payload: SaveEquipmentPayload) =>
+    demo.demoAtivo() ? demo.demoEquipmentUpdate(id, payload) : api.put<Equipment>(`/equipment/${id}`, payload),
+  remove: (id: string) =>
+    demo.demoAtivo() ? (demo.demoEquipmentRemove(id), demo.demoResposta(null)) : api.delete(`/equipment/${id}`),
 }
 
 // Reviews / Favorites / Notifications / Contractor
 export const reviewsApi = {
-  create: (payload: { eventId: string; overallRating: number; punctuality: number; quality: number; professionalism: number; communication: number; comment: string }) =>
+  create: (payload: { eventId: string; overallRating: number; comment: string; photos: string[] }) =>
     api.post<Review>('/reviews', payload),
   listForArtist: (artistId: string) => api.get<Review[]>(`/reviews/artist/${artistId}`),
+  // Shows concluídos que o contratante ainda não avaliou.
+  pending: () => api.get<PendingReview[]>('/reviews/pending'),
+  // Avaliações recebidas pelo artista logado (somente leitura).
+  received: () => (demo.demoAtivo() ? demo.demoReviewsReceived() : api.get<Review[]>('/reviews/received')),
 }
 
 export const favoritesApi = {
@@ -238,7 +288,8 @@ export const addonsApi = {
 
 // EPK do artista (kit de imprensa público em /epk/{slug})
 export const epkApi = {
-  get: (artistId: string) => api.get<import('@/types').Epk>(`/epk/${artistId}`),
+  get: (artistId: string) =>
+    demo.demoAtivo() ? demo.demoEpkGet(artistId) : api.get<import('@/types').Epk>(`/epk/${artistId}`),
   save: (payload: {
     bio: string
     photoUrls: string[]
@@ -254,8 +305,12 @@ export const epkApi = {
 
 // Redes sociais do artista (por enquanto Instagram)
 export const socialLinksApi = {
-  list: (artistId: string) => api.get<import('@/types').SocialLink[]>(`/social-links/${artistId}`),
-  save: (payload: { platform: string; handle: string }) => api.put<import('@/types').SocialLink | null>('/social-links', payload),
+  list: (artistId: string) =>
+    demo.demoAtivo() ? demo.demoSocialLinksList().then((s) => demo.demoResposta(s)) : api.get<import('@/types').SocialLink[]>(`/social-links/${artistId}`),
+  save: (payload: { platform: string; handle: string }) =>
+    demo.demoAtivo()
+      ? demo.demoSocialLinkSave(payload)
+      : api.put<import('@/types').SocialLink | null>('/social-links', payload),
 }
 
 // Identidade visual da plataforma

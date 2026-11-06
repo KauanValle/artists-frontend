@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
-import { addDays } from 'date-fns'
-import { CalendarDays, CalendarPlus, Check, CheckCircle2, ChevronRight, Heart, Images, Instagram, MapPin } from 'lucide-react'
+import { addDays, addMonths, endOfMonth, eachDayOfInterval, format, startOfMonth } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
+import { BadgeCheck, CalendarDays, CalendarPlus, Check, CheckCircle2, ChevronRight, Coins, Heart, House, Images, Info, Instagram, MapPin, Music2, Share2, Star } from 'lucide-react'
 import { toast } from 'sonner'
 import {
-    addonsApi, artistsApi, availabilityApi, bookingsApi, brandingApi, favoritesApi, publicBookingsApi, socialLinksApi,
+    addonsApi, artistsApi, availabilityApi, bookingsApi, brandingApi, epkApi, favoritesApi, publicBookingsApi, socialLinksApi,
     viaCepApi
 } from '@/services'
 import { useAuth } from '@/hooks/useAuth'
@@ -83,6 +84,28 @@ export function ArtistPublicPage() {
     enabled: !!artist?.id,
   })
   const instagram = socialLinks.find((l) => l.platform === 'Instagram')
+
+  const [cursorMes, setCursorMes] = useState(new Date())
+
+  // Mídia real: fotos/vídeos/músicas publicados no EPK do artista.
+  const { data: epk } = useQuery({
+    queryKey: ['epk-publico', artist?.id],
+    queryFn: async () => (await epkApi.get(artist!.id)).data,
+    enabled: !!artist?.id,
+  })
+  const fotosMidia = useMemo(
+    () => Array.from(new Set([...(artist?.galleryUrls ?? []), ...(epk?.photoUrls ?? [])])),
+    [artist?.galleryUrls, epk?.photoUrls]
+  )
+  const videosMidia = useMemo(
+    () => Array.from(new Set([...(artist?.videoUrls ?? []), ...(epk?.videoUrls ?? [])])),
+    [artist?.videoUrls, epk?.videoUrls]
+  )
+  const musicasMidia = epk?.songs ?? []
+  const diasDoMes = useMemo(
+    () => eachDayOfInterval({ start: startOfMonth(cursorMes), end: endOfMonth(cursorMes) }),
+    [cursorMes]
+  )
 
   // O endpoint devolve datas livres E bloqueios; o card "Datas disponíveis" mostra só as livres.
   const availableDates = availabilities.filter((a) => a.status === 'Available')
@@ -170,6 +193,35 @@ export function ArtistPublicPage() {
     onError: (e) => toast.error(extractApiError(e)),
   })
 
+  const [aba, setAba] = useState<'geral' | 'agenda' | 'caches' | 'midia' | 'avaliacoes'>('geral')
+  const [estilosExpandidos, setEstilosExpandidos] = useState(false)
+  const [sobreExpandido, setSobreExpandido] = useState(false)
+
+
+  const agendaAgrupada = useMemo(() => {
+    const porData = new Map<string, TimeInterval[]>()
+    for (const a of availableDates) {
+      const janelas = workingTimesByDate[a.date] ?? []
+      if (janelas.length > 0) porData.set(a.date, janelas)
+    }
+    return Array.from(porData.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, janelas]) => ({ date, horario: resumirJanelas(janelas) }))
+  }, [availableDates, workingTimesByDate])
+
+  // Datas ocupadas por status: Confirmado = fechado; Scheduled/PreReserved = marcado (laranja).
+  const ocupadasPorData = useMemo(() => {
+    const prioridade: Record<string, number> = { Confirmed: 3, Scheduled: 2, PreReserved: 1 }
+    const mapa: Record<string, { status: string; horario: string }> = {}
+    for (const slot of busySlots) {
+      const atual = mapa[slot.date]
+      if (!atual || (prioridade[slot.status] ?? 0) > (prioridade[atual.status] ?? 0)) {
+        mapa[slot.date] = { status: slot.status, horario: `${slot.startTime.slice(0, 5)} – ${slot.endTime.slice(0, 5)}` }
+      }
+    }
+    return mapa
+  }, [busySlots])
+
   if (isLoading) {
     return (
       <div className="flex h-[60vh] items-center justify-center">
@@ -188,8 +240,144 @@ export function ArtistPublicPage() {
 
   const tipo = artist.artistType === 'Band' ? 'Banda/Grupo' : 'Solo'
 
+  const ehDono = isAuthenticated && user?.role === 'Artist' && user.artistId === artist.id
+  const chips = [...artist.styles, ...artist.specialties]
+  const chipsVisiveis = estilosExpandidos ? chips : chips.slice(0, 6)
+  const primeiraLinha = (artist.description || '').split('\n')[0] ?? ''
+  const tagline = primeiraLinha.length > 120 ? `${primeiraLinha.slice(0, 117)}…` : primeiraLinha
+  const descricaoLonga = (artist.description || '').length > 200
+
+  const abas = [
+    { id: 'geral', label: 'Visão Geral', icon: House },
+    { id: 'agenda', label: 'Agenda', icon: CalendarDays },
+    { id: 'caches', label: 'Cachês', icon: Coins },
+    { id: 'midia', label: 'Mídia', icon: Images },
+    { id: 'avaliacoes', label: 'Avaliações', icon: Star },
+  ] as const
+
+  const compartilhar = async () => {
+    const url = window.location.href
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: `${artist.artisticName} no Reprissa`, url })
+        return
+      }
+    } catch {
+      /* compartilhamento nativo indisponível ou cancelado — segue para o clipboard */
+    }
+    try {
+      await navigator.clipboard.writeText(url)
+    } catch {
+      const area = document.createElement('textarea')
+      area.value = url
+      document.body.appendChild(area)
+      area.select()
+      document.execCommand('copy')
+      area.remove()
+    }
+    toast.success('Link copiado para a área de transferência!')
+  }
+
+  // ── blocos reutilizados entre as abas ──
+  const cachêsCard = (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Coins className="h-4 w-4 text-primary" /> Cachês
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_190px]">
+        <div>
+          {artist.fees.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Sob consulta — defina o valor na sua proposta.</p>
+          ) : (
+            <div className="overflow-hidden rounded-lg border">
+              <table className="w-full text-sm">
+                <thead className="bg-primary/5 text-left">
+                  <tr>
+                    <th className="px-4 py-2.5 font-semibold">Duração</th>
+                    <th className="px-4 py-2.5 text-right font-semibold">Valor</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {artist.fees.map((fee, i) => (
+                    <tr key={fee.id} className="border-t">
+                      <td className="px-4 py-2.5 font-medium">{minutesToLabel(fee.durationMinutes)}{i === 0 ? ' ¹' : ''}</td>
+                      <td className="px-4 py-2.5 text-right font-semibold">{formatMoney(fee.price)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <p className="mt-3 text-xs text-muted-foreground">¹ Valores de referência — o preço final é definido pela proposta.</p>
+        </div>
+        {artist.aceitaNegociarPropostas && (
+          <div className="flex flex-col items-center justify-center gap-3 self-start rounded-lg border bg-secondary/40 p-4 text-center">
+            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/15 text-primary">
+              <Info className="h-5 w-5" />
+            </span>
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              Valores de referência — o preço final é definido pela proposta.
+            </p>
+            <Button variant="outline" size="sm" className="rounded-full" onClick={abrirContratacao}>
+              Solicitar proposta
+            </Button>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+
+  const avaliacoesCard = (mostrarTodas: boolean) => (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle className="flex items-center gap-2">
+          <Star className="h-4 w-4 fill-amber-400 text-amber-400" /> Avaliações
+        </CardTitle>
+        {!mostrarTodas && artist.reviewCount > 0 && (
+          <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
+            {artist.reviewCount}
+          </span>
+        )}
+      </CardHeader>
+      <CardContent>
+        {artist.reviews.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Ainda sem avaliações — seja o primeiro a contratar e avaliar.</p>
+        ) : (
+          <>
+            <div className="space-y-3">
+              {(mostrarTodas ? artist.reviews : artist.reviews.slice(0, 1)).map((review) => (
+                <article key={review.id} className="rounded-lg border p-4">
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-secondary text-sm font-semibold text-secondary-foreground">
+                      {review.contractorName.charAt(0).toUpperCase()}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium">{review.contractorName}</p>
+                      <div className="flex items-center gap-2">
+                        <RatingStars value={review.overallRating} />
+                        <span className="text-xs text-muted-foreground">{formatDate(review.createdAt)}</span>
+                      </div>
+                    </div>
+                  </div>
+                  {review.comment && <p className="mt-3 text-sm text-muted-foreground">{review.comment}</p>}
+                </article>
+              ))}
+            </div>
+            {!mostrarTodas && (
+              <Button variant="outline" className="mt-4 w-full" onClick={() => setAba('avaliacoes')}>
+                Ver todas as avaliações <ChevronRight className="h-4 w-4" />
+              </Button>
+            )}
+          </>
+        )}
+      </CardContent>
+    </Card>
+  )
+
   return (
-    <div className="mx-auto max-w-6xl px-4 pb-16 pt-6">
+    <div className="mx-auto w-full min-h-[65vh] max-w-6xl px-4 pb-16 pt-6">
       {/* Trilha de navegação */}
       <nav className="mb-4 flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
         <Link to="/artistas" className="hover:text-foreground hover:underline">
@@ -199,235 +387,88 @@ export function ArtistPublicPage() {
         <span className="truncate font-medium text-foreground">{artist.artisticName}</span>
       </nav>
 
-      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
-        {/* Coluna principal */}
-        <div className="min-w-0 space-y-6">
-          {/* Cartão de perfil */}
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex flex-col gap-5 sm:flex-row">
-                <Avatar
-                  src={artist.profilePhotoUrl}
-                  alt={artist.artisticName}
-                  className="h-32 w-32 shrink-0 border bg-background text-3xl shadow-sm sm:h-36 sm:w-36"
-                />
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <h1 className="text-3xl font-bold">{artist.artisticName}</h1>
-                    {artist.startingPrice != null && (
-                      <p className="text-right">
-                        <span className="block text-xs text-muted-foreground">A partir de</span>
-                        <span className="text-xl font-bold">{formatMoney(artist.startingPrice)}</span>
-                        <span className="text-xs text-muted-foreground"> /apresentação</span>
-                      </p>
-                    )}
-                  </div>
-                  <p className="mt-1 font-semibold">
-                    {artist.categoryName} · {tipo}
-                  </p>
-                  <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
-                    {artist.reviewCount > 0 && (
-                      <span className="flex items-center gap-1.5">
-                        <RatingStars value={artist.averageRating ?? 0} />
-                        <span className="font-medium text-foreground">
-                          {artist.averageRating != null ? artist.averageRating.toFixed(1) : '—'}
-                        </span>
-                        <span>({artist.reviewCount})</span>
-                      </span>
-                    )}
-                    <span className="flex items-center gap-1">
-                      <MapPin className="h-4 w-4" /> {artist.city}, {artist.state}
-                    </span>
-                  </div>
-
-                  <div className="my-4 h-px bg-border" />
-
-                  {(artist.styles.length > 0 || instagram) && (
-                    <div>
-                      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                        {artist.styles.length > 0 && (
-                          <p className="text-sm text-muted-foreground">Estilos principais</p>
-                        )}
-                        {instagram && (
-                          <a
-                            href={instagram.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            title={`@${instagram.handle} no Instagram`}
-                            className="ml-auto inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
-                          >
-                            <Instagram className="h-4 w-4" />@{instagram.handle}
-                          </a>
-                        )}
-                      </div>
-                      {artist.styles.length > 0 && (
-                        <div className="flex flex-wrap gap-2">
-                          {artist.styles.map((s) => (
-                            <Badge key={s} variant="secondary" className="rounded-full px-3 py-1">
-                              {s}
-                            </Badge>
-                          ))}
-                        </div>
-                      )}
-                    </div>
+      {/* Cartão principal (hero) */}
+      <Card>
+        <CardContent className="p-5 sm:p-6">
+          <div className="flex flex-col gap-6 lg:flex-row">
+            {/* Identidade */}
+            <div className="flex min-w-0 flex-1 gap-5">
+              <Avatar
+                src={artist.profilePhotoUrl}
+                alt={artist.artisticName}
+                className="h-24 w-24 shrink-0 border bg-background text-3xl shadow-sm sm:h-32 sm:w-32"
+              />
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <h1 className="text-2xl font-bold sm:text-3xl">{artist.artisticName}</h1>
+                  {artist.reviewCount > 0 && (
+                    <BadgeCheck className="h-5 w-5 shrink-0 text-sky-400" title="Perfil com avaliações de contratantes" />
                   )}
-                  {artist.specialties.length > 0 && (
-                    <div className={artist.styles.length > 0 || instagram ? 'mt-4' : ''}>
-                      <p className="mb-2 text-sm text-muted-foreground">Especialidades</p>
-                      <div className="flex flex-wrap gap-2">
-                        {artist.specialties.map((s) => (
-                          <Badge key={s} variant="outline" className="rounded-full px-3 py-1">
-                            {s}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* CTA visível no mobile — no desktop fica na coluna lateral */}
-                  <Button size="lg" className="mt-5 w-full lg:hidden" onClick={abrirContratacao}>
-                    <CalendarPlus /> Solicitar contratação
-                  </Button>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+                <p className="mt-0.5 font-semibold">
+                  {artist.categoryName} · {tipo}
+                </p>
+                <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                  {artist.reviewCount > 0 && (
+                    <span className="flex items-center gap-1.5">
+                      <RatingStars value={artist.averageRating ?? 0} />
+                      <span className="font-medium text-foreground">
+                        {artist.averageRating != null ? artist.averageRating.toFixed(1) : '—'}
+                      </span>
+                      <span>({artist.reviewCount} avaliação{artist.reviewCount > 1 ? 'es' : ''})</span>
+                    </span>
+                  )}
+                  <span className="flex items-center gap-1">
+                    <MapPin className="h-4 w-4" /> {artist.city}, {artist.state}
+                  </span>
+                </div>
 
-          {/* Sobre */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Sobre o artista</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {artist.eventTypes.length > 0 && (
-                <div className="mb-4">
-                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Ideal para</p>
-                  <div className="flex flex-wrap gap-2">
-                    {artist.eventTypes.map((type) => (
-                      <Badge key={type} variant="secondary" className="rounded-full px-3 py-1">
-                        {type}
+                {tagline && (
+                  <p className="mt-3 text-sm text-muted-foreground">{tagline}</p>
+                )}
+
+                {chips.length > 0 && (
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    {chipsVisiveis.map((s) => (
+                      <Badge key={s} variant="secondary" className="rounded-full px-3 py-1">
+                        {s}
                       </Badge>
                     ))}
+                    {chips.length > 6 && (
+                      <button
+                        type="button"
+                        onClick={() => setEstilosExpandidos((v) => !v)}
+                        className="text-sm font-medium text-primary hover:underline"
+                      >
+                        {estilosExpandidos ? 'Ver menos' : '+Ver mais'}
+                      </button>
+                    )}
                   </div>
-                </div>
-              )}
-              <p className="whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
-                {artist.description || 'Este artista ainda não escreveu uma descrição.'}
-              </p>
-            </CardContent>
-          </Card>
+                )}
+              </div>
+            </div>
 
-          {/* Fotos e vídeos */}
-          {(artist.galleryUrls.length > 0 || artist.videoUrls.length > 0) && (
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>Fotos e vídeos</CardTitle>
-                <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
-                  {artist.galleryUrls.length + artist.videoUrls.length}
-                </span>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                  {artist.galleryUrls.map((url) => (
-                    <figure key={url} className="group overflow-hidden rounded-lg border bg-muted">
-                      <img
-                        src={url}
-                        alt={`Foto de ${artist.artisticName}`}
-                        loading="lazy"
-                        className="aspect-video w-full object-cover transition duration-300 group-hover:scale-105"
-                      />
-                    </figure>
-                  ))}
-                  {artist.videoUrls.map((url) => (
-                    <video key={url} src={url} controls preload="metadata" className="aspect-video w-full rounded-lg border bg-black" />
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Cachês em tabela */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Cachês</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {artist.fees.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Sob consulta — defina o valor na sua proposta.</p>
-              ) : (
-                <div className="overflow-hidden rounded-lg border">
-                  <table className="w-full text-sm">
-                    <thead className="bg-primary/5 text-left">
-                      <tr>
-                        <th className="px-4 py-2.5 font-semibold">Duração</th>
-                        <th className="px-4 py-2.5 font-semibold">Detalhes</th>
-                        <th className="px-4 py-2.5 text-right font-semibold">Valor</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {artist.fees.map((fee) => (
-                        <tr key={fee.id} className="border-t">
-                          <td className="px-4 py-2.5 font-medium">{minutesToLabel(fee.durationMinutes)}</td>
-                          <td className="px-4 py-2.5 text-muted-foreground">{fee.description || '—'}</td>
-                          <td className="px-4 py-2.5 text-right font-semibold">{formatMoney(fee.price)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+            {/* Preço + ações */}
+            <div className="flex shrink-0 flex-col gap-3 lg:w-60 lg:border-l lg:border-border/60 lg:pl-6">
+              {artist.startingPrice != null && (
+                <p className="text-center lg:text-right">
+                  <span className="block text-xs text-muted-foreground">A partir de</span>
+                  <span className="text-2xl font-bold">{formatMoney(artist.startingPrice)}</span>
+                  <span className="block text-xs text-muted-foreground">/apresentação</span>
+                </p>
               )}
-              <p className="mt-3 text-xs text-muted-foreground">Valores de referência — o preço final é definido pela proposta.</p>
-            </CardContent>
-          </Card>
-
-          {/* Avaliações */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Avaliações</CardTitle>
-              {artist.reviewCount > 0 && (
-                <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
-                  {artist.reviewCount}
-                </span>
-              )}
-            </CardHeader>
-            <CardContent>
-              {artist.reviews.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Ainda sem avaliações — seja o primeiro a contratar e avaliar.</p>
-              ) : (
-                <div className="space-y-3">
-                  {artist.reviews.map((review) => (
-                    <article key={review.id} className="rounded-lg border p-4">
-                      <div className="flex items-center gap-3">
-                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-secondary text-sm font-semibold text-secondary-foreground">
-                          {review.contractorName.charAt(0).toUpperCase()}
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-medium">{review.contractorName}</p>
-                          <div className="flex items-center gap-2">
-                            <RatingStars value={review.overallRating} />
-                            <span className="text-xs text-muted-foreground">{formatDate(review.createdAt)}</span>
-                          </div>
-                        </div>
-                      </div>
-                      {review.comment && <p className="mt-3 text-sm text-muted-foreground">{review.comment}</p>}
-                    </article>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Coluna lateral — contratação */}
-        <aside className="space-y-6 lg:sticky lg:top-24 lg:self-start">
-          <Card>
-            <CardContent className="p-5">
+              <Button size="lg" onClick={abrirContratacao}>
+                <CalendarPlus /> Solicitar contratação
+              </Button>
               <div className="flex gap-2">
+                <Button variant="outline" className="flex-1" onClick={compartilhar}>
+                  <Share2 /> Compartilhar perfil
+                </Button>
                 {isContractor && (
                   <Button
                     variant="outline"
                     size="icon"
-                    className="h-11 w-11 shrink-0"
+                    className="h-10 w-10 shrink-0"
                     onClick={() => addFavorite.mutate()}
                     disabled={isFavorite}
                     title="Favoritar"
@@ -435,54 +476,374 @@ export function ArtistPublicPage() {
                     <Heart className={isFavorite ? 'fill-destructive text-destructive' : ''} />
                   </Button>
                 )}
-                <Button size="lg" className="flex-1" onClick={abrirContratacao}>
-                  <CalendarPlus /> Solicitar contratação
-                </Button>
               </div>
-              <p className="mt-3 text-center text-xs text-muted-foreground">
-                Contratação com conta de contratante — resposta direto com o artista.
-              </p>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Informações</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2.5 text-sm">
-              <InfoRow label="Tipo" value={tipo} />
-              <InfoRow label="Categoria" value={artist.categoryName} />
-              <InfoRow label="Atende em" value={`${artist.city}, ${artist.state}`} />
-              <InfoRow
-                label="Avaliação"
-                value={artist.averageRating != null ? `${artist.averageRating.toFixed(1)} / 5` : '—'}
-              />
-              <InfoRow label="Avaliações recebidas" value={String(artist.reviewCount)} />
-              <InfoRow label="Datas disponíveis" value={String(availableDates.length)} />
-            </CardContent>
-          </Card>
+      {/* Abas */}
+      <div className="mt-4 flex gap-1 overflow-x-auto rounded-xl border bg-card p-1.5">
+        {abas.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => setAba(t.id)}
+            className={cn(
+              'flex shrink-0 items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors',
+              aba === t.id ? 'bg-primary/15 text-primary' : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+            )}
+          >
+            <t.icon className="h-4 w-4" />
+            {t.label}
+          </button>
+        ))}
+      </div>
 
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <CalendarDays className="h-4 w-4 text-muted-foreground" /> Datas disponíveis
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {availableDates.length === 0 && (
-                <p className="text-sm text-muted-foreground">Consulte a disponibilidade pela solicitação.</p>
-              )}
-              {availableDates.slice(0, 8).map((a) => (
-                <div key={a.id} className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                  <span>{new Date(a.date + 'T00:00:00').toLocaleDateString('pt-BR')}</span>
-                  <span className="text-muted-foreground">
-                    {a.isAllDay ? 'Dia inteiro' : `${a.startTime.slice(0, 5)} – ${a.endTime.slice(0, 5)}`}
+      {/* Conteúdo das abas */}
+      <div className="mt-4">
+        {aba === 'geral' && (
+          <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+            {/* Coluna principal */}
+            <div className="min-w-0 space-y-4">
+              {/* Sobre o artista */}
+              <Card className="relative overflow-hidden">
+                {artist.galleryUrls[0] && (
+                  <>
+                    <img
+                      src={artist.galleryUrls[0]}
+                      alt=""
+                      className="absolute inset-y-0 right-0 h-full w-1/2 object-cover opacity-70"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-r from-card via-card/85 to-card/20" />
+                  </>
+                )}
+                <CardContent className="relative p-5">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Music2 className="h-4 w-4 text-primary" /> Sobre o artista
+                  </CardTitle>
+                  <p
+                    className={cn(
+                      'mt-3 whitespace-pre-line text-sm leading-relaxed text-muted-foreground',
+                      !sobreExpandido && descricaoLonga && 'line-clamp-3'
+                    )}
+                  >
+                    {artist.description || 'Este artista ainda não escreveu uma descrição.'}
+                  </p>
+                  {artist.eventTypes.length > 0 && sobreExpandido && (
+                    <div className="mt-3">
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Ideal para</p>
+                      <div className="flex flex-wrap gap-2">
+                        {artist.eventTypes.map((type) => (
+                          <Badge key={type} variant="secondary" className="rounded-full px-3 py-1">
+                            {type}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {descricaoLonga && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="mt-4 rounded-full"
+                      onClick={() => setSobreExpandido((v) => !v)}
+                    >
+                      {sobreExpandido ? 'Ver menos' : 'Ver mais sobre'} <ChevronRight className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Cachês */}
+              {cachêsCard}
+
+              {/* Avaliações (prévia) */}
+              {avaliacoesCard(false)}
+            </div>
+
+            {/* Coluna lateral */}
+            <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between pb-3">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Info className="h-4 w-4 text-primary" /> Informações principais
+                  </CardTitle>
+                  {ehDono && (
+                    <Link to="/artist/perfil" className="text-xs font-medium text-primary hover:underline">
+                      Editar
+                    </Link>
+                  )}
+                </CardHeader>
+                <CardContent className="space-y-2.5 text-sm">
+                  <InfoRow label="Tipo" value={tipo} />
+                  <InfoRow label="Categoria" value={artist.categoryName} />
+                  <InfoRow label="Atende em" value={`${artist.city}, ${artist.state}`} />
+                  <InfoRow
+                    label="Avaliação"
+                    value={
+                      artist.averageRating != null ? (
+                        <span className="flex items-center gap-1.5">
+                          <RatingStars value={artist.averageRating} /> {artist.averageRating.toFixed(1)} / 5
+                        </span>
+                      ) : (
+                        '—'
+                      )
+                    }
+                  />
+                  <InfoRow label="Avaliações recebidas" value={String(artist.reviewCount)} />
+                  <InfoRow label="Datas disponíveis" value={String(availableDates.length)} />
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between pb-3">
+                  <CardTitle className="text-base">Agenda disponível</CardTitle>
+                  <button
+                    type="button"
+                    onClick={() => setAba('agenda')}
+                    className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                  >
+                    Ver agenda <ChevronRight className="h-3.5 w-3.5" />
+                  </button>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {agendaAgrupada.length === 0 && (
+                    <p className="text-sm text-muted-foreground">Consulte a disponibilidade pela solicitação.</p>
+                  )}
+                  {agendaAgrupada.slice(0, 6).map((a) => (
+                    <div key={a.date} className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+                      <span>{new Date(a.date + 'T00:00:00').toLocaleDateString('pt-BR')}</span>
+                      <span className="text-muted-foreground">{a.horario}</span>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            </aside>
+          </div>
+        )}
+
+        {aba === 'agenda' && (
+          <div className="space-y-4">
+            {/* Calendário mensal */}
+            <Card>
+              <CardContent className="p-4">
+                <div className="mb-3 flex items-center justify-between">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => setCursorMes(addMonths(cursorMes, -1))}
+                    aria-label="Mês anterior"
+                  >
+                    <ChevronRight className="h-4 w-4 rotate-180" />
+                  </Button>
+                  <p className="text-sm font-medium capitalize">
+                    {format(cursorMes, 'MMMM yyyy', { locale: ptBR })}
+                  </p>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => setCursorMes(addMonths(cursorMes, 1))}
+                    aria-label="Próximo mês"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="grid grid-cols-7 gap-px text-center text-xs font-medium text-muted-foreground">
+                  {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((d) => (
+                    <div key={d} className="py-1.5">{d}</div>
+                  ))}
+                </div>
+                <div className="grid grid-cols-7 gap-px">
+                  {diasDoMes.map((day) => {
+                    const key = format(day, 'yyyy-MM-dd')
+                    const janelas = workingTimesByDate[key] ?? []
+                    const ocupacao = ocupadasPorData[key]
+                    const passado = key < toDateInput(new Date())
+                    const disponivel = janelas.length > 0 && !passado && !ocupacao
+                    const ehHoje = key === toDateInput(new Date())
+                    return (
+                      <div
+                        key={key}
+                        className={cn(
+                          'min-h-20 rounded-md border p-1.5 text-left',
+                          ehHoje && 'border-primary',
+                          passado && 'opacity-40',
+                          ocupacao && !disponivel && 'bg-amber-500/5'
+                        )}
+                      >
+                        <span className={cn('text-xs', ehHoje && 'font-bold text-primary', !disponivel && !ocupacao && 'text-muted-foreground/60')}>
+                          {format(day, 'd')}
+                        </span>
+                        <div className="mt-1 space-y-0.5">
+                          {disponivel && (
+                            <p className="truncate rounded bg-emerald-100 px-1 py-0.5 text-[10px] font-medium text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">
+                              {resumirJanelas(janelas)}
+                            </p>
+                          )}
+                          {ocupacao && !disponivel && (
+                            <p
+                              className={cn(
+                                'truncate rounded px-1 py-0.5 text-[10px] font-medium',
+                                ocupacao.status === 'Confirmed'
+                                  ? 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300'
+                                  : 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300'
+                              )}
+                            >
+                              {ocupacao.status === 'Confirmed' ? 'Ocupado' : ocupacao.status === 'Scheduled' ? 'Reservado' : 'Pré-reserva'}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+                <div className="mt-3 flex flex-wrap gap-4 text-xs text-muted-foreground">
+                  <span className="flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-full bg-emerald-500" /> Livre para shows
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-full bg-amber-400" /> Reservado (não fechado)
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-full bg-red-400" /> Ocupado (confirmado)
                   </span>
                 </div>
-              ))}
-            </CardContent>
-          </Card>
-        </aside>
+              </CardContent>
+            </Card>
+
+            {Object.keys(ocupadasPorData).length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Datas com shows agendados</CardTitle>
+                </CardHeader>
+                <CardContent className="grid gap-2 sm:grid-cols-2">
+                  {Object.entries(ocupadasPorData)
+                    .sort(([a], [b]) => a.localeCompare(b))
+                    .map(([date, info]) => (
+                      <div key={date} className="flex items-center justify-between rounded-md border p-3">
+                        <div>
+                          <p className="text-sm font-medium">
+                            {new Date(date + 'T00:00:00').toLocaleDateString('pt-BR', {
+                              weekday: 'short',
+                              day: '2-digit',
+                              month: '2-digit',
+                              year: 'numeric',
+                            })}
+                          </p>
+                          <p className="text-xs text-muted-foreground">{info.horario}</p>
+                        </div>
+                        {info.status === 'Confirmed' ? (
+                          <Badge variant="destructive">Ocupado</Badge>
+                        ) : (
+                          <Badge variant="warning">{info.status === 'Scheduled' ? 'Reservado' : 'Pré-reservado'}</Badge>
+                        )}
+                      </div>
+                    ))}
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        )}
+
+        {aba === 'caches' && cachêsCard}
+
+        {aba === 'midia' && (
+          <div className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Images className="h-4 w-4 text-primary" /> Fotos ({fotosMidia.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {fotosMidia.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Nenhuma foto publicada ainda.</p>
+                ) : (
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                    {fotosMidia.map((url) => (
+                      <figure key={url} className="group overflow-hidden rounded-lg border bg-muted">
+                        <a href={url} target="_blank" rel="noopener noreferrer">
+                          <img
+                            src={url}
+                            alt={`Foto de ${artist.artisticName}`}
+                            loading="lazy"
+                            className="aspect-square w-full object-cover transition duration-300 group-hover:scale-105"
+                          />
+                        </a>
+                      </figure>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Images className="h-4 w-4 text-primary" /> Vídeos ({videosMidia.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {videosMidia.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Nenhum vídeo publicada ainda.</p>
+                ) : (
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    {videosMidia.map((url) => (
+                      <video key={url} src={url} controls preload="metadata" className="aspect-video w-full rounded-lg border bg-black" />
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Music2 className="h-4 w-4 text-primary" /> Músicas e streams
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {(musicasMidia.length === 0 && !epk?.spotifyUrl && !epk?.youTubeUrl && !epk?.soundCloudUrl) ? (
+                  <p className="text-sm text-muted-foreground">Nenhuma música ou link de streaming publicado ainda.</p>
+                ) : (
+                  <>
+                    {musicasMidia.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {musicasMidia.map((musica) => (
+                          <span key={musica} className="rounded-full border bg-secondary/40 px-3 py-1 text-sm">
+                            {musica}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    <div className="flex flex-wrap gap-2">
+                      {epk?.spotifyUrl && (
+                        <a href={epk.spotifyUrl} target="_blank" rel="noopener noreferrer">
+                          <Button variant="outline" size="sm">Ouvir no Spotify</Button>
+                        </a>
+                      )}
+                      {epk?.youTubeUrl && (
+                        <a href={epk.youTubeUrl} target="_blank" rel="noopener noreferrer">
+                          <Button variant="outline" size="sm">Ver no YouTube</Button>
+                        </a>
+                      )}
+                      {epk?.soundCloudUrl && (
+                        <a href={epk.soundCloudUrl} target="_blank" rel="noopener noreferrer">
+                          <Button variant="outline" size="sm">Ouvir no SoundCloud</Button>
+                        </a>
+                      )}
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {aba === 'avaliacoes' && avaliacoesCard(true)}
       </div>
 
       <BookingRequestDialog
@@ -521,6 +882,34 @@ function workingTimesLabel(windows: TimeInterval[]) {
     .sort((a, b) => a.start.localeCompare(b.start))
     .map((w) => `${w.start}–${w.end}`)
     .join(' e ')
+}
+
+/** Duração em minutos entre dois horários HH:mm; faixas que cruzam a meia-noite somam 24h. */
+function duracaoEntre(inicio: string, fim: string): number {
+  const [sh, sm] = inicio.split(':').map(Number)
+  const [eh, em] = fim.split(':').map(Number)
+  const minutos = eh * 60 + em - (sh * 60 + sm)
+  return minutos > 0 ? minutos : minutos + 1440
+}
+
+/** 90 → "1h30"; 60 → "1h"; 45 → "45min". */
+function formatarDuracao(minutos: number): string {
+  const h = Math.floor(minutos / 60)
+  const m = minutos % 60
+  if (h === 0) return `${m}min`
+  return m > 0 ? `${h}h${m}` : `${h}h`
+}
+
+/**
+ * Resume as janelas do dia em um único período — faixas que cruzam a meia-noite
+ * (ex.: 12:00–24:00 + 00:00–05:00) viram "12:00 – 05:00" em vez de "+1".
+ */
+function resumirJanelas(janelas: TimeInterval[]): string {
+  if (janelas.length === 0) return ''
+  const cruzaMeiaNoite = janelas.some((w) => w.start > '00:00')
+  const chave = (start: string) => (cruzaMeiaNoite && start === '00:00' ? '24:00' : start)
+  const ordenadas = [...janelas].sort((a, b) => chave(a.start).localeCompare(chave(b.start)))
+  return `${ordenadas[0].start} – ${ordenadas[ordenadas.length - 1].end}`
 }
 
 export function BookingRequestDialog({
@@ -583,15 +972,29 @@ export function BookingRequestDialog({
     const STEP_TITLES = (addons?.equipment.length == 0 && addons?.teamMembers.length == 0) ? ['Detalhes do evento', 'Endereço', 'Orçamento', 'Confirmação'] : ['Detalhes do evento', 'Endereço', 'Orçamento & Adicionais', 'Confirmação']
 
     // Duração selecionada em minutos → cachê correspondente pré-preenche o orçamento.
-  const duracaoMinutos = useMemo(() => {
-    if (!startTime || !endTime) return null
-    const [sh, sm] = startTime.split(':').map(Number)
-    const [eh, em] = endTime.split(':').map(Number)
-    const minutos = eh * 60 + em - (sh * 60 + sm)
-    // Show que cruza a meia-noite (ex.: 23:00 → 02:00 = 3h).
-    return minutos > 0 ? minutos : minutos + 1440
-  }, [startTime, endTime])
+  const duracaoMinutos = useMemo(
+    () => (startTime && endTime ? duracaoEntre(startTime, endTime) : null),
+    [startTime, endTime]
+  )
   const feeDaDuracao = duracaoMinutos ? fees.find((f) => f.durationMinutes === duracaoMinutos) : undefined
+
+  // Bloqueio por cachê: com cachês cadastrados, só vale faixa cuja duração bate com um deles.
+  // Faixa inválida não é aceita — mantém o início marcado, descarta o fim e avisa o contratante.
+  const handleHorario = (s: string | null, e: string | null) => {
+    if (s && e && fees.length > 0 && !fees.some((f) => f.durationMinutes === duracaoEntre(s, e))) {
+      const opcoes = [...new Set(fees.map((f) => f.durationMinutes))]
+        .filter((m) => m > 0)
+        .sort((a, b) => a - b)
+        .map(formatarDuracao)
+        .join(', ')
+      toast.error(`O artista não faz shows nesse período selecionado. Cachês disponíveis: ${opcoes}.`)
+      setStartTime(s)
+      setEndTime(null)
+      return
+    }
+    setStartTime(s)
+    setEndTime(e)
+  }
 
   useEffect(() => {
     if (feeDaDuracao) setBudget(String(feeDaDuracao.price))
@@ -780,10 +1183,7 @@ export function BookingRequestDialog({
             <TimeRangePicker
               start={startTime}
               end={endTime}
-              onChange={(s, e) => {
-                setStartTime(s)
-                setEndTime(e)
-              }}
+              onChange={handleHorario}
               blocked={blockedTimesByDate[eventDate] ?? []}
               soft={softTimesByDate[eventDate] ?? []}
               allowed={workingTimesByDate[eventDate]}
@@ -887,8 +1287,8 @@ export function BookingRequestDialog({
                               <Label>Valor da proposta de negociação (R$)</Label>
                               <Input
                                   value={budget}
-                                  onChange={(e) => aceitaNegociar && setBudget(budget)}
-                                  placeholder="Opcional"
+                                  onChange={(e) => aceitaNegociar && setBudget(e.target.value)}
+                                  placeholder="Valor da proposta de negociação"
                                   readOnly={!aceitaNegociar}
                                   className={cn(!aceitaNegociar && 'cursor-not-allowed bg-muted')}
                               />
