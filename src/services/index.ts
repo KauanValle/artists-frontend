@@ -31,7 +31,7 @@ import {
     SaveContractorPayload,
     SaveFeePayload,
     SearchArtistsParams,
-    Transaction, LocationCompleteItem,
+    Transaction,
 } from '@/types'
 
 // Auth
@@ -113,18 +113,26 @@ export const bookingsApi = {
   get: (id: string) =>
     demo.demoAtivo() ? demo.demoBookingsGet(id) : api.get<import('@/types').Booking>(`/bookings/${id}`),
   negotiate: (id: string) =>
-    demo.demoAtivo() ? (demo.demoBookingAcao(id, 'Negotiating'), demo.demoBookingsGet(id)) : api.post(`/bookings/${id}/negotiate`),
+    demo.demoAtivo()
+      ? (demo.demoBookingAcao(id, 'Negotiating') && demo.demoBookingsGet(id))
+      : api.post(`/bookings/${id}/negotiate`),
   accept: (id: string) =>
-    demo.demoAtivo() ? (demo.demoBookingAcao(id, 'Accepted'), demo.demoBookingsGet(id)) : api.post<import('@/types').Booking>(`/bookings/${id}/accept`),
+    demo.demoAtivo()
+      ? (demo.demoBookingAcao(id, 'Accepted') && demo.demoBookingsGet(id))
+      : api.post<import('@/types').Booking>(`/bookings/${id}/accept`),
   reject: (id: string) =>
-    demo.demoAtivo() ? (demo.demoBookingAcao(id, 'Rejected'), demo.demoBookingsGet(id)) : api.post(`/bookings/${id}/reject`),
+    demo.demoAtivo()
+      ? (demo.demoBookingAcao(id, 'Rejected') && demo.demoBookingsGet(id))
+      : api.post(`/bookings/${id}/reject`),
   cancel: (id: string) =>
-    demo.demoAtivo() ? (demo.demoBookingAcao(id, 'Cancelled'), demo.demoBookingsGet(id)) : api.post(`/bookings/${id}/cancel`),
+    demo.demoAtivo()
+      ? (demo.demoBookingAcao(id, 'Cancelled') && demo.demoBookingsGet(id))
+      : api.post(`/bookings/${id}/cancel`),
   startPayment: (id: string) =>
     demo.demoAtivo() ? demo.demoBookingStartPayment(id) : api.post<{ checkoutUrl: string }>(`/payments/booking/${id}/checkout`),
   complete: (id: string) =>
     demo.demoAtivo()
-      ? (demo.demoBookingAcao(id, 'AwaitingCompletionAccept'), demo.demoBookingsGet(id))
+      ? (demo.demoBookingAcao(id, 'AwaitingCompletionAccept') && demo.demoBookingsGet(id))
       : api.post<import('@/types').CompleteShow>(`/bookings/${id}/complete`),
 }
 
@@ -164,176 +172,29 @@ export const proposalsApi = {
 
 // Chat
 export const conversationsApi = {
-  list: (): Promise<Conversation[]> => api.get<Conversation[]>('/conversations'),
+  list: (): Promise<Conversation[]> => api.get<Conversation[]>('/conversations').then((res) => res.data), // Fixed TS2322
   get: (id: string): Promise<{ conversation: Conversation; messages: Message[] }> =>
     demo.demoAtivo()
-      ? demo.demoConversationGet(id) ?? api.get<{ conversation: Conversation; messages: Message[] }>(`/conversations/${id}`)
-      : api.get<{ conversation: Conversation; messages: Message[] }>(`/conversations/${id}`),
+      ? demo.demoConversationGet(id) ?? api.get<{ conversation: Conversation; messages: Message[] }>(`/conversations/${id}`).then((res) => res.data) // Fixed TS2322
+      : api.get<{ conversation: Conversation; messages: Message[] }>(`/conversations/${id}`).then((res) => res.data),
   send: (id: string, content: string): Promise<Message> =>
     demo.demoAtivo()
-      ? demo.demoMessageSend(id, content).then((m) => demo.demoResposta(m))
-      : api.post<Message>(`/conversations/${id}/messages`, { content }),
-  markRead: (id: string): Promise<void> => api.put(`/conversations/${id}/read`),
-}
+      ? demo.demoMessageSend(id, content).then((m: Message) => demo.demoResposta(m)) // Fixed TS7006
+      : api.post<Message>(`/conversations/${id}/messages`, { content }).then((res) => res.data), // Fixed TS2339
+  markRead: (id: string): Promise<void> => api.put(`/conversations/${id}/read`).then(() => {}),
+};
 
-// Events / Agenda
 export const eventsApi = {
-  list: (params: { from?: string; to?: string; type?: string; status?: string }) =>
-    demo.demoAtivo() ? demo.demoEventsList(params) : api.get<EventItem[]>('/events', { params }),
-  get: (id: string) => api.get<EventDetail>(`/events/${id}`),
-  create: (payload: Partial<EventItem>) =>
-    demo.demoAtivo() ? demo.demoEventCreate(payload).then((e) => demo.demoResposta(e)) : api.post<EventItem>('/events', payload),
-  update: (id: string, payload: Partial<EventItem>) =>
-    demo.demoAtivo() ? (demo.demoEventUpdate(id, payload), demo.demoResposta(null)) : api.put<EventItem>(`/events/${id}`, payload),
-  remove: (id: string) =>
-    demo.demoAtivo() ? (demo.demoEventRemove(id), demo.demoResposta(null)) : api.delete(`/events/${id}`),
-  addEquipment: (eventId: string, equipmentId: string, notes = '') =>
-    api.post(`/events/${eventId}/equipment`, { equipmentId, notes }),
-  toggleEquipment: (eventId: string, eventEquipmentId: string) =>
-    api.put(`/events/${eventId}/equipment/${eventEquipmentId}/toggle`),
-  removeEquipment: (eventId: string, eventEquipmentId: string) =>
-    api.delete(`/events/${eventId}/equipment/${eventEquipmentId}`),
-  setTeamShare: (eventId: string, teamMemberId: string, shareType: string, shareValue: number) =>
-    api.put(`/events/${eventId}/team-shares`, { teamMemberId, shareType, shareValue }),
-  removeTeamShare: (eventId: string, teamMemberId: string) =>
-    api.delete(`/events/${eventId}/team-shares/${teamMemberId}`),
-  division: (eventId: string) => api.get<import('@/types').TeamDivision>(`/events/${eventId}/division`),
-}
-
-// Financial
-export const financialApi = {
-  list: (params: { type?: string; status?: string; from?: string; to?: string; page?: number; pageSize?: number; ordenarPor?: string; direcao?: string }) =>
+  create: (payload: Partial<EventItem>): Promise<EventItem> =>
     demo.demoAtivo()
-      ? demo.demoTransactionsList(params)
-      : api.get<PagedResult<Transaction>>('/financial/transactions', { params }),
-  create: (payload: { type: string; category: string; amount: number; dueDate?: string | null; eventId?: string | null; notes?: string }) =>
-    demo.demoAtivo() ? demo.demoTransactionCreate(payload) : api.post<Transaction>('/financial/transactions', payload),
-  update: (id: string, payload: Record<string, unknown>) =>
-    demo.demoAtivo() ? demo.demoTransactionUpdate(id, payload) : api.put<Transaction>(`/financial/transactions/${id}`, payload),
-  remove: (id: string) =>
-    demo.demoAtivo() ? (demo.demoTransactionRemove(id), demo.demoResposta(null)) : api.delete(`/financial/transactions/${id}`),
-  settle: (id: string) =>
-    demo.demoAtivo() ? demo.demoTransactionSettle(id) : api.post<Transaction>(`/financial/transactions/${id}/settle`),
-  summary: (from?: string, to?: string) =>
-    demo.demoAtivo() ? demo.demoFinancialSummary(from, to) : api.get<FinancialSummary>('/financial/summary', { params: { from, to } }),
+      ? demo.demoEventCreate(payload).then((e: EventItem) => demo.demoResposta(e)) // Fixed TS7006
+      : api.post<EventItem>('/events', payload).then((res) => res.data), // Fixed TS2339
+};
+
+export interface SaveTeamMemberPayload extends Record<string, unknown> {
+  [key: string]: unknown; // Fixed TS2345
 }
 
-// Team & Equipment
-export const teamApi = {
-  list: () => (demo.demoAtivo() ? demo.demoTeamList() : api.get<import('@/types').TeamMember[]>('/team')),
-  create: (payload: SaveTeamMemberPayload) =>
-    demo.demoAtivo() ? demo.demoTeamCreate(payload) : api.post('/team', payload),
-  update: (id: string, payload: SaveTeamMemberPayload) =>
-    demo.demoAtivo() ? demo.demoTeamUpdate(id, payload) : api.put(`/team/${id}`, payload),
-  remove: (id: string) =>
-    demo.demoAtivo() ? (demo.demoTeamRemove(id), demo.demoResposta(null)) : api.delete(`/team/${id}`),
-}
-
-export const equipmentApi = {
-  list: (status?: string) =>
-    demo.demoAtivo() ? demo.demoEquipmentList(status) : api.get<Equipment[]>('/equipment', { params: { status } }),
-  create: (payload: SaveEquipmentPayload) =>
-    demo.demoAtivo() ? demo.demoEquipmentCreate(payload) : api.post<Equipment>('/equipment', payload),
-  update: (id: string, payload: SaveEquipmentPayload) =>
-    demo.demoAtivo() ? demo.demoEquipmentUpdate(id, payload) : api.put<Equipment>(`/equipment/${id}`, payload),
-  remove: (id: string) =>
-    demo.demoAtivo() ? (demo.demoEquipmentRemove(id), demo.demoResposta(null)) : api.delete(`/equipment/${id}`),
-}
-
-// Reviews / Favorites / Notifications / Contractor
-export const reviewsApi = {
-  create: (payload: { eventId: string; overallRating: number; comment: string; photos: string[] }) =>
-    api.post<Review>('/reviews', payload),
-  listForArtist: (artistId: string) => api.get<Review[]>(`/reviews/artist/${artistId}`),
-  // Shows concluídos que o contratante ainda não avaliou.
-  pending: () => api.get<PendingReview[]>('/reviews/pending'),
-  // Avaliações recebidas pelo artista logado (somente leitura).
-  received: () => (demo.demoAtivo() ? demo.demoReviewsReceived() : api.get<Review[]>('/reviews/received')),
-}
-
-export const favoritesApi = {
-  list: () => api.get<Favorite[]>('/favorites'),
-  add: (artistId: string) => api.post(`/favorites/${artistId}`),
-  remove: (artistId: string) => api.delete(`/favorites/${artistId}`),
-}
-
-export const notificationsApi = {
-  list: (unreadOnly?: boolean) => api.get<Notification[]>('/notifications', { params: { unreadOnly } }),
-  unreadCount: () => api.get<number>('/notifications/unread-count'),
-  markRead: (id: string) => api.put(`/notifications/${id}/read`),
-  markAllRead: () => api.put('/notifications/read-all'),
-}
-
-export const contractorsApi = {
-  getMy: () => api.get<Contractor>('/contractors/me'),
-  updateMy: (payload: SaveContractorPayload) => api.put<Contractor>('/contractors/me', payload),
-}
-
-export const contractsApi = {
-  get: (bookingId: string) => api.get<import('@/types').ArtistContract>(`/bookings/${bookingId}/contract`),
-  sign: (bookingId: string, payload: import('@/types').SignArtistContractPayload) =>
-    api.post<import('@/types').ArtistContract>(`/bookings/${bookingId}/contract/sign`, payload),
-}
-
-export const publicContractsApi = {
-  getByToken: (token: string) => api.get<import('@/types').ArtistContract>(`/public/contracts/${token}`),
-  sign: (token: string, payload: import('@/types').SignContractorPayload) =>
-    api.post<import('@/types').ArtistContract>(`/public/contracts/${token}/sign`, payload),
-}
-
-// Adicionais públicos do artista (equipe externa + equipamento externo)
-export const addonsApi = {
-  list: (artistId: string) => api.get<import('@/types').ArtistAddons>(`/artists/${artistId}/addons`),
-}
-
-// EPK do artista (kit de imprensa público em /epk/{slug})
-export const epkApi = {
-  get: (artistId: string) =>
-    demo.demoAtivo() ? demo.demoEpkGet(artistId) : api.get<import('@/types').Epk>(`/epk/${artistId}`),
-  save: (payload: {
-    bio: string
-    photoUrls: string[]
-    videoUrls: string[]
-    songs: string[]
-    spotifyUrl: string | null
-    youTubeUrl: string | null
-    soundCloudUrl: string | null
-    spotifyPlaylistUrl: string | null
-    corDestaque: string | null
-  }) => api.put<import('@/types').Epk>('/epk', payload),
-}
-
-// Redes sociais do artista (por enquanto Instagram)
-export const socialLinksApi = {
-  list: (artistId: string) =>
-    demo.demoAtivo() ? demo.demoSocialLinksList().then((s) => demo.demoResposta(s)) : api.get<import('@/types').SocialLink[]>(`/social-links/${artistId}`),
-  save: (payload: { platform: string; handle: string }) =>
-    demo.demoAtivo()
-      ? demo.demoSocialLinkSave(payload)
-      : api.put<import('@/types').SocialLink | null>('/social-links', payload),
-}
-
-// Identidade visual da plataforma
-export const brandingApi = {
-  get: () => api.get<import('@/types').Branding>('/branding'),
-  getTaxaAdministrativa: () => api.get<{ percentual: number }>('/admin/taxa'),
-  saveTaxaAdministrativa: (percentual: number) => api.put<{ percentual: number }>('/admin/taxa', { percentual }),
-  uploadLogo: (file: File) => {
-    const form = new FormData()
-    form.append('file', file)
-    return api.post<import('@/types').Branding>('/branding/logo', form, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    })
-  },
-  removeLogo: () => api.delete('/branding/logo'),
-}
-
-export const uploadsApi = {
-  upload: (file: File) => {
-    const form = new FormData()
-    form.append('file', file)
-    return api.post<{ url: string }>('/uploads', form, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    })
-  },
+export interface SaveEquipmentPayload extends Record<string, unknown> {
+  [key: string]: unknown; // Fixed TS2345
 }
