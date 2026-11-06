@@ -103,7 +103,9 @@ export function BookingDetailPage() {
   })
 
   const accept = useMutation({
-    mutationFn: (proposalId: string) => proposalsApi.accept(proposalId),
+    mutationFn: async (proposalId: string): Promise<AxiosResponse<Proposal>> => {
+      return await proposalsApi.accept(proposalId);
+    },
     onSuccess: () => {
       toast.success('Proposta aceita! Evento confirmado e agenda bloqueada.')
       invalidate()
@@ -112,7 +114,9 @@ export function BookingDetailPage() {
   })
 
   const rejectProposal = useMutation({
-    mutationFn: (proposalId: string) => proposalsApi.reject(proposalId),
+    mutationFn: async (proposalId: string): Promise<AxiosResponse<Proposal>> => {
+      return await proposalsApi.reject(proposalId);
+    },
     onSuccess: () => {
       toast.info('Proposta recusada. A negociação continua aberta.')
       invalidate()

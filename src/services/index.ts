@@ -164,16 +164,16 @@ export const proposalsApi = {
 
 // Chat
 export const conversationsApi = {
-  list: () => api.get<Conversation[]>('/conversations'),
-  get: (id: string) =>
+  list: (): Promise<Conversation[]> => api.get<Conversation[]>('/conversations'),
+  get: (id: string): Promise<{ conversation: Conversation; messages: Message[] }> =>
     demo.demoAtivo()
       ? demo.demoConversationGet(id) ?? api.get<{ conversation: Conversation; messages: Message[] }>(`/conversations/${id}`)
       : api.get<{ conversation: Conversation; messages: Message[] }>(`/conversations/${id}`),
-  send: (id: string, content: string) =>
+  send: (id: string, content: string): Promise<Message> =>
     demo.demoAtivo()
       ? demo.demoMessageSend(id, content).then((m) => demo.demoResposta(m))
       : api.post<Message>(`/conversations/${id}/messages`, { content }),
-  markRead: (id: string) => api.put(`/conversations/${id}/read`),
+  markRead: (id: string): Promise<void> => api.put(`/conversations/${id}/read`),
 }
 
 // Events / Agenda
