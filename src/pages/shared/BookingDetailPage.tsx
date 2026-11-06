@@ -16,9 +16,10 @@ import { Textarea } from '@/components/ui/textarea'
 import { BookingStatusBadge, eventTypeLabel, proposalStatusLabel } from '@/components/badges'
 import { cn, formatDate, formatDateTime, formatMoney, formatTime } from '@/lib/utils'
 import { extractApiError } from '@/services/api'
+import type { AxiosResponse } from 'axios'
 import { ContractTab } from '@/pages/shared/ContractTab'
 import { EventTeamEquipmentTab } from '@/pages/shared/EventTeamEquipmentTab'
-import type { CreateProposalPayload, Proposal } from '@/types'
+import type { CreateProposalPayload, Message, Proposal } from '@/types'
 
 export function BookingDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -74,7 +75,8 @@ export function BookingDetailPage() {
   const [completeOpen, setCompleteOpen] = useState(false)
   const [completionLink, setCompletionLink] = useState<string | null>(null)
   const complete = useMutation({
-    mutationFn: async () => (await bookingsApi.complete(id!)).data,
+    mutationFn: async (): Promise<import('@/types').CompleteShow> =>
+      (await bookingsApi.complete(id!)) as unknown as import('@/types').CompleteShow,
     onSuccess: (data) => {
       invalidate()
       if (data.status === 'Completed') {
@@ -751,7 +753,7 @@ export function ChatPanel({ conversationId }: { conversationId: string }) {
 
   const { data } = useQuery({
     queryKey: ['conversation', conversationId],
-    queryFn: async () => (await conversationsApi.get(conversationId)).conversation, // Fixed TS2339
+    queryFn: async () => (await conversationsApi.get(conversationId)).data,
     refetchInterval: 5000,
   });
 

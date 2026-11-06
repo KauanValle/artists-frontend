@@ -284,6 +284,28 @@ export function demoBookingStartPayment(id: string) {
   return resposta({ checkoutUrl: '#' })
 }
 
+/** Aplica a ação e devolve a booking atualizada já embalada em AxiosResponse-like. */
+export function demoBookingAcaoRet(id: string, novoStatus: BookingStatus): Promise<AxiosResponse<Booking>> {
+  demoBookingAcao(id, novoStatus)
+  const b = acharBooking(id)
+  return resposta(b as Booking)
+}
+
+/** Conclusão demo: gera token público como o backend faria. */
+export function demoBookingCompleteRet(id: string): Promise<AxiosResponse<import('@/types').CompleteShow>> {
+  demoBookingAcao(id, 'AwaitingCompletionAccept')
+  return resposta({
+    id,
+    status: 'AwaitingCompletionAccept',
+    artistConfirmed: true,
+    contractorConfirmed: false,
+    contractorToken: 'demo-token-' + id.slice(0, 8),
+    eventDate: '',
+    artistName: '',
+    location: '',
+  } as unknown as import('@/types').CompleteShow)
+}
+
 // ─────────────────────────── agenda ───────────────────────────
 
 export function demoEventsList(params: { from?: string; to?: string; type?: string; status?: string }): Promise<AxiosResponse<import('@/types').EventItem[]>> {
@@ -296,7 +318,7 @@ export function demoEventsList(params: { from?: string; to?: string; type?: stri
   return resposta(itens)
 }
 
-export function demoEventCreate(payload: Partial<EventItem>): EventItem {
+export function demoEventCreate(payload: Partial<EventItem>): Promise<AxiosResponse<EventItem>> {
   const evento: EventItem = {
     id: `demo-evento-${Math.random().toString(36).slice(2, 8)}`,
     artistId: 'demo-artista',
@@ -311,7 +333,7 @@ export function demoEventCreate(payload: Partial<EventItem>): EventItem {
     status: 'Scheduled',
   }
   _events.push(evento)
-  return evento
+  return resposta(evento)
 }
 
 export function demoEventUpdate(id: string, payload: Partial<EventItem>): void {
@@ -382,7 +404,7 @@ export function demoTransactionCreate(payload: {
   dueDate?: string | null
   eventId?: string | null
   notes?: string
-}): Transaction {
+}): Promise<AxiosResponse<Transaction>> {
   const t: Transaction = {
     id: `demo-trans-${Math.random().toString(36).slice(2, 8)}`,
     type: payload.type === 'Expense' ? 'Expense' : 'Income',
@@ -397,26 +419,26 @@ export function demoTransactionCreate(payload: {
     createdAt: agoraIso(),
   }
   _transactions.push(t)
-  return t
+  return resposta(t)
 }
 
-export function demoTransactionUpdate(id: string, payload: Record<string, unknown>): Transaction | null {
+export function demoTransactionUpdate(id: string, payload: Record<string, unknown>): Promise<AxiosResponse<Transaction>> {
   const t = _transactions.find((x) => x.id === id)
   if (t) Object.assign(t, payload)
-  return t ?? null
+  return resposta(t as Transaction)
 }
 
 export function demoTransactionRemove(id: string): void {
   _transactions = _transactions.filter((t) => t.id !== id)
 }
 
-export function demoTransactionSettle(id: string): Transaction | null {
+export function demoTransactionSettle(id: string): Promise<AxiosResponse<Transaction>> {
   const t = _transactions.find((x) => x.id === id)
   if (t) {
     t.status = t.type === 'Expense' ? 'Paid' : 'Received'
     t.settlementDate = dia(0)
   }
-  return t ?? null
+  return resposta(t as Transaction)
 }
 
 // ─────────────────────────── equipe e equipamentos ───────────────────────────
@@ -425,7 +447,7 @@ export function demoTeamList(): Promise<AxiosResponse<TeamMember[]>> {
   return resposta(_team)
 }
 
-export function demoTeamCreate(payload: Record<string, unknown>): TeamMember {
+export function demoTeamCreate(payload: import('@/types').SaveTeamMemberPayload): Promise<AxiosResponse<TeamMember>> {
   const m: TeamMember = {
     id: `demo-equipe-${Math.random().toString(36).slice(2, 8)}`,
     name: String(payload.name ?? ''),
@@ -439,13 +461,13 @@ export function demoTeamCreate(payload: Record<string, unknown>): TeamMember {
     notes: String(payload.notes ?? ''),
   }
   _team.push(m)
-  return m
+  return resposta(m)
 }
 
-export function demoTeamUpdate(id: string, payload: Record<string, unknown>): TeamMember | null {
+export function demoTeamUpdate(id: string, payload: import('@/types').SaveTeamMemberPayload): Promise<AxiosResponse<TeamMember>> {
   const m = _team.find((x) => x.id === id)
   if (m) Object.assign(m, payload)
-  return m ?? null
+  return resposta(m as TeamMember)
 }
 
 export function demoTeamRemove(id: string): void {
@@ -458,7 +480,7 @@ export function demoEquipmentList(status?: string): Promise<AxiosResponse<Equipm
   return resposta(itens)
 }
 
-export function demoEquipmentCreate(payload: Record<string, unknown>): Equipment {
+export function demoEquipmentCreate(payload: import('@/types').SaveEquipmentPayload): Promise<AxiosResponse<Equipment>> {
   const e: Equipment = {
     id: `demo-equip-${Math.random().toString(36).slice(2, 8)}`,
     name: String(payload.name ?? ''),
@@ -475,13 +497,13 @@ export function demoEquipmentCreate(payload: Record<string, unknown>): Equipment
     notes: String(payload.notes ?? ''),
   }
   _equipment.push(e)
-  return e
+  return resposta(e)
 }
 
-export function demoEquipmentUpdate(id: string, payload: Record<string, unknown>): Equipment | null {
+export function demoEquipmentUpdate(id: string, payload: import('@/types').SaveEquipmentPayload): Promise<AxiosResponse<Equipment>> {
   const e = _equipment.find((x) => x.id === id)
   if (e) Object.assign(e, payload)
-  return e ?? null
+  return resposta(e as Equipment)
 }
 
 export function demoEquipmentRemove(id: string): void {
@@ -500,27 +522,27 @@ export function demoProposalsForBooking(bookingId: string): Promise<AxiosRespons
   return resposta(_proposals.filter((p) => p.bookingRequestId === bookingId))
 }
 
-export function demoProposalAccept(id: string): Proposal | null {
+export function demoProposalAccept(id: string): Promise<AxiosResponse<Proposal>> {
   const p = _proposals.find((x) => x.id === id)
   if (p) {
     p.status = 'Accepted'
     const b = acharBooking(p.bookingRequestId)
     if (b) b.status = 'Accepted'
   }
-  return p ?? null
+  return resposta(p as Proposal)
 }
 
-export function demoProposalReject(id: string): Proposal | null {
+export function demoProposalReject(id: string): Promise<AxiosResponse<Proposal>> {
   const p = _proposals.find((x) => x.id === id)
   if (p) {
     p.status = 'Rejected'
     const b = acharBooking(p.bookingRequestId)
     if (b) b.status = 'Rejected'
   }
-  return p ?? null
+  return resposta(p as Proposal)
 }
 
-export function demoProposalCreate(bookingId: string, finalAmount: number): Proposal {
+export function demoProposalCreate(bookingId: string, finalAmount: number): Promise<AxiosResponse<Proposal>> {
   const p: Proposal = {
     id: `demo-proposta-${Math.random().toString(36).slice(2, 8)}`,
     bookingRequestId: bookingId,
@@ -540,12 +562,26 @@ export function demoProposalCreate(bookingId: string, finalAmount: number): Prop
   _proposals.push(p)
   const b = acharBooking(bookingId)
   if (b) b.status = 'Proposed'
-  return p
+  return resposta(p)
 }
 
-export function demoConversationGet(conversationId: string): Promise<AxiosResponse<{ conversation: Conversation; messages: Message[] }> | null> {
+export function demoConversationGet(conversationId: string): Promise<AxiosResponse<{ conversation: Conversation; messages: Message[] }>> {
   const booking = _bookings.find((b) => b.conversationId === conversationId)
-  if (!booking) return null
+  if (!booking) {
+    return resposta({
+      conversation: {
+        id: conversationId,
+        bookingRequestId: '',
+        otherUserId: '',
+        otherUserName: 'Contratante',
+        otherUserPhotoUrl: null,
+        lastMessage: null,
+        lastMessageAt: null,
+        unreadCount: 0,
+      },
+      messages: [],
+    })
+  }
   const mensagens = _conversas[conversationId] ?? []
   return resposta({
     conversation: {
@@ -562,7 +598,7 @@ export function demoConversationGet(conversationId: string): Promise<AxiosRespon
   })
 }
 
-export function demoMessageSend(conversationId: string, content: string): Message {
+export function demoMessageSend(conversationId: string, content: string): Promise<AxiosResponse<Message>> {
   const msg: Message = {
     id: `demo-msg-${Math.random().toString(36).slice(2, 8)}`,
     senderUserId: 'demo-artista',
@@ -572,7 +608,7 @@ export function demoMessageSend(conversationId: string, content: string): Messag
     isRead: true,
   }
   ;(_conversas[conversationId] ??= []).push(msg)
-  return msg
+  return resposta(msg)
 }
 
 // ─────────────────────────── EPK e redes sociais ───────────────────────────
@@ -581,22 +617,22 @@ export function demoEpkGet(artistId: string): Epk {
   return { ...(_epk ?? { ...(_epk = { artistId, bio: '', photoUrls: [], videoUrls: [], songs: [], spotifyUrl: null, youTubeUrl: null, soundCloudUrl: null, spotifyPlaylistUrl: null, corDestaque: null }) }), artistId }
 }
 
-export function demoEpkSave(payload: Partial<Epk>): Epk {
+export function demoEpkSave(payload: Partial<Epk>): Promise<AxiosResponse<Epk>> {
   _epk = { ...(_epk ?? { artistId: 'demo-artista', bio: '', photoUrls: [], videoUrls: [], songs: [], spotifyUrl: null, youTubeUrl: null, soundCloudUrl: null, spotifyPlaylistUrl: null, corDestaque: null }), ...payload }
-  return _epk
+  return resposta(_epk as Epk)
 }
 
 export function demoSocialLinksList(): SocialLink[] {
   return _socialLinks
 }
 
-export function demoSocialLinkSave(payload: { platform: string; handle: string }): SocialLink {
+export function demoSocialLinkSave(payload: { platform: string; handle: string }): Promise<AxiosResponse<SocialLink>> {
   const existente = _socialLinks.find((s) => s.platform === payload.platform)
   if (existente) {
     existente.handle = payload.handle
-    return existente
+    return resposta(existente)
   }
   const novo: SocialLink = { artistId: 'demo-artista', platform: payload.platform, handle: payload.handle, url: '' }
   _socialLinks.push(novo)
-  return novo
+  return resposta(novo)
 }

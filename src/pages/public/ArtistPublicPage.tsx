@@ -402,7 +402,9 @@ export function ArtistPublicPage() {
                 <div className="flex items-center gap-2">
                   <h1 className="text-2xl font-bold sm:text-3xl">{artist.artisticName}</h1>
                   {artist.reviewCount > 0 && (
-                    <BadgeCheck className="h-5 w-5 shrink-0 text-sky-400" title="Perfil com avaliações de contratantes" />
+                    <span title="Perfil com avaliações de contratantes">
+                      <BadgeCheck className="h-5 w-5 shrink-0 text-sky-400" />
+                    </span>
                   )}
                 </div>
                 <p className="mt-0.5 font-semibold">
@@ -1303,7 +1305,7 @@ export function BookingRequestDialog({
                       </div>
                   </div>
 
-                  {(addons?.teamMembers.length ?? 0) > 0 || (addons?.equipment.length ?? 0) > 0 && (
+                  {((addons?.teamMembers.length ?? 0) > 0 || (addons?.equipment.length ?? 0) > 0) && (
                 <div className="space-y-3 rounded-xl border p-4">
                     
                   <div>
