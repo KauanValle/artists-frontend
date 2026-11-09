@@ -109,7 +109,7 @@ export function InstallAppButton() {
                 style={{
                     position: 'fixed',
                     bottom: '20px',
-                    right: '20px',
+                    left: '20px',
                     zIndex: 9999,
                     display: 'flex',
                     alignItems: 'center',
