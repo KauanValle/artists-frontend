@@ -32,7 +32,6 @@ import { Button } from '@/components/ui/button'
 import { NotificationsMenu } from '@/components/NotificationsMenu'
 import { cn } from '@/lib/utils'
 import { SiteFooter } from '@/components/SiteFooter'
-import { PushPermissionModal } from '@/components/PushPermissionModal'
 import { TutorialBox, useTutorialProgress, type TutorialStep } from '@/components/onboarding/TutorialBox'
 
 const artistNav = [
@@ -324,7 +323,6 @@ export function DashboardLayout() {
       {user?.role === 'Artist' && (
         <TutorialBox title="Bem-vindo ao Reprissa!" steps={artistTutorialSteps} progress={tutorialArtista} />
       )}
-      <PushPermissionModal />
     </div>
   )
 }

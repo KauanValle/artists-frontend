@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
-import { BellRing, X } from 'lucide-react'
-import { isPushSupported, needsInstallForPush } from '@/lib/push'
+import { BellRing } from 'lucide-react'
 import { usePushNotifications } from '@/hooks/usePushNotifications'
 import {
   Dialog,
@@ -34,14 +33,23 @@ function saveDismiss() {
 }
 
 /**
- * Modal que aparece automaticamente quando o usuário logado ainda não
- * autorizou notificações push. Atrasa 2 s para não atrapalhar o carregamento.
+ * Detecta se o navegador suporta notificações (sem depender do service worker
+ * já estar registrado — ele pode levar alguns segundos).
+ */
+function canAskNotificationPermission(): boolean {
+  return typeof window !== 'undefined' && 'Notification' in window
+}
+
+/**
+ * Modal que aparece automaticamente quando o usuário ainda não autorizou
+ * notificações push. Atrasa 3 s para dar tempo do SW registrar e da
+ * página carregar.
  *
  * Regras:
- *  - Só aparece se push é suportado e a permissão está em "default".
+ *  - Só aparece se o navegador tem a API de Notification e a permissão está em "default".
  *  - Não aparece se o usuário já dispensou nos últimos 7 dias.
  *  - Se o usuário clicar "Agora não", salva o dismiss e fecha.
- *  - Se clicar "Ativar", chama enablePush (que dispara o prompt nativo do navegador).
+ *  - Se clicar "Ativar", chama enablePush (que registra o SW, pede permissão e inscreve no backend).
  *  - Se a permissão for "denied" ou "granted", não mostra.
  */
 export function PushPermissionModal() {
@@ -49,18 +57,15 @@ export function PushPermissionModal() {
   const [open, setOpen] = useState(false)
 
   useEffect(() => {
-    // Não mostra se push não é suportado, se já autorizou/bloqueou, ou se dispensou recentemente.
-    if (!isPushSupported()) return
-    if (needsInstallForPush()) return
+    if (!canAskNotificationPermission()) return
     if (Notification.permission !== 'default') return
     if (wasDismissedRecently()) return
 
-    // Pequeno atraso para não competir com o carregamento da página.
-    const timer = setTimeout(() => setOpen(true), 2000)
+    const timer = setTimeout(() => setOpen(true), 3000)
     return () => clearTimeout(timer)
   }, [])
 
-  // Fecha se o estado de permissão mudar (o usuário ativou ou bloqueou via prompt nativo).
+  // Fecha se o estado de permissão mudar (o usuário ativou ou bloqueou).
   useEffect(() => {
     if (push.permission !== 'default') setOpen(false)
   }, [push.permission])
@@ -74,6 +79,8 @@ export function PushPermissionModal() {
     await push.enable()
     setOpen(false)
   }
+
+  if (!canAskNotificationPermission()) return null
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) handleDismiss() }}>

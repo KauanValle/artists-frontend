@@ -9,6 +9,7 @@ import { ThemeProvider, initTheme } from '@/hooks/useTheme'
 import './index.css'
 import {WhatsAppSupportButton} from "@/components/WhatsAppSupportButton.tsx";
 import {InstallAppButton} from "@/components/InstallAppButton.tsx";
+import {PushPermissionModal} from "@/components/PushPermissionModal.tsx";
 
 // Registra o service worker do PWA (vite-plugin-pwa strategy "injectManifest").
 // Sem isso, notificações push e cache offline não funcionam.
@@ -36,6 +37,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
           <RouterProvider router={router} />
             <WhatsAppSupportButton />
             <InstallAppButton/>
+          <PushPermissionModal />
           <Toaster richColors position="top-right" />
         </AuthProvider>
       </ThemeProvider>
