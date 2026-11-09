@@ -103,6 +103,7 @@ export function FinancialAdminPage() {
               <EmptyState title="Nenhuma transação no período" icon={<Wallet />} />
             </div>
           ) : (
+            <>
             {/* Mobile card list */}
             <div className="sm:hidden divide-y">
               {transactions!.items.map((t) => (
@@ -172,6 +173,7 @@ export function FinancialAdminPage() {
               </tbody>
             </table>
             </div>
+            </>
           )}
         </CardContent>
       </Card>
