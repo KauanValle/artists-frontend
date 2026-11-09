@@ -26,6 +26,7 @@ import { ArtistProfilePage } from '@/pages/artist/ArtistProfilePage'
 import { EpkPage } from '@/pages/artist/EpkPage'
 import { SettingsPage } from '@/pages/artist/SettingsPage'
 import { SubscriptionPage } from '@/pages/artist/SubscriptionPage'
+import { ArtistConversationsPage } from '@/pages/artist/ConversationsPage'
 
 import { ContractorDashboardPage, ContractorEventsPage } from '@/pages/contractor/ContractorDashboardPage'
 import { MarketplacePage } from '@/pages/contractor/MarketplacePage'
@@ -88,6 +89,8 @@ export const router = createBrowserRouter([
           { path: '/artist/equipamentos', element: <EquipmentPage /> },
           { path: '/artist/perfil', element: <ArtistProfilePage /> },
           { path: '/artist/epk', element: <EpkPage /> },
+          { path: '/artist/conversas', element: <ArtistConversationsPage /> },
+          { path: '/artist/conversas/:id', element: <ArtistConversationsPage /> },
           { path: '/artist/configuracoes', element: <SettingsPage /> },
           { path: '/artist/assinatura', element: <SubscriptionPage /> },
         ],

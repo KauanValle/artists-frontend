@@ -42,6 +42,7 @@ const artistNav = [
   { to: '/artist/equipe', label: 'Equipe', icon: Users },
   { to: '/artist/equipamentos', label: 'Equipamentos', icon: Guitar },
   { to: '/artist/perfil', label: 'Meu Perfil', icon: Music },
+  { to: '/artist/conversas', label: 'Conversas', icon: MessageSquare },
   { to: '/artist/epk', label: 'Meu EPK', icon: Newspaper },
   { to: '/artist/configuracoes', label: 'Configurações', icon: Settings },
   // { to: '/artist/assinatura', label: 'Assinatura', icon: BadgeCheck },
