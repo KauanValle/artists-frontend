@@ -591,7 +591,7 @@ export function EpkPage() {
               <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-[color:var(--epk-accent)]">
                 Galeria
               </p>
-              <div className="grid grid-cols-4 gap-1.5">
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5">
                 {photos.slice(0, 4).map((url) => (
                   <img key={url} src={url} alt="" className="aspect-square w-full rounded-md object-cover" />
                 ))}

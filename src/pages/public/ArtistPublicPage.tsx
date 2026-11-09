@@ -670,7 +670,7 @@ export function ArtistPublicPage() {
                       <div
                         key={key}
                         className={cn(
-                          'min-h-20 rounded-md border p-1.5 text-left',
+                          'min-h-14 sm:min-h-20 rounded-md border p-1.5 text-left',
                           ehHoje && 'border-primary',
                           passado && 'opacity-40',
                           ocupacao && !disponivel && 'bg-amber-500/5'
@@ -764,7 +764,7 @@ export function ArtistPublicPage() {
                 {fotosMidia.length === 0 ? (
                   <p className="text-sm text-muted-foreground">Nenhuma foto publicada ainda.</p>
                 ) : (
-                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
                     {fotosMidia.map((url) => (
                       <figure key={url} className="group overflow-hidden rounded-lg border bg-muted">
                         <a href={url} target="_blank" rel="noopener noreferrer">
@@ -1197,7 +1197,7 @@ export function BookingRequestDialog({
                       {workingTimesLabel(workingTimesByDate[eventDate])}.
                   </p>
           ) : null}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             
             <div className="space-y-1.5">
               <Label>Tipo de evento</Label>

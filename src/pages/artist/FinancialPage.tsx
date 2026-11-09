@@ -318,7 +318,7 @@ function CreateTransactionDialog({
             create.mutate()
           }}
         >
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>Tipo</Label>
               <Select value={type} onValueChange={(v) => setType(v as TransactionType)}>
@@ -336,7 +336,7 @@ function CreateTransactionDialog({
               <Input value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Ex.: Show, Transporte, Som" required />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>Valor (R$)</Label>
               <Input value={amount} onChange={(e) => setAmount(e.target.value)} required />

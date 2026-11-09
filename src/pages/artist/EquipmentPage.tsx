@@ -213,7 +213,7 @@ function EquipmentDialog({ open, onClose, editing }: { open: boolean; onClose: (
             save.mutate()
           }}
         >
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>Nome</Label>
               <Input value={form.name} onChange={(e) => set('name', e.target.value)} required />
@@ -255,7 +255,7 @@ function EquipmentDialog({ open, onClose, editing }: { open: boolean; onClose: (
               </Button>
             </div>
             {form.allocationType === 'Externo' && (
-              <div className="grid grid-cols-2 gap-3 pt-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                 <div className="space-y-1.5">
                   <Label>Tipo de custo</Label>
                   <Select value={form.shareType} onValueChange={(v) => setForm({ ...form, shareType: v as ShareType })}>
@@ -274,7 +274,7 @@ function EquipmentDialog({ open, onClose, editing }: { open: boolean; onClose: (
               </div>
             )}
           </div>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="space-y-1.5">
               <Label>Categoria</Label>
               <Input value={form.category} onChange={(e) => set('category', e.target.value)} placeholder="Ex.: Áudio" />

@@ -36,7 +36,7 @@ export function TeamPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">Equipe</h1>
           <p className="text-sm text-muted-foreground">
@@ -200,7 +200,7 @@ function TeamMemberDialog({
             save.mutate()
           }}
         >
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>Nome</Label>
               <Input value={name} onChange={(e) => setName(e.target.value)} required />
@@ -210,7 +210,7 @@ function TeamMemberDialog({
               <Input value={role} onChange={(e) => setRole(e.target.value)} placeholder="Ex.: Guitarrista" />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>Telefone</Label>
               <Input value={phone} onChange={(e) => setPhone(e.target.value)} />
@@ -246,7 +246,7 @@ function TeamMemberDialog({
                 : 'Interno: este profissional trabalha especificamente para você.'}
             </p>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>Tipo de divisão</Label>
               <Select value={shareType} onValueChange={(v) => setShareType(v as ShareType)}>

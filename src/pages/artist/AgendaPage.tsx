@@ -118,7 +118,7 @@ export function AgendaPage() {
                       setView('day')
                     }}
                     className={cn(
-                      'min-h-24 rounded-md border p-1.5 text-left align-top hover:bg-accent',
+                      'min-h-16 sm:min-h-24 rounded-md border p-1.5 text-left align-top hover:bg-accent',
                       isToday && 'border-primary'
                     )}
                   >
@@ -234,7 +234,7 @@ export function CreateEventDialog({
             create.mutate()
           }}
         >
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>Título</Label>
               <Input value={title} onChange={(e) => setTitle(e.target.value)} required />
@@ -255,7 +255,7 @@ export function CreateEventDialog({
               </Select>
             </div>
           </div>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="space-y-1.5">
               <Label>Data</Label>
               <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} required />

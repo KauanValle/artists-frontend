@@ -701,7 +701,7 @@ export function CreateProposalDialog({
               <Plus /> Adicionar item
             </Button>
           </div>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="space-y-1.5">
               <Label>Deslocamento</Label>
               <Input value={travelCost} onChange={(e) => setTravelCost(e.target.value)} placeholder="0" />
@@ -715,7 +715,7 @@ export function CreateProposalDialog({
               <Input value={discount} onChange={(e) => setDiscount(e.target.value)} placeholder="0" />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>Validade (dias)</Label>
               <Input type="number" min={1} value={validityDays} onChange={(e) => setValidityDays(e.target.value)} />

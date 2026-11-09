@@ -271,7 +271,7 @@ export function CompleteProfilePage() {
               <Input placeholder="(11) 99999-9999" {...register('phone')} />
               {fieldError('phone') && <p className="text-xs text-destructive">{fieldError('phone')}</p>}
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label>CPF</Label>
                 <Input placeholder="000.000.000-00" {...register('cpf')} />
@@ -291,7 +291,7 @@ export function CompleteProfilePage() {
                 {fieldError('cep') && <p className="text-xs text-destructive">{fieldError('cep')}</p>}
               </div>
             </div>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="col-span-2 space-y-1.5">
                 <Label>Cidade</Label>
                 <Input placeholder="São Paulo" {...register('city')} />
@@ -320,7 +320,7 @@ export function CompleteProfilePage() {
                 <Input placeholder="Ex.: João Silva" {...register('artisticName')} />
                 {fieldError('artisticName') && <p className="text-xs text-destructive">{fieldError('artisticName')}</p>}
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label>Tipo</Label>
                   <Select value={artistType} onValueChange={setArtistType}>
