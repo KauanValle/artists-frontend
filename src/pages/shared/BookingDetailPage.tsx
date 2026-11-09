@@ -337,7 +337,7 @@ export function BookingDetailPage() {
       </Dialog>
 
       <Tabs defaultValue="resumo">
-        <TabsList>
+        <TabsList className="w-full overflow-x-auto scrollbar-none flex-nowrap justify-start">
           <TabsTrigger value="resumo">Resumo</TabsTrigger>
           <TabsTrigger value="financeiro">Financeiro</TabsTrigger>
           <TabsTrigger
@@ -350,7 +350,7 @@ export function BookingDetailPage() {
           <TabsTrigger value="chat" className="gap-1.5">
             <MessageSquare className="h-3.5 w-3.5" /> Chat
           </TabsTrigger>
-          <TabsTrigger value="docs">Equipe/Equip./Docs</TabsTrigger>
+          <TabsTrigger value="docs">Equipe/Docs</TabsTrigger>
         </TabsList>
 
         <TabsContent value="resumo">
