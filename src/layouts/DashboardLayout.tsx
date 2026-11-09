@@ -1,16 +1,15 @@
 import { useMemo, useState } from 'react'
-import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
     BadgeCheck,
     CalendarDays,
     CalendarRange,
     ClipboardList,
-    CreditCard, DollarSignIcon, GlassesIcon, Guitar,
+    CreditCard, DollarSignIcon, Ellipsis, GlassesIcon, Guitar,
     Heart,
     LayoutDashboard,
     LogOut,
     Megaphone,
-    Menu,
     MessageSquare, MicIcon,
     Music,
     Newspaper,
@@ -240,6 +239,71 @@ function SidebarContent({
   )
 }
 
+/* ── Bottom tab bar (mobile only) ── */
+const artistBottomTabs = [
+  { to: '/artist/dashboard', label: 'Início', icon: LayoutDashboard },
+  { to: '/artist/shows', label: 'Shows', icon: Megaphone },
+  { to: '/artist/agenda', label: 'Agenda', icon: CalendarDays },
+  { to: '/artist/financeiro', label: 'Financeiro', icon: CreditCard },
+]
+
+const contractorBottomTabs = [
+  { to: '/contractor/dashboard', label: 'Início', icon: LayoutDashboard },
+  { to: '/contractor/buscar', label: 'Buscar', icon: Search },
+  { to: '/contractor/solicitacoes', label: 'Solicitações', icon: ClipboardList },
+  { to: '/contractor/conversas', label: 'Conversas', icon: MessageSquare },
+]
+
+const adminBottomTabs = [
+  { to: '/admin', label: 'Painel', icon: LayoutDashboard },
+  { to: '/solicitacoes-anonimas', label: 'Solicitações', icon: GlassesIcon },
+  { to: '/eventos', label: 'Eventos', icon: MicIcon },
+  { to: '/financeiro', label: 'Financeiro', icon: DollarSignIcon },
+]
+
+function BottomTabBar({
+  tabs,
+  onMoreClick,
+}: {
+  tabs: { to: string; label: string; icon: typeof LayoutDashboard }[]
+  onMoreClick: () => void
+}) {
+  const location = useLocation()
+  const moreActive = !tabs.some((t) => location.pathname.startsWith(t.to))
+
+  return (
+    <nav className="fixed inset-x-0 bottom-0 z-40 border-t bg-background pb-[env(safe-area-inset-bottom)] lg:hidden">
+      <div className="flex h-14 items-stretch">
+        {tabs.map((item) => {
+          const active = location.pathname.startsWith(item.to)
+          return (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              className="flex flex-1 flex-col items-center justify-center gap-0.5"
+            >
+              <item.icon className={cn('h-5 w-5', active ? 'text-primary' : 'text-muted-foreground')} />
+              <span className={cn('text-[10px] font-medium', active ? 'text-primary' : 'text-muted-foreground')}>
+                {item.label}
+              </span>
+            </NavLink>
+          )
+        })}
+        <button
+          type="button"
+          onClick={onMoreClick}
+          className="flex flex-1 flex-col items-center justify-center gap-0.5"
+        >
+          <Ellipsis className={cn('h-5 w-5', moreActive ? 'text-primary' : 'text-muted-foreground')} />
+          <span className={cn('text-[10px] font-medium', moreActive ? 'text-primary' : 'text-muted-foreground')}>
+            Mais
+          </span>
+        </button>
+      </div>
+    </nav>
+  )
+}
+
 export function DashboardLayout() {
   const { user } = useAuth()
   const [menuOpen, setMenuOpen] = useState(false)
@@ -272,6 +336,14 @@ export function DashboardLayout() {
     return navBase.filter((item) => liberados.has(item.to))
   }, [navBase, tutorialArtista])
 
+  const bottomTabs = !user
+    ? artistBottomTabs
+    : user.role === 'Admin'
+      ? adminBottomTabs
+      : user.role === 'Contractor'
+        ? contractorBottomTabs
+        : artistBottomTabs
+
   return (
     <div className="min-h-screen bg-secondary/40">
       {/* Sidebar fixa apenas em telas grandes */}
@@ -279,7 +351,7 @@ export function DashboardLayout() {
         <SidebarContent nav={nav} />
       </aside>
 
-      {/* Drawer no mobile */}
+      {/* Drawer "Mais" no mobile (abre pelo botão Mais da bottom bar) */}
       {menuOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
           <div className="absolute inset-0 bg-black/50" onClick={() => setMenuOpen(false)} aria-hidden />
@@ -290,11 +362,8 @@ export function DashboardLayout() {
       )}
 
       <div className="flex min-h-screen flex-col lg:pl-60">
-        <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-2 border-b bg-background/95 px-4 backdrop-blur lg:justify-end lg:px-6">
+        <header className="sticky top-0 z-30 flex h-14 lg:h-16 items-center justify-between gap-2 border-b bg-background/95 px-4 backdrop-blur lg:justify-end lg:px-6">
           <div className="flex items-center gap-2 lg:hidden">
-            <Button variant="ghost" size="icon" onClick={() => setMenuOpen(true)} aria-label="Abrir menu">
-              <Menu className="h-5 w-5" />
-            </Button>
             <BrandMark />
           </div>
           <div className="flex items-center gap-1">
@@ -302,7 +371,7 @@ export function DashboardLayout() {
             <NotificationsMenu />
           </div>
         </header>
-        <main className="flex-1 p-4 lg:p-6">
+        <main className="flex-1 p-4 pb-20 lg:p-6 lg:pb-6">
           {user?.role === 'Artist' && tutorialArtista && !tutorialArtista.state.done && (
             <div
               role="status"
@@ -320,6 +389,10 @@ export function DashboardLayout() {
         </main>
         <SiteFooter compact />
       </div>
+
+      {/* Bottom tab bar (mobile only) */}
+      <BottomTabBar tabs={bottomTabs} onMoreClick={() => setMenuOpen(true)} />
+
       {user?.role === 'Artist' && (
         <TutorialBox title="Bem-vindo ao Reprissa!" steps={artistTutorialSteps} progress={tutorialArtista} />
       )}
