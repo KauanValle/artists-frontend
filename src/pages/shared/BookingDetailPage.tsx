@@ -140,34 +140,43 @@ export function BookingDetailPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="space-y-3">
-        <div className="flex items-start gap-3">
-          <Button variant="ghost" size="icon" className="shrink-0 mt-0.5" onClick={() => navigate(-1)}>
-            <ArrowLeft />
-          </Button>
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-lg sm:text-xl font-bold">
-                Contratação — {isArtist ? booking.contractorName : booking.artistName}
-              </h1>
-              {booking.isGuest && <Badge variant="secondary">Solicitação de visitante</Badge>}
-              <BookingStatusBadge status={booking.status} />
-            </div>
-            <p className="mt-0.5 text-sm text-muted-foreground">
-              {formatDate(booking.eventDate)} • {formatTime(booking.startTime)}–{formatTime(booking.endTime)} • {booking.location}
-            </p>
+        {/* Row 1: back + status badge + cancel (compact top bar) */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" className="shrink-0 -ml-2" onClick={() => navigate(-1)}>
+              <ArrowLeft />
+            </Button>
+            {booking.isGuest && <Badge variant="secondary">Visitante</Badge>}
+            <BookingStatusBadge status={booking.status} />
           </div>
+          {canAct && (
+            <Button variant="outline" size="sm" onClick={() => act.mutate({ action: 'cancel' })} disabled={act.isPending}>
+              <X /> Cancelar
+            </Button>
+          )}
         </div>
 
-        {/* Action buttons — below header on mobile */}
-        <div className="flex flex-wrap items-center gap-2 sm:pl-11">
+        {/* Row 2: title + subtitle */}
+        <div>
+          <h1 className="text-lg font-bold leading-tight">
+            Contratação — {isArtist ? booking.contractorName : booking.artistName}
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {formatDate(booking.eventDate)} • {formatTime(booking.startTime)}–{formatTime(booking.endTime)}
+          </p>
+          <p className="text-sm text-muted-foreground">{booking.location}</p>
+        </div>
+
+        {/* Row 3: Action buttons */}
+        <div className="flex flex-wrap items-center gap-2">
           {canAcceptDirectly && booking.budget !== null && (
             <Button size="sm" onClick={() => setAcceptOpen(true)} disabled={acceptDirect.isPending}>
-              <Check /> Aceitar diretamente
+              <Check /> Aceitar
             </Button>
           )}
           {isArtist && booking.status === 'Requested' && (
             <Button variant="outline" size="sm" onClick={() => act.mutate({ action: 'negotiate' })} disabled={act.isPending}>
-              Iniciar negociação
+              Negociar
             </Button>
           )}
           {isArtist && (booking.status === 'Requested' || booking.status === 'Negotiating') && (
@@ -178,7 +187,7 @@ export function BookingDetailPage() {
           {isArtist && (booking.status === 'Confirmed' || booking.status === "AwaitingCompletionAccept") && (
             <>
               <Button size="sm" onClick={() => setCompleteOpen(true)} disabled={complete.isPending}>
-                <CheckCircle2 /> Concluir show
+                <CheckCircle2 /> Concluir
               </Button>
               <Button variant="destructive" size="sm" onClick={() => setCancelConfirmedOpen(true)} disabled={cancelConfirmed.isPending}>
                 <X /> Cancelar show
@@ -188,17 +197,12 @@ export function BookingDetailPage() {
           {!isArtist && user?.role === 'Contractor' && booking.status === 'Confirmed' && (
             <>
               <Button size="sm" onClick={() => setCompleteOpen(true)} disabled={complete.isPending}>
-                <CheckCircle2 /> Confirmar conclusão
+                <CheckCircle2 /> Confirmar
               </Button>
               <Button variant="destructive" size="sm" onClick={() => setCancelConfirmedOpen(true)} disabled={cancelConfirmed.isPending}>
                 <X /> Cancelar show
               </Button>
             </>
-          )}
-          {canAct && (
-            <Button variant="outline" size="sm" onClick={() => act.mutate({ action: 'cancel' })} disabled={act.isPending}>
-              <X /> Cancelar
-            </Button>
           )}
         </div>
       </div>
