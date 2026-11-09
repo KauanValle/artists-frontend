@@ -15,6 +15,7 @@ export function InstallAppButton() {
     const [installed, setInstalled] = useState(false);
     const [isIOS, setIsIOS] = useState(false);
     const [isOpen, setIsOpen] = useState(false);
+    const [dismissed, setDismissed] = useState(() => localStorage.getItem('install-btn-dismissed') === '1');
 
     useEffect(() => {
         const checkInstallation = () => {
@@ -99,18 +100,34 @@ export function InstallAppButton() {
         setIsOpen(true);
     };
 
-    if (installed) return null;
+    const handleDismiss = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        setDismissed(true);
+        localStorage.setItem('install-btn-dismissed', '1');
+    };
+
+    if (installed || dismissed) return null;
 
     return (
         <>
             {/* Botão fixo */}
-            <button
-                onClick={handleInstall}
-                className="fixed bottom-20 left-5 z-[9999] flex items-center gap-2.5 rounded-xl border-none bg-[#7436A8] px-[22px] py-3.5 text-sm font-bold text-white shadow-[0_6px_25px_rgba(116,54,168,0.35)] lg:bottom-5"
-            >
-                <span style={{ fontSize: '18px' }}>↓</span>
-                Instalar aplicativo
-            </button>
+            <div className="fixed bottom-20 left-5 z-[9999] flex items-center gap-1.5 lg:bottom-5">
+                <button
+                    onClick={handleInstall}
+                    className="flex items-center gap-2.5 rounded-xl border-none bg-[#7436A8] px-[22px] py-3.5 text-sm font-bold text-white shadow-[0_6px_25px_rgba(116,54,168,0.35)]"
+                >
+                    <span style={{ fontSize: '18px' }}>↓</span>
+                    Instalar aplicativo
+                </button>
+                <button
+                    onClick={handleDismiss}
+                    className="flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-xs text-white/80 backdrop-blur hover:bg-black/80 hover:text-white"
+                    aria-label="Fechar"
+                    title="Fechar"
+                >
+                    ✕
+                </button>
+            </div>
 
             {/* Tutorial de instalação */}
             {isOpen && (
