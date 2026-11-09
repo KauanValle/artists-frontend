@@ -142,18 +142,29 @@ export function TutorialBox({
     }
   }, [])
 
-  // Auto-preenchimento: visita a tela do passo E esse passo é o próximo liberado.
-  // Visitas a telas de passos bloqueados não marcam nada (segue o passo a passo).
+  // Tutorial novo sempre abre em Meu Perfil, mesmo que o login leve ao dashboard.
+  const inicioFeito = useRef(false)
   useEffect(() => {
-    if (!state || state.done) return
-    const primeiroPendente = steps.find((s) => !checkedSet.has(s.id))
-    if (!primeiroPendente) return
-    const passoDaTela = steps.find(
-      (s) => s.href && (location.pathname === s.href || location.pathname.startsWith(s.href + '/'))
-    )
-    if (passoDaTela && passoDaTela.id === primeiroPendente.id) progress?.salvar({ checked: [...checkedSet, passoDaTela.id] })
+    if (!state || state.done || state.checked.length > 0 || inicioFeito.current) return
+    inicioFeito.current = true
+    const primeiro = steps[0]
+    if (primeiro.href && location.pathname !== primeiro.href) navigate(primeiro.href, { replace: true })
+    mostrarOverlay(primeiro)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.pathname, state?.done, checkedSet, steps])
+  }, [state?.done, state?.checked.length])
+
+  // Concluir ao sair da tela: concluir ao chegar faria o avanço pular o passo seguinte.
+  // O primeiro passo (completar o perfil) só conclui pelo botão.
+  const telaAnterior = useRef(location.pathname)
+  useEffect(() => {
+    const anterior = telaAnterior.current
+    telaAnterior.current = location.pathname
+    if (!state || state.done || !passoAtual?.href || atualIdx === 0) return
+    if (anterior === passoAtual.href && location.pathname !== anterior) {
+      progress?.salvar({ checked: [...checkedSet, passoAtual.id] })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname])
 
   // Tutorial concluído → o usuário não vê mais nada (estado vive na conta dele).
   if (!state || state.done) return null
@@ -184,6 +195,9 @@ export function TutorialBox({
           </p>
           <h2 className="mt-2 text-2xl font-bold tracking-tight">{overlay.title}</h2>
           <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{overlay.text}</p>
+          <p className="mt-3 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-600 dark:text-amber-300">
+            Durante o tutorial, os shows, valores e avaliações de exemplo são apenas para visualização.
+          </p>
           <Button variant="outline" size="sm" className="mt-5" onClick={fecharOverlay}>
             Entendi, fechar
           </Button>

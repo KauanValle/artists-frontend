@@ -22,6 +22,11 @@ import type {
  * o mesmo usuário/sessão passa a receber os dados reais das APIs.
  */
 
+/** Id gerado pela camada demo (ex.: "demo-...") — ações sobre ele ficam em memória. */
+export function ehIdDemo(id?: string | null): boolean {
+  return !!id && id.startsWith('demo-')
+}
+
 export function demoAtivo(): boolean {
   const user = loadSession()?.user
   const ativo = !!user && user.role === 'Artist' && user.tutorialFeito === false
@@ -245,8 +250,8 @@ export function demoBookingsList(params: {
   busca?: string
   ordenarPor?: string
   direcao?: string
-}): Promise<AxiosResponse<import('@/types').PagedResult<import('@/types').Booking>>> {
-  let itens = [..._bookings]
+}, extras: import('@/types').Booking[] = []): Promise<AxiosResponse<import('@/types').PagedResult<import('@/types').Booking>>> {
+  let itens = [...extras, ..._bookings]
   if (params.status) itens = itens.filter((b) => b.status === params.status)
   if (params.busca) {
     const q = params.busca.toLowerCase()
@@ -295,45 +300,24 @@ export function demoBookingAcaoRet(id: string, novoStatus: BookingStatus): Promi
 export function demoBookingCompleteRet(id: string): Promise<AxiosResponse<import('@/types').CompleteShow>> {
   demoBookingAcao(id, 'AwaitingCompletionAccept')
   return resposta({
-    id,
+    bookingId: id,
     status: 'AwaitingCompletionAccept',
     artistConfirmed: true,
     contractorConfirmed: false,
     contractorToken: 'demo-token-' + id.slice(0, 8),
-    eventDate: '',
-    artistName: '',
-    location: '',
-  } as unknown as import('@/types').CompleteShow)
+  })
 }
 
 // ─────────────────────────── agenda ───────────────────────────
 
-export function demoEventsList(params: { from?: string; to?: string; type?: string; status?: string }): Promise<AxiosResponse<import('@/types').EventItem[]>> {
-  let itens = [..._events]
+export function demoEventsList(params: { from?: string; to?: string; type?: string; status?: string }, extras: import('@/types').EventItem[] = []): Promise<AxiosResponse<import('@/types').EventItem[]>> {
+  let itens = [...extras, ..._events]
   if (params.from) itens = itens.filter((e) => e.startDateTime.slice(0, 10) >= params.from!)
   if (params.to) itens = itens.filter((e) => e.startDateTime.slice(0, 10) <= params.to!)
   if (params.type) itens = itens.filter((e) => e.type === params.type)
   if (params.status) itens = itens.filter((e) => e.status === params.status)
   itens.sort((a, b) => a.startDateTime.localeCompare(b.startDateTime))
   return resposta(itens)
-}
-
-export function demoEventCreate(payload: Partial<EventItem>): Promise<AxiosResponse<EventItem>> {
-  const evento: EventItem = {
-    id: `demo-evento-${Math.random().toString(36).slice(2, 8)}`,
-    artistId: 'demo-artista',
-    contractorId: null,
-    bookingRequestId: null,
-    title: payload.title ?? 'Novo compromisso',
-    type: payload.type ?? 'Other',
-    startDateTime: payload.startDateTime ?? iso(1),
-    endDateTime: payload.endDateTime ?? iso(1, '22:00'),
-    location: payload.location ?? '',
-    description: payload.description ?? '',
-    status: 'Scheduled',
-  }
-  _events.push(evento)
-  return resposta(evento)
 }
 
 export function demoEventUpdate(id: string, payload: Partial<EventItem>): void {
@@ -347,7 +331,7 @@ export function demoEventRemove(id: string): void {
 
 // ─────────────────────────── financeiro ───────────────────────────
 
-export function demoFinancialSummary(from?: string, to?: string): Promise<AxiosResponse<FinancialSummary>> {
+function calcularSummaryDemo(from?: string, to?: string): FinancialSummary {
   const noPeriodo = _transactions.filter(
     (t) => (!from || (t.dueDate ?? '') >= from) && (!to || (t.dueDate ?? '') <= to)
   )
@@ -355,7 +339,7 @@ export function demoFinancialSummary(from?: string, to?: string): Promise<AxiosR
   const expense = noPeriodo.filter((t) => t.type === 'Expense')
   const incomeExpected = income.reduce((s, t) => s + t.amount, 0)
   const expenseTotal = expense.reduce((s, t) => s + t.amount, 0)
-  return resposta({
+  return {
     from: from ?? null,
     to: to ?? null,
     incomeExpected,
@@ -366,9 +350,27 @@ export function demoFinancialSummary(from?: string, to?: string): Promise<AxiosR
     expensePending: expense.filter((t) => t.status !== 'Paid').reduce((s, t) => s + t.amount, 0),
     result: incomeExpected - expenseTotal,
     accountsReceivable: income.filter((t) => t.status !== 'Received').reduce((s, t) => s + t.amount, 0),
-    upcomingShowsCount: _events.filter(
-      (e) => e.status === 'Confirmed' && e.startDateTime.slice(0, 10) >= dia(0)
-    ).length,
+    upcomingShowsCount: _events.filter((e) => e.status === 'Confirmed' && e.startDateTime.slice(0, 10) >= dia(0)).length,
+  }
+}
+
+export function demoSummarySomado(
+  real: FinancialSummary,
+  from?: string,
+  to?: string
+): Promise<AxiosResponse<FinancialSummary>> {
+  const demo = calcularSummaryDemo(from, to)
+  return resposta({
+    ...real,
+    incomeExpected: real.incomeExpected + demo.incomeExpected,
+    incomeReceived: real.incomeReceived + demo.incomeReceived,
+    incomePending: real.incomePending + demo.incomePending,
+    expenseTotal: real.expenseTotal + demo.expenseTotal,
+    expensePaid: real.expensePaid + demo.expensePaid,
+    expensePending: real.expensePending + demo.expensePending,
+    result: real.result + demo.result,
+    accountsReceivable: real.accountsReceivable + demo.accountsReceivable,
+    upcomingShowsCount: real.upcomingShowsCount + demo.upcomingShowsCount,
   })
 }
 
@@ -381,8 +383,8 @@ export function demoTransactionsList(params: {
   pageSize?: number
   ordenarPor?: string
   direcao?: string
-}): Promise<AxiosResponse<import('@/types').PagedResult<Transaction>>> {
-  let itens = [..._transactions]
+}, extras: import('@/types').Transaction[] = []): Promise<AxiosResponse<import('@/types').PagedResult<Transaction>>> {
+  let itens = [...extras, ..._transactions]
   if (params.type) itens = itens.filter((t) => t.type === params.type)
   if (params.status) itens = itens.filter((t) => t.status === params.status)
   if (params.from) itens = itens.filter((t) => (t.dueDate ?? '') >= params.from!)
@@ -395,31 +397,6 @@ export function demoTransactionsList(params: {
     return direcaoDesc ? (av < bv ? 1 : -1) : av < bv ? -1 : 1
   })
   return resposta(pagina(itens, params.page, params.pageSize))
-}
-
-export function demoTransactionCreate(payload: {
-  type: string
-  category: string
-  amount: number
-  dueDate?: string | null
-  eventId?: string | null
-  notes?: string
-}): Promise<AxiosResponse<Transaction>> {
-  const t: Transaction = {
-    id: `demo-trans-${Math.random().toString(36).slice(2, 8)}`,
-    type: payload.type === 'Expense' ? 'Expense' : 'Income',
-    category: payload.category,
-    amount: payload.amount,
-    dueDate: payload.dueDate ?? null,
-    settlementDate: null,
-    status: 'Pending',
-    eventId: payload.eventId ?? null,
-    eventTitle: null,
-    notes: payload.notes ?? '',
-    createdAt: agoraIso(),
-  }
-  _transactions.push(t)
-  return resposta(t)
 }
 
 export function demoTransactionUpdate(id: string, payload: Record<string, unknown>): Promise<AxiosResponse<Transaction>> {
@@ -443,25 +420,8 @@ export function demoTransactionSettle(id: string): Promise<AxiosResponse<Transac
 
 // ─────────────────────────── equipe e equipamentos ───────────────────────────
 
-export function demoTeamList(): Promise<AxiosResponse<TeamMember[]>> {
-  return resposta(_team)
-}
-
-export function demoTeamCreate(payload: import('@/types').SaveTeamMemberPayload): Promise<AxiosResponse<TeamMember>> {
-  const m: TeamMember = {
-    id: `demo-equipe-${Math.random().toString(36).slice(2, 8)}`,
-    name: String(payload.name ?? ''),
-    photoUrl: String(payload.photoUrl ?? ''),
-    role: String(payload.role ?? ''),
-    phone: String(payload.phone ?? ''),
-    email: String(payload.email ?? ''),
-    allocationType: (payload.allocationType as TeamMember['allocationType']) ?? 'Interno',
-    defaultShareType: (payload.defaultShareType as TeamMember['defaultShareType']) ?? 'Percentage',
-    defaultShareValue: Number(payload.defaultShareValue ?? 0),
-    notes: String(payload.notes ?? ''),
-  }
-  _team.push(m)
-  return resposta(m)
+export function demoTeamList(extras: TeamMember[] = []): Promise<AxiosResponse<TeamMember[]>> {
+  return resposta([..._team, ...extras])
 }
 
 export function demoTeamUpdate(id: string, payload: import('@/types').SaveTeamMemberPayload): Promise<AxiosResponse<TeamMember>> {
@@ -474,30 +434,10 @@ export function demoTeamRemove(id: string): void {
   _team = _team.filter((m) => m.id !== id)
 }
 
-export function demoEquipmentList(status?: string): Promise<AxiosResponse<Equipment[]>> {
-  let itens = [..._equipment]
+export function demoEquipmentList(status?: string, extras: Equipment[] = []): Promise<AxiosResponse<Equipment[]>> {
+  let itens = [...extras, ..._equipment]
   if (status) itens = itens.filter((e) => e.status === status)
   return resposta(itens)
-}
-
-export function demoEquipmentCreate(payload: import('@/types').SaveEquipmentPayload): Promise<AxiosResponse<Equipment>> {
-  const e: Equipment = {
-    id: `demo-equip-${Math.random().toString(36).slice(2, 8)}`,
-    name: String(payload.name ?? ''),
-    category: String(payload.category ?? ''),
-    brand: String(payload.brand ?? ''),
-    model: String(payload.model ?? ''),
-    identifier: String(payload.identifier ?? ''),
-    weightKg: payload.weightKg != null ? Number(payload.weightKg) : null,
-    value: payload.value != null ? Number(payload.value) : null,
-    allocationType: (payload.allocationType as Equipment['allocationType']) ?? 'Interno',
-    shareType: (payload.shareType as Equipment['shareType']) ?? 'Fixed',
-    shareValue: Number(payload.shareValue ?? 0),
-    status: 'Available',
-    notes: String(payload.notes ?? ''),
-  }
-  _equipment.push(e)
-  return resposta(e)
 }
 
 export function demoEquipmentUpdate(id: string, payload: import('@/types').SaveEquipmentPayload): Promise<AxiosResponse<Equipment>> {
@@ -512,8 +452,8 @@ export function demoEquipmentRemove(id: string): void {
 
 // ─────────────────────────── avaliações recebidas ───────────────────────────
 
-export function demoReviewsReceived(): Promise<AxiosResponse<Review[]>> {
-  return resposta(_reviews)
+export function demoReviewsReceived(extras: Review[] = []): Promise<AxiosResponse<Review[]>> {
+  return resposta([...extras, ..._reviews])
 }
 
 // ─────────────────────────── propostas e conversas ───────────────────────────

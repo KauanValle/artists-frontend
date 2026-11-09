@@ -303,6 +303,19 @@ export function DashboardLayout() {
           </div>
         </header>
         <main className="flex-1 p-4 lg:p-6">
+          {user?.role === 'Artist' && tutorialArtista && !tutorialArtista.state.done && (
+            <div
+              role="status"
+              className="mb-4 flex items-start gap-3 rounded-lg border border-amber-500/60 bg-amber-500/10 px-4 py-3 text-sm"
+            >
+              <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
+              <p>
+                <strong>Você está no modo tutorial.</strong> Os shows, valores, eventos, avaliações, equipe e
+                equipamentos de exemplo são fictícios, servem apenas para visualização e somem quando você concluir o
+                tutorial. O que você mesmo cadastrar fica salvo na sua conta.
+              </p>
+            </div>
+          )}
           <Outlet />
         </main>
         <SiteFooter compact />

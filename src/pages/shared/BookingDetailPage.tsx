@@ -75,8 +75,7 @@ export function BookingDetailPage() {
   const [completeOpen, setCompleteOpen] = useState(false)
   const [completionLink, setCompletionLink] = useState<string | null>(null)
   const complete = useMutation({
-    mutationFn: async (): Promise<import('@/types').CompleteShow> =>
-      (await bookingsApi.complete(id!)) as unknown as import('@/types').CompleteShow,
+    mutationFn: async () => (await bookingsApi.complete(id!)).data,
     onSuccess: (data) => {
       invalidate()
       if (data.status === 'Completed') {
@@ -781,7 +780,7 @@ export function ChatPanel({ conversationId }: { conversationId: string }) {
             Nenhuma mensagem ainda. Combine os detalhes da contratação por aqui.
           </p>
         )}
-        {data?.messages.map((message: Message) => { // Fixed TS7006
+        {data?.messages.map((message: Message) => {
           const mine = message.senderUserId === user?.id;
           return (
             <div key={message.id} className={cn('flex', mine ? 'justify-end' : 'justify-start')}>
