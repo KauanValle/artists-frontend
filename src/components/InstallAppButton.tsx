@@ -106,24 +106,7 @@ export function InstallAppButton() {
             {/* Botão fixo */}
             <button
                 onClick={handleInstall}
-                style={{
-                    position: 'fixed',
-                    bottom: '20px',
-                    left: '20px',
-                    zIndex: 9999,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '10px',
-                    padding: '14px 22px',
-                    background: '#7436A8',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: '12px',
-                    fontSize: '14px',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    boxShadow: '0 6px 25px rgba(116,54,168,0.35)'
-                }}
+                className="fixed bottom-20 left-5 z-[9999] flex items-center gap-2.5 rounded-xl border-none bg-[#7436A8] px-[22px] py-3.5 text-sm font-bold text-white shadow-[0_6px_25px_rgba(116,54,168,0.35)] lg:bottom-5"
             >
                 <span style={{ fontSize: '18px' }}>↓</span>
                 Instalar aplicativo
