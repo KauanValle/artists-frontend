@@ -81,7 +81,14 @@ self.addEventListener('push', ((event: SwPushEvent) => {
         icon: '/pwa_192x192.png',
         badge: '/pwa_192x192.png',
         data: { link: payload.link || '/' },
-      })
+        // tag + renotify: cada push gera um pop-up mesmo se já houver notificação anterior.
+        tag: 'reprissa-' + Date.now(),
+        renotify: true,
+        // Vibração para chamar atenção no Android (padrão: vibra-pausa-vibra).
+        vibrate: [200, 100, 200],
+        // Mantém a notificação na tela até o usuário interagir.
+        requireInteraction: true,
+      } as Record<string, unknown>)
 
       // Se o app estiver aberto, avisa para atualizar o sininho na hora.
       const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
