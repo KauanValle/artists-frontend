@@ -10,6 +10,12 @@ import './index.css'
 import {WhatsAppSupportButton} from "@/components/WhatsAppSupportButton.tsx";
 import {InstallAppButton} from "@/components/InstallAppButton.tsx";
 
+// Registra o service worker do PWA (vite-plugin-pwa strategy "injectManifest").
+// Sem isso, notificações push e cache offline não funcionam.
+import { registerSW } from 'virtual:pwa-register'
+
+registerSW({ immediate: true })
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
