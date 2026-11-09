@@ -113,8 +113,8 @@ export function FinancialPage() {
       )}
 
       {/* Filtros e ordenação */}
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-sm text-muted-foreground">Status</span>
+      <div className="flex flex-wrap items-center gap-2 text-sm">
+        <span className="text-muted-foreground">Status</span>
         <Select value={statusFiltro} onValueChange={setStatusFiltro}>
           <SelectTrigger className="w-40">
             <SelectValue />
@@ -161,7 +161,7 @@ export function FinancialPage() {
         )}
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-6">
         <StatCard title="Receita prevista" value={formatMoney(summary?.incomeExpected)} hint="Inclui pendentes" />
         <StatCard title="Cache" value={formatMoney(summary?.incomeReceived)} />
         <StatCard title="Recebido" value={formatMoney(summary?.incomeReceived)} />
@@ -180,7 +180,35 @@ export function FinancialPage() {
             </div>
           ) : (
             <>
-            <div className={`overflow-x-auto transition-opacity ${isFetching ? 'opacity-60' : ''}`}>
+            {/* Mobile card list */}
+            <div className={`sm:hidden divide-y transition-opacity ${isFetching ? 'opacity-60' : ''}`}>
+              {transactions!.items.map((t) => (
+                <div key={t.id} className="flex items-start justify-between gap-3 p-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs font-medium ${t.type === 'Income' ? 'text-emerald-600' : 'text-destructive'}`}>
+                        {t.type === 'Income' ? 'Receita' : 'Despesa'}
+                      </span>
+                      <TransactionStatusBadge status={t.status} />
+                    </div>
+                    <p className="mt-1 font-medium">{t.category}</p>
+                    {t.eventTitle && <p className="text-xs text-muted-foreground">{t.eventTitle}</p>}
+                    <p className="mt-1 text-xs text-muted-foreground">Venc. {formatDate(t.dueDate)}</p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="font-medium">{formatMoney(t.amount)}</p>
+                    {(t.status === 'Pending' || t.status === 'Overdue') && (
+                      <Button variant="outline" size="sm" className="mt-2 text-xs h-7" onClick={() => settle.mutate(t.id)}>
+                        {t.type === 'Income' ? 'Recebida' : 'Paga'}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop table */}
+            <div className={`hidden sm:block overflow-x-auto transition-opacity ${isFetching ? 'opacity-60' : ''}`}>
               <table className="w-full min-w-[36rem] text-sm">
               <thead>
                 <tr className="border-b text-left text-muted-foreground">

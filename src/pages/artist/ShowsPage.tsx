@@ -100,7 +100,7 @@ export function ShowsPage() {
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Tabs value={tab} onValueChange={setTab}>
-          <TabsList className="flex-wrap h-auto">
+          <TabsList className="w-full overflow-x-auto scrollbar-none flex-nowrap">
             {tabs.map((t) => (
               <TabsTrigger key={t.value} value={t.value}>
                 {t.label}
@@ -109,7 +109,7 @@ export function ShowsPage() {
           </TabsList>
         </Tabs>
         <input
-          className="h-9 w-56 rounded-md border border-input bg-transparent px-3 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="h-9 w-full sm:w-56 rounded-md border border-input bg-transparent px-3 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           placeholder="Buscar por contratante/local..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -159,7 +159,50 @@ export function ShowsPage() {
       ) : (
         <Card>
           <CardContent className="p-0">
-            <div className={cn('overflow-x-auto transition-opacity', isFetching && 'opacity-60')}>
+            {/* Mobile card list */}
+            <div className={cn('sm:hidden divide-y transition-opacity', isFetching && 'opacity-60')}>
+              {items.map((booking) => {
+                const d = new Date(booking.eventDate + 'T00:00:00')
+                const nome = ehArtista ? booking.contractorName : booking.artistName
+                return (
+                  <div
+                    key={booking.id}
+                    className="flex items-start gap-3 p-4 active:bg-accent/50"
+                    onClick={() => navigate(`/artist/shows/${booking.id}`)}
+                    role="button"
+                  >
+                    <div className="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-lg bg-muted text-center leading-tight">
+                      <span className="text-base font-bold">{String(d.getDate()).padStart(2, '0')}</span>
+                      <span className="text-[10px] font-medium text-muted-foreground">{MESES_CURTOS[d.getMonth()]}</span>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="truncate font-medium">{nome}</p>
+                        <BookingStatusBadge status={booking.status} />
+                      </div>
+                      <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
+                        <MapPin className="h-3 w-3 shrink-0" />
+                        <span className="truncate">{booking.location}</span>
+                      </p>
+                      <div className="mt-1 flex items-center justify-between text-xs">
+                        <span className="text-muted-foreground">
+                          {booking.startTime.slice(0, 5)} – {booking.endTime.slice(0, 5)}
+                        </span>
+                        {booking.budget !== null && (
+                          <span className="font-medium text-foreground">
+                            R$ {booking.budget.toLocaleString('pt-BR')}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground" />
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* Desktop table */}
+            <div className={cn('hidden sm:block overflow-x-auto transition-opacity', isFetching && 'opacity-60')}>
               <table className="w-full min-w-[52rem] text-sm">
                 <thead>
                   <tr className="border-b text-left text-muted-foreground bg-muted/50">
@@ -270,7 +313,7 @@ export function ShowsPage() {
             </div>
 
             {/* Rodapé: totais + paginação numerada */}
-            <div className="flex flex-wrap items-center justify-between gap-3 border-t p-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-t p-3 sm:p-4">
               <div className="flex items-center gap-2">
                 <span className="flex h-7 w-7 items-center justify-center rounded-md bg-primary/15 text-primary">
                   <Ticket className="h-4 w-4" />

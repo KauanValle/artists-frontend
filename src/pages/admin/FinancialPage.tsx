@@ -86,7 +86,7 @@ export function FinancialAdminPage() {
         </div>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5">
         <StatCard title="Receita prevista" value={formatMoney(summary?.incomeExpected)} hint="Inclui pendentes" />
         <StatCard title="Recebido" value={formatMoney(summary?.incomeReceived)} />
         <StatCard title="Despesas" value={formatMoney(summary?.expenseTotal)} hint={`Pagas: ${formatMoney(summary?.expensePaid)}`} />
@@ -103,7 +103,35 @@ export function FinancialAdminPage() {
               <EmptyState title="Nenhuma transação no período" icon={<Wallet />} />
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            {/* Mobile card list */}
+            <div className="sm:hidden divide-y">
+              {transactions!.items.map((t) => (
+                <div key={t.id} className="flex items-start justify-between gap-3 p-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs font-medium ${t.type === 'Income' ? 'text-emerald-600' : 'text-destructive'}`}>
+                        {t.type === 'Income' ? 'Receita' : 'Despesa'}
+                      </span>
+                      <TransactionStatusBadge status={t.status} />
+                    </div>
+                    <p className="mt-1 font-medium">{t.category}</p>
+                    {t.eventTitle && <p className="text-xs text-muted-foreground">{t.eventTitle}</p>}
+                    <p className="mt-1 text-xs text-muted-foreground">Venc. {formatDate(t.dueDate)}</p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="font-medium">{formatMoney(t.amount)}</p>
+                    {(t.status === 'Pending' || t.status === 'Overdue') && (
+                      <Button variant="outline" size="sm" className="mt-2 text-xs h-7" onClick={() => settle.mutate(t.id)}>
+                        {t.type === 'Income' ? 'Recebida' : 'Paga'}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop table */}
+            <div className="hidden sm:block overflow-x-auto">
               <table className="w-full min-w-[36rem] text-sm">
               <thead>
                 <tr className="border-b text-left text-muted-foreground">
