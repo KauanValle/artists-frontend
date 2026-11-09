@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, MessageSquare, Send } from 'lucide-react'
+import { ArrowLeft, ChevronLeft, ChevronRight, MessageSquare, Send } from 'lucide-react'
 import { toast } from 'sonner'
 import { conversationsApi } from '@/services'
 import { useAuth } from '@/hooks/useAuth'
@@ -13,16 +13,33 @@ import { EmptyState } from '@/components/badges'
 import { cn, formatDateTime } from '@/lib/utils'
 import { extractApiError } from '@/services/api'
 
+const PER_PAGE = 9
+
 export function ArtistConversationsPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { user } = useAuth()
+  const [page, setPage] = useState(1)
 
   const { data: conversations = [], isLoading } = useQuery({
     queryKey: ['conversations'],
     queryFn: async () => (await conversationsApi.list()).data,
     refetchInterval: 15_000,
   })
+
+  const totalPaginas = Math.max(1, Math.ceil(conversations.length / PER_PAGE))
+  const paginadas = useMemo(
+    () => conversations.slice((page - 1) * PER_PAGE, page * PER_PAGE),
+    [conversations, page]
+  )
+
+  const paginas: (number | '…')[] = useMemo(() => {
+    if (totalPaginas <= 7) return Array.from({ length: totalPaginas }, (_, i) => i + 1)
+    const janela = Math.min(Math.max(page - 2, 2), totalPaginas - 3)
+    return [1, '…', janela, janela + 1, janela + 2, '…', totalPaginas]
+  }, [page, totalPaginas])
+
+  useEffect(() => setPage(1), [conversations.length])
 
   return (
     <div className="space-y-6">
@@ -71,30 +88,77 @@ export function ArtistConversationsPage() {
           <ChatConversation conversationId={id} />
         </div>
       ) : (
-        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-          {conversations.map((conversation) => (
-            <Link key={conversation.id} to={`/artist/conversas/${conversation.id}`}>
-              <Card className="hover:shadow-md">
-                <CardContent className="flex items-center gap-3 p-4">
-                  <Avatar alt={conversation.otherUserName} />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between">
-                      <p className="truncate text-sm font-medium">{conversation.otherUserName}</p>
-                      {conversation.unreadCount > 0 && (
-                        <span className="rounded-full bg-primary px-1.5 text-[10px] font-bold text-white">
-                          {conversation.unreadCount}
-                        </span>
-                      )}
+        <>
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+            {paginadas.map((conversation) => (
+              <Link key={conversation.id} to={`/artist/conversas/${conversation.id}`}>
+                <Card className="hover:shadow-md">
+                  <CardContent className="flex items-center gap-3 p-4">
+                    <Avatar alt={conversation.otherUserName} />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between">
+                        <p className="truncate text-sm font-medium">{conversation.otherUserName}</p>
+                        {conversation.unreadCount > 0 && (
+                          <span className="rounded-full bg-primary px-1.5 text-[10px] font-bold text-white">
+                            {conversation.unreadCount}
+                          </span>
+                        )}
+                      </div>
+                      <p className="truncate text-xs text-muted-foreground">
+                        {conversation.lastMessage ?? 'Sem mensagens'}
+                      </p>
                     </div>
-                    <p className="truncate text-xs text-muted-foreground">
-                      {conversation.lastMessage ?? 'Sem mensagens'}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
-        </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+          </div>
+
+          {totalPaginas > 1 && (
+            <div className="flex flex-col items-center gap-2 sm:flex-row sm:justify-between">
+              <p className="text-xs text-muted-foreground">
+                {conversations.length} conversa{conversations.length !== 1 && 's'}
+              </p>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page <= 1}
+                  title="Página anterior"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                {paginas.map((p, i) =>
+                  p === '…' ? (
+                    <span key={`elipse-${i}`} className="px-1 text-muted-foreground">…</span>
+                  ) : (
+                    <Button
+                      key={p}
+                      variant={p === page ? 'default' : 'outline'}
+                      size="icon"
+                      className="h-8 w-8 text-xs"
+                      onClick={() => setPage(p as number)}
+                    >
+                      {p}
+                    </Button>
+                  )
+                )}
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setPage((p) => Math.min(totalPaginas, p + 1))}
+                  disabled={page >= totalPaginas}
+                  title="Próxima página"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   )
