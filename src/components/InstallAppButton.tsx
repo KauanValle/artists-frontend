@@ -3,23 +3,21 @@ import { useEffect, useState } from 'react';
 
 interface BeforeInstallPromptEvent extends Event {
     prompt: () => Promise<void>;
-    userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
+    userChoice: Promise<{
+        outcome: 'accepted' | 'dismissed';
+    }>;
 }
 
 export function InstallAppButton() {
-    const [prompt, setPrompt] =
+    const [deferredPrompt, setDeferredPrompt] =
         useState<BeforeInstallPromptEvent | null>(null);
 
     const [installed, setInstalled] = useState(false);
-    const [help, setHelp] = useState(false);
-
-    const isIOS =
-        /iphone|ipad|ipod/i.test(navigator.userAgent);
-    
-    console.log(isIOS)
+    const [isIOS, setIsIOS] = useState(false);
+    const [isOpen, setIsOpen] = useState(false);
 
     useEffect(() => {
-        const checkInstalled = () => {
+        const checkInstallation = () => {
             const standalone =
                 window.matchMedia('(display-mode: standalone)').matches ||
                 (navigator as any).standalone === true;
@@ -27,131 +25,296 @@ export function InstallAppButton() {
             setInstalled(standalone);
         };
 
-        checkInstalled();
+        const ios =
+            /iphone|ipad|ipod/i.test(navigator.userAgent);
 
-        const handlePrompt = (event: Event) => {
+        setIsIOS(ios);
+        checkInstallation();
+
+        const mediaQuery =
+            window.matchMedia('(display-mode: standalone)');
+
+        mediaQuery.addEventListener('change', checkInstallation);
+
+        const handleBeforeInstall = (event: Event) => {
             event.preventDefault();
-            setPrompt(event as BeforeInstallPromptEvent);
+            setDeferredPrompt(event as BeforeInstallPromptEvent);
         };
 
         const handleInstalled = () => {
             setInstalled(true);
-            setPrompt(null);
+            setDeferredPrompt(null);
+            setIsOpen(false);
         };
 
-        window.addEventListener('beforeinstallprompt', handlePrompt);
+        window.addEventListener(
+            'beforeinstallprompt',
+            handleBeforeInstall
+        );
+
         window.addEventListener('appinstalled', handleInstalled);
 
         return () => {
-            window.removeEventListener('beforeinstallprompt', handlePrompt);
-            window.removeEventListener('appinstalled', handleInstalled);
+            mediaQuery.removeEventListener('change', checkInstallation);
+
+            window.removeEventListener(
+                'beforeinstallprompt',
+                handleBeforeInstall
+            );
+
+            window.removeEventListener(
+                'appinstalled',
+                handleInstalled
+            );
         };
     }, []);
 
-    const install = async () => {
-        // iPhone: instalação manual
+    const handleInstall = async () => {
         if (isIOS) {
-            setHelp(true);
+            setIsOpen(true);
             return;
         }
 
-        // Android e computadores
-        if (prompt) {
+        if (deferredPrompt) {
             try {
-                await prompt.prompt();
+                await deferredPrompt.prompt();
 
-                const result = await prompt.userChoice;
+                const result = await deferredPrompt.userChoice;
 
                 if (result.outcome === 'accepted') {
                     setInstalled(true);
                 }
 
-                setPrompt(null);
+                setDeferredPrompt(null);
             } catch (error) {
-                console.error('Erro ao instalar PWA:', error);
+                console.error('Erro ao instalar:', error);
+                setIsOpen(true);
             }
 
             return;
         }
 
-        // O navegador ainda não disponibilizou a instalação
-        console.warn(
-            'Instalação nativa indisponível. Verifique os requisitos do PWA.'
-        );
+        // Caso o navegador ainda não disponibilize
+        // a instalação nativa, mostramos as instruções.
+        setIsOpen(true);
     };
 
     if (installed) return null;
 
     return (
         <>
+            {/* Botão fixo */}
             <button
-                onClick={install}
+                onClick={handleInstall}
                 style={{
                     position: 'fixed',
                     bottom: '20px',
-                    left: '20px',
-                    zIndex: 99999,
+                    right: '20px',
+                    zIndex: 9999,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    padding: '14px 22px',
                     background: '#7436A8',
                     color: '#fff',
                     border: 'none',
                     borderRadius: '12px',
-                    padding: '14px 22px',
+                    fontSize: '14px',
                     fontWeight: 700,
                     cursor: 'pointer',
-                    boxShadow: '0 4px 20px rgba(0,0,0,.3)'
+                    boxShadow: '0 6px 25px rgba(116,54,168,0.35)'
                 }}
             >
-                ↓ Instalar aplicativo
+                <span style={{ fontSize: '18px' }}>↓</span>
+                Instalar aplicativo
             </button>
 
-            {help && (
-                <div style={{
-                    position: 'fixed',
-                    inset: 0,
-                    background: 'rgba(0,0,0,.7)',
-                    zIndex: 100000,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: 20
-                }}>
-                    <div style={{
-                        background: '#171717',
-                        color: '#fff',
-                        padding: 24,
-                        borderRadius: 16,
-                        maxWidth: 360,
-                        width: '100%'
-                    }}>
-                        <h2>Instale a Reprissa</h2>
+            {/* Tutorial de instalação */}
+            {isOpen && (
+                <div
+                    onClick={() => setIsOpen(false)}
+                    style={{
+                        position: 'fixed',
+                        inset: 0,
+                        zIndex: 10000,
+                        background: 'rgba(0,0,0,0.75)',
+                        backdropFilter: 'blur(6px)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '20px'
+                    }}
+                >
+                    <div
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                            width: '100%',
+                            maxWidth: '390px',
+                            background: '#17151B',
+                            border: '1px solid #302638',
+                            borderRadius: '22px',
+                            padding: '26px',
+                            color: '#fff',
+                            boxShadow: '0 20px 60px rgba(0,0,0,0.5)'
+                        }}
+                    >
+                        {/* Cabeçalho */}
+                        <div style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center'
+                        }}>
+                            <div style={{
+                                background: '#7436A8',
+                                width: '46px',
+                                height: '46px',
+                                borderRadius: '13px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '24px',
+                                fontWeight: 800
+                            }}>
+                                R
+                            </div>
+
+                            <button
+                                onClick={() => setIsOpen(false)}
+                                style={{
+                                    background: '#29252E',
+                                    border: 'none',
+                                    color: '#aaa',
+                                    borderRadius: '50%',
+                                    width: '34px',
+                                    height: '34px',
+                                    cursor: 'pointer',
+                                    fontSize: '18px'
+                                }}
+                            >
+                                ×
+                            </button>
+                        </div>
+
+                        <h2 style={{
+                            fontSize: '23px',
+                            margin: '22px 0 8px',
+                            fontWeight: 800
+                        }}>
+                            Tenha a Reprissa sempre com você!
+                        </h2>
+
+                        <p style={{
+                            color: '#AAA4B1',
+                            fontSize: '14px',
+                            lineHeight: 1.6,
+                            marginBottom: '25px'
+                        }}>
+                            Adicione nosso aplicativo à tela inicial e
+                            tenha seus shows, propostas e agenda sempre
+                            ao seu alcance.
+                        </p>
 
                         {isIOS ? (
-                            <p>
-                                No Safari, toque em Compartilhar e depois
-                                em "Adicionar à Tela de Início".
-                            </p>
+                            <>
+                                <div style={{
+                                    background: '#25212B',
+                                    borderRadius: '14px',
+                                    padding: '17px',
+                                    marginBottom: '13px'
+                                }}>
+                                    <div style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '13px'
+                                    }}>
+                                        <span style={{ fontSize: '25px' }}>↥</span>
+                                        <div>
+                                            <strong>1. Toque em Compartilhar</strong>
+                                            <p style={{
+                                                color: '#AAA4B1',
+                                                fontSize: '13px',
+                                                margin: '5px 0 0'
+                                            }}>
+                                                No menu inferior do Safari.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div style={{
+                                    background: '#25212B',
+                                    borderRadius: '14px',
+                                    padding: '17px',
+                                    marginBottom: '22px'
+                                }}>
+                                    <div style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '13px'
+                                    }}>
+                                        <span style={{ fontSize: '25px' }}>⊞</span>
+                                        <div>
+                                            <strong>2. Adicionar à Tela de Início</strong>
+                                            <p style={{
+                                                color: '#AAA4B1',
+                                                fontSize: '13px',
+                                                margin: '5px 0 0'
+                                            }}>
+                                                Depois, confirme em Adicionar.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </>
                         ) : (
-                            <p>
-                                No navegador, abra o menu (⋮) e procure
-                                a opção "Instalar Reprissa" ou
-                                "Instalar página como app".
-                            </p>
+                            <>
+                                <div style={{
+                                    background: '#25212B',
+                                    borderRadius: '14px',
+                                    padding: '17px',
+                                    marginBottom: '22px'
+                                }}>
+                                    <strong>Instalação pelo navegador</strong>
+                                    <p style={{
+                                        color: '#AAA4B1',
+                                        fontSize: '13px',
+                                        lineHeight: 1.6,
+                                        margin: '8px 0 0'
+                                    }}>
+                                        Abra o menu do navegador (⋮) e procure
+                                        por "Instalar Reprissa" ou
+                                        "Instalar página como aplicativo".
+                                    </p>
+                                </div>
+                            </>
                         )}
 
                         <button
-                            onClick={() => setHelp(false)}
+                            onClick={() => setIsOpen(false)}
                             style={{
+                                width: '100%',
+                                padding: '15px',
+                                border: 'none',
+                                borderRadius: '12px',
                                 background: '#7436A8',
                                 color: '#fff',
-                                border: 0,
-                                padding: 12,
-                                borderRadius: 8,
-                                width: '100%',
+                                fontWeight: 700,
+                                fontSize: '14px',
                                 cursor: 'pointer'
                             }}
                         >
-                            Entendi
+                            Entendi, vou instalar!
                         </button>
+
+                        <p style={{
+                            textAlign: 'center',
+                            color: '#77717E',
+                            fontSize: '11px',
+                            marginTop: '15px',
+                            marginBottom: 0
+                        }}>
+                            REPRISSA • SUA CARREIRA EM OUTRO NÍVEL
+                        </p>
                     </div>
                 </div>
             )}
