@@ -6,11 +6,19 @@ import {VitePWA} from "vite-plugin-pwa";
 export default defineConfig({
   plugins: [react(),
             VitePWA({
+              // injectManifest: o service worker é o arquivo src/sw.ts (precisa dele para tratar Web Push)
+              strategies: 'injectManifest',
+              srcDir: 'src',
+              filename: 'sw.ts',
               registerType: 'autoUpdate',
                 devOptions: {
-                    enabled: true
+                    enabled: true,
+                    type: 'module'
                 },
               manifest: {
+                  id: '/',
+                  start_url: '/',
+                  scope: '/',
                   name: 'Reprissa',
                   short_name: 'Reprissa',
                   description: 'Gestão de carreira e contratação de artistas.',

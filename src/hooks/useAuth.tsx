@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { authApi } from '@/services'
 import { api, clearSession, loadSession, saveSession, setSessionExpiredHandler, type StoredSession } from '@/services/api'
+import { disablePush } from '@/lib/push'
 import type { AuthResponse, User } from '@/types'
 
 interface AuthContextValue {
@@ -36,6 +37,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient()
 
   const logout = useCallback(() => {
+    // Aparelho deixa de receber pushes da conta que saiu (usa o token antes de limpar a sessão).
+    void disablePush(loadSession()?.accessToken)
     clearSession()
     setUser(null)
     queryClient.clear()

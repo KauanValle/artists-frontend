@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { Bell, CheckCheck } from 'lucide-react'
+import { Bell, BellRing, CheckCheck } from 'lucide-react'
 import { notificationsApi } from '@/services'
 import { Button } from '@/components/ui/button'
 import {
@@ -10,10 +10,12 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { cn, formatDate } from '@/lib/utils'
 import { toast } from 'sonner'
+import { usePushNotifications } from '@/hooks/usePushNotifications'
 
 export function NotificationsMenu() {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
+  const push = usePushNotifications()
 
   const { data: notifications = [] } = useQuery({
     queryKey: ['notifications'],
@@ -61,6 +63,35 @@ export function NotificationsMenu() {
             Marcar todas
           </Button>
         </div>
+        {push.supported && push.permission === 'default' && (
+          <div className="border-b bg-accent/40 px-3 py-2.5">
+            <p className="text-xs text-muted-foreground">
+              Receba propostas, mensagens e avisos de shows direto no celular, mesmo com o app fechado.
+            </p>
+            <Button
+              size="sm"
+              className="mt-2 h-8 w-full text-xs"
+              disabled={push.busy}
+              onClick={(e) => {
+                e.preventDefault()
+                void push.enable()
+              }}
+            >
+              <BellRing className="h-3.5 w-3.5" />
+              {push.busy ? 'Ativando...' : 'Ativar notificações neste aparelho'}
+            </Button>
+          </div>
+        )}
+        {push.supported && push.permission === 'denied' && (
+          <p className="border-b px-3 py-2 text-xs text-muted-foreground">
+            As notificações estão bloqueadas neste navegador. Libere nas configurações do site para receber avisos.
+          </p>
+        )}
+        {!push.supported && push.needsInstall && (
+          <p className="border-b px-3 py-2 text-xs text-muted-foreground">
+            No iPhone, instale o app (Compartilhar → Adicionar à Tela de Início) para ativar as notificações.
+          </p>
+        )}
         <div className="max-h-80 overflow-y-auto">
           {notifications.length === 0 && (
             <p className="px-3 py-8 text-center text-sm text-muted-foreground">Nenhuma notificação</p>

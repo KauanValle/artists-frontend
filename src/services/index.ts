@@ -282,6 +282,13 @@ export const notificationsApi = {
   markAllRead: () => api.put('/notifications/read-all'),
 }
 
+export const pushApi = {
+  vapidPublicKey: () => api.get<string>('/push/vapid-public-key', { responseType: 'text' }),
+  subscribe: (payload: { endpoint: string; keys: { p256dh: string; auth: string } }) =>
+    api.post('/push/subscriptions', payload),
+  remove: (endpoint: string) => api.post('/push/subscriptions/remover', { endpoint }),
+}
+
 export const contractorsApi = {
   getMy: () => api.get<Contractor>('/contractors/me'),
   updateMy: (payload: Record<string, unknown>) => api.put<Contractor>('/contractors/me', payload),
