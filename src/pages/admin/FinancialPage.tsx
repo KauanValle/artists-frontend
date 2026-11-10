@@ -1,11 +1,11 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { endOfMonth, endOfYear, startOfMonth, startOfYear } from 'date-fns'
-import { Plus, Wallet } from 'lucide-react'
+import { BadgeDollarSign, CircleDollarSign, Clock, Plus, Wallet } from 'lucide-react'
 import { toast } from 'sonner'
-import { eventsApi, financialApi } from '@/services'
+import { bookingsApi, brandingApi, eventsApi, financialApi } from '@/services'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -37,6 +37,7 @@ export function FinancialAdminPage() {
 
   const fmt = (d: Date | null) => (d ? toDateInput(d) : undefined)
 
+  /* ── Dados financeiros existentes ── */
   const { data: summary } = useQuery({
     queryKey: ['financial-summary', from?.toISOString(), to?.toISOString()],
     queryFn: async () => (await financialApi.summary(fmt(from), fmt(to))).data,
@@ -46,6 +47,41 @@ export function FinancialAdminPage() {
     queryKey: ['transactions', from?.toISOString(), to?.toISOString()],
     queryFn: async () => (await financialApi.list({ from: fmt(from), to: fmt(to), pageSize: 100 })).data,
   })
+
+  /* ── Dados de bookings para os cards de negócio ── */
+  const { data: confirmedBookings } = useQuery({
+    queryKey: ['admin-bookings-confirmed'],
+    queryFn: async () => (await bookingsApi.list('Confirmed', 1, 200)).data,
+  })
+
+  const { data: awaitingPaymentBookings } = useQuery({
+    queryKey: ['admin-bookings-awaiting-payment'],
+    queryFn: async () => (await bookingsApi.list('AwaitingPayment', 1, 200)).data,
+  })
+
+  const { data: taxaData } = useQuery({
+    queryKey: ['admin-taxa'],
+    queryFn: async () => (await brandingApi.getTaxaAdministrativa()).data,
+  })
+
+  const taxaPct = taxaData?.percentual ?? 0
+
+  /* ── Cálculos de negócio ── */
+  const businessMetrics = useMemo(() => {
+    const confirmed = confirmedBookings?.items ?? []
+    const awaiting = awaitingPaymentBookings?.items ?? []
+
+    // Valor total dos shows confirmados (budget de cada booking confirmado)
+    const valorShowsConfirmados = confirmed.reduce((acc, b) => acc + (b.budget ?? 0), 0)
+
+    // Taxa administrativa sobre os shows confirmados
+    const taxaShowsConfirmados = valorShowsConfirmados * (taxaPct / 100)
+
+    // Valor dos shows pendentes de pagamento
+    const valorPendentePagamento = awaiting.reduce((acc, b) => acc + (b.budget ?? 0), 0)
+
+    return { valorShowsConfirmados, taxaShowsConfirmados, valorPendentePagamento }
+  }, [confirmedBookings, awaitingPaymentBookings, taxaPct])
 
   const settle = useMutation({
     mutationFn: (id: string) => financialApi.settle(id),
@@ -66,15 +102,15 @@ export function FinancialAdminPage() {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Tabs value={period} onValueChange={(v) => setPeriod(v as Period)}>
-            <TabsList>
-              <TabsTrigger value="month">Mês</TabsTrigger>
-              <TabsTrigger value="year">Ano</TabsTrigger>
-              <TabsTrigger value="all">Tudo</TabsTrigger>
-              <TabsTrigger value="custom">Período</TabsTrigger>
+            <TabsList className="w-full justify-start overflow-x-auto scrollbar-none flex-nowrap">
+              <TabsTrigger value="month" className="shrink-0 px-2 py-1 text-xs sm:px-3 sm:py-1.5 sm:text-sm">Mês</TabsTrigger>
+              <TabsTrigger value="year" className="shrink-0 px-2 py-1 text-xs sm:px-3 sm:py-1.5 sm:text-sm">Ano</TabsTrigger>
+              <TabsTrigger value="all" className="shrink-0 px-2 py-1 text-xs sm:px-3 sm:py-1.5 sm:text-sm">Tudo</TabsTrigger>
+              <TabsTrigger value="custom" className="shrink-0 px-2 py-1 text-xs sm:px-3 sm:py-1.5 sm:text-sm">Período</TabsTrigger>
             </TabsList>
           </Tabs>
-          <Button onClick={() => setCreateOpen(true)}>
-            <Plus /> Nova transação
+          <Button onClick={() => setCreateOpen(true)} size="sm">
+            <Plus className="h-4 w-4" /> Nova transação
           </Button>
         </div>
       </div>
@@ -86,6 +122,36 @@ export function FinancialAdminPage() {
         </div>
       )}
 
+      {/* ═══ Cards de regra de negócio (bookings) ═══ */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Resumo de Shows</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <StatCard
+              title="Shows confirmados"
+              value={formatMoney(businessMetrics.valorShowsConfirmados)}
+              hint={`${confirmedBookings?.items?.length ?? 0} show(s)`}
+              icon={<CircleDollarSign className="h-4 w-4 text-emerald-600" />}
+            />
+            <StatCard
+              title="Taxas administrativas"
+              value={formatMoney(businessMetrics.taxaShowsConfirmados)}
+              hint={`${taxaPct}% sobre confirmados`}
+              icon={<BadgeDollarSign className="h-4 w-4 text-blue-600" />}
+            />
+            <StatCard
+              title="Pendente de pagamento"
+              value={formatMoney(businessMetrics.valorPendentePagamento)}
+              hint={`${awaitingPaymentBookings?.items?.length ?? 0} show(s)`}
+              icon={<Clock className="h-4 w-4 text-amber-600" />}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ═══ Cards financeiros existentes ═══ */}
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5">
         <StatCard title="Receita prevista" value={formatMoney(summary?.incomeExpected)} hint="Inclui pendentes" />
         <StatCard title="Recebido" value={formatMoney(summary?.incomeReceived)} />
@@ -94,6 +160,7 @@ export function FinancialAdminPage() {
         <StatCard title="Resultado" value={formatMoney(summary?.result)} hint="Recebido − pago" />
       </div>
 
+      {/* ═══ Tabela de transações ═══ */}
       <Card>
         <CardContent className="p-0">
           {isLoading ? (
