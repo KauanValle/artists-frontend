@@ -55,9 +55,9 @@ export function ContractorBookingsPage() {
       </div>
 
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList className="h-auto flex-wrap">
+        <TabsList className="w-full justify-start overflow-x-auto scrollbar-none flex-nowrap">
           {tabs.map((t) => (
-            <TabsTrigger key={t.value} value={t.value}>
+            <TabsTrigger key={t.value} value={t.value} className="shrink-0 px-2 py-1 text-xs sm:px-3 sm:py-1.5 sm:text-sm">
               {t.label}
             </TabsTrigger>
           ))}
