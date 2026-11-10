@@ -77,23 +77,26 @@ export function ContractorBookingsPage() {
           {data!.items.map((booking) => (
             <Link key={booking.id} to={`/contractor/solicitacoes/${booking.id}`} className="block">
               <Card className="mb-2 hover:shadow-md">
-                <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
-                  <div className="min-w-0">
-                    <p className="font-medium">{booking.artistName}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {formatDate(booking.eventDate)} • {formatTime(booking.startTime)}–{formatTime(booking.endTime)} • {booking.location}
-                    </p>
+                <CardContent className="space-y-2 p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium">{booking.artistName}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {formatDate(booking.eventDate)} • {formatTime(booking.startTime)}–{formatTime(booking.endTime)} • {booking.location}
+                      </p>
+                    </div>
+                    <BookingStatusBadge status={booking.status} />
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
                     {booking.budget !== null && (
                       <span className="text-sm text-muted-foreground">
                         Orçamento: {formatMoney(booking.budget)}
                       </span>
                     )}
-                    <BookingStatusBadge status={booking.status} />
                     {booking.status === 'AwaitingPayment' && (
                       <Button
                         size="sm"
+                        className="text-xs sm:text-sm"
                         onClick={(e) => {
                           e.preventDefault()
                           void realizarPagamento(booking.id)
