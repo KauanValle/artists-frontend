@@ -52,7 +52,7 @@ export function StatCard({ title, value, icon, hint }: { title: string; value: s
         {icon}
       </CardHeader>
       <CardContent>
-        <p className="text-2xl font-bold">{value}</p>
+        <p className="text-xl font-bold sm:text-2xl truncate">{value}</p>
         {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
       </CardContent>
     </Card>
