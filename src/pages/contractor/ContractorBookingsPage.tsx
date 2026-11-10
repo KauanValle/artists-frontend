@@ -38,7 +38,7 @@ export function ContractorBookingsPage() {
   })
 
   const items = data?.items ?? []
-  const total = data?.total ?? 0
+  const total = data?.totalCount ?? 0
   const totalPaginas = Math.max(1, Math.ceil(total / PER_PAGE))
 
   const paginas: (number | '…')[] = useMemo(() => {
