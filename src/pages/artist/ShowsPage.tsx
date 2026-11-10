@@ -100,9 +100,9 @@ export function ShowsPage() {
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Tabs value={tab} onValueChange={setTab}>
-          <TabsList className="w-full overflow-x-auto scrollbar-none flex-nowrap">
+          <TabsList className="w-full justify-start overflow-x-auto scrollbar-none flex-nowrap">
             {tabs.map((t) => (
-              <TabsTrigger key={t.value} value={t.value}>
+              <TabsTrigger key={t.value} value={t.value} className="shrink-0">
                 {t.label}
               </TabsTrigger>
             ))}
