@@ -100,12 +100,12 @@ export function ShowsPage() {
 
       <div className="space-y-3">
         <Tabs value={tab} onValueChange={setTab}>
-          <TabsList className="h-auto w-full flex-wrap justify-start gap-1 bg-transparent p-0 sm:flex-nowrap sm:gap-0 sm:bg-muted sm:p-1">
+          <TabsList className="w-full justify-start overflow-x-auto scrollbar-none flex-nowrap">
             {tabs.map((t) => (
               <TabsTrigger
                 key={t.value}
                 value={t.value}
-                className="shrink-0 rounded-md border border-border/50 px-2.5 py-1.5 text-xs sm:border-0 sm:px-3 sm:py-1 sm:text-sm"
+                className="shrink-0 px-2 py-1 text-xs sm:px-3 sm:py-1.5 sm:text-sm"
               >
                 {t.label}
               </TabsTrigger>
