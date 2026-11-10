@@ -180,10 +180,10 @@ function ArtistRow({ artist }: { artist: ArtistCard }) {
                   {artist.city}, {artist.state}
                 </span>
               )}
-              {artist.averageRating !== null && (
+              {artist.averageRating != null && (
                 <span className="flex items-center gap-0.5">
                   <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                  {artist.averageRating.toFixed(1)} ({artist.reviewCount})
+                  {Number(artist.averageRating).toFixed(1)} ({artist.reviewCount})
                 </span>
               )}
             </div>
