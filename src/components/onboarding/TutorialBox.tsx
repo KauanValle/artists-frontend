@@ -231,7 +231,7 @@ export function TutorialBox({
     <div
       role="dialog"
       aria-label="Tutorial do Reprissa"
-      className="fixed bottom-36 right-6 z-50 w-[360px] max-w-[calc(100vw-3rem)] overflow-hidden rounded-2xl border border-border/60 bg-background/85 shadow-2xl backdrop-blur-md lg:bottom-24"
+      className="fixed bottom-20 right-2 z-50 w-[360px] max-w-[calc(100vw-1rem)] max-h-[calc(100vh-10rem)] overflow-y-auto rounded-2xl border border-border/60 bg-background/85 shadow-2xl backdrop-blur-md lg:bottom-24 lg:right-6 lg:max-h-none lg:overflow-hidden"
     >
       {/* Cabeçalho estilo assistente */}
       <div className="flex items-center gap-3 border-b border-border/60 bg-primary/5 p-4">
