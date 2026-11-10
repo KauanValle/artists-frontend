@@ -335,6 +335,35 @@ export const brandingApi = {
   removeLogo: () => api.delete('/branding/logo'),
 }
 
+// Admin User Management
+export const adminUsersApi = {
+  // Artistas
+  getArtistStats: (artistId: string) =>
+    api.get<import('@/types').AdminArtistStats>(`/admin/users/artists/${artistId}/stats`),
+  unpublishArtist: (artistId: string) =>
+    api.post(`/admin/users/artists/${artistId}/unpublish`),
+  publishArtist: (artistId: string) =>
+    api.post(`/admin/users/artists/${artistId}/publish`),
+  getArtistUserId: (artistId: string) =>
+    api.get<{ userId: string }>(`/admin/users/artists/${artistId}/user-id`),
+
+  // Contratantes
+  listContractors: () =>
+    api.get<import('@/types').AdminContractorList[]>(`/admin/users/contractors`),
+  getContractorStats: (contractorId: string) =>
+    api.get<import('@/types').AdminContractorStats>(`/admin/users/contractors/${contractorId}/stats`),
+  getContractorUserId: (contractorId: string) =>
+    api.get<{ userId: string }>(`/admin/users/contractors/${contractorId}/user-id`),
+
+  // Ações compartilhadas
+  deactivateUser: (userId: string, message: string) =>
+    api.post(`/admin/users/${userId}/deactivate`, { message }),
+  reactivateUser: (userId: string) =>
+    api.post(`/admin/users/${userId}/reactivate`),
+  deleteUser: (userId: string) =>
+    api.delete(`/admin/users/${userId}`),
+}
+
 export const uploadsApi = {
   upload: (file: File) => {
     const form = new FormData()

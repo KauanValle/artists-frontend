@@ -373,6 +373,22 @@ export function DashboardLayout() {
           </div>
         </header>
         <main className="flex-1 p-4 pb-20 lg:p-6 lg:pb-6">
+          {user?.isDeactivated && (
+            <div
+              role="alert"
+              className="mb-4 rounded-lg border border-red-500/60 bg-red-500/10 px-4 py-4 text-sm"
+            >
+              <div className="flex items-start gap-3">
+                <TriangleAlert className="mt-0.5 h-5 w-5 shrink-0 text-red-500" />
+                <div>
+                  <p className="font-semibold text-red-700 dark:text-red-400">Sua conta foi desativada pelo administrador</p>
+                  {user.deactivationMessage && (
+                    <p className="mt-1 text-red-600 dark:text-red-300">{user.deactivationMessage}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
           {user?.role === 'Artist' && tutorialArtista && !tutorialArtista.state.done && (
             <div
               role="status"

@@ -53,6 +53,8 @@ export interface User {
   perfilCompleto: boolean
   tutorialFeito: boolean
   tutorialPassos: string[]
+  isDeactivated?: boolean
+  deactivationMessage?: string | null
 }
 
 export interface AuthResponse {
@@ -721,4 +723,55 @@ export interface CompletionSummary {
   artistConfirmed: boolean
   contractorConfirmed: boolean
   status: string
+}
+
+// ─────────────────────────── Admin User Management ───────────────────────────
+
+export interface AdminArtistStats {
+  artistId: string
+  name: string
+  artisticName: string
+  profilePhotoUrl: string | null
+  categoryName: string
+  city: string
+  state: string
+  averageRating: number | null
+  reviewCount: number
+  isPublished: boolean
+  isDeactivated: boolean
+  deactivationMessage: string | null
+  totalShows: number
+  monthShows: number
+  yearShows: number
+  valorConfirmadosConcluidos: number
+  taxaAdministrativa: number
+}
+
+export interface AdminContractorStats {
+  contractorId: string
+  name: string
+  companyName: string | null
+  phone: string | null
+  city: string
+  state: string
+  isDeactivated: boolean
+  deactivationMessage: string | null
+  totalContratados: number
+  monthContratados: number
+  yearContratados: number
+  taxasPagas: number
+}
+
+export interface AdminContractorList {
+  contractorId: string
+  userId: string
+  name: string
+  companyName: string | null
+  city: string
+  state: string
+  phone: string | null
+  totalBookings: number
+  confirmedBookings: number
+  totalSpent: number
+  isDeactivated: boolean
 }
