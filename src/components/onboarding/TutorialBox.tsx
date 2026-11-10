@@ -213,7 +213,7 @@ export function TutorialBox({
       <button
         type="button"
         onClick={() => progress?.salvar({ minimizado: false })}
-        className="fixed bottom-6 right-24 z-50 flex h-12 w-12 items-center justify-center rounded-full border border-border/60 bg-background/70 text-primary shadow-lg backdrop-blur-md transition-transform hover:scale-105"
+        className="fixed bottom-20 right-24 z-50 flex h-12 w-12 items-center justify-center rounded-full border border-border/60 bg-background/70 text-primary shadow-lg backdrop-blur-md transition-transform hover:scale-105 lg:bottom-6"
         aria-label="Expandir tutorial"
         title={`Tutorial do Reprissa — ${faltam === 0 ? 'pronto para concluir' : `faltam ${faltam} passo${faltam > 1 ? 's' : ''}`}`}
       >
@@ -231,7 +231,7 @@ export function TutorialBox({
     <div
       role="dialog"
       aria-label="Tutorial do Reprissa"
-      className="fixed bottom-24 right-6 z-50 w-[360px] max-w-[calc(100vw-3rem)] overflow-hidden rounded-2xl border border-border/60 bg-background/85 shadow-2xl backdrop-blur-md"
+      className="fixed bottom-36 right-6 z-50 w-[360px] max-w-[calc(100vw-3rem)] overflow-hidden rounded-2xl border border-border/60 bg-background/85 shadow-2xl backdrop-blur-md lg:bottom-24"
     >
       {/* Cabeçalho estilo assistente */}
       <div className="flex items-center gap-3 border-b border-border/60 bg-primary/5 p-4">
