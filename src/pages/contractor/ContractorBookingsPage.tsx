@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import { ClipboardList, CreditCard, Loader2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ClipboardList, CreditCard, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { bookingsApi } from '@/services'
 import { extractApiError } from '@/services/api'
@@ -23,16 +23,31 @@ const tabs: { value: string; label: string; status?: BookingStatus }[] = [
   { value: 'cancelled', label: 'Canceladas', status: 'Cancelled' },
 ]
 
+const PER_PAGE = 8
+
 export function ContractorBookingsPage() {
   const [tab, setTab] = useState('all')
+  const [page, setPage] = useState(1)
   const [pagandoId, setPagandoId] = useState<string | null>(null)
   const status = tabs.find((t) => t.value === tab)?.status
 
-  const { data, isLoading } = useQuery({
-    queryKey: ['bookings-contractor', status ?? 'all'],
-    queryFn: async () => (await bookingsApi.list(status, 1, 50)).data,
+  const { data, isLoading, isFetching } = useQuery({
+    queryKey: ['bookings-contractor', status ?? 'all', page],
+    queryFn: async () => (await bookingsApi.list(status, page, PER_PAGE)).data,
     placeholderData: keepPreviousData,
   })
+
+  const items = data?.items ?? []
+  const total = data?.total ?? 0
+  const totalPaginas = Math.max(1, Math.ceil(total / PER_PAGE))
+
+  const paginas: (number | '…')[] = useMemo(() => {
+    if (totalPaginas <= 7) return Array.from({ length: totalPaginas }, (_, i) => i + 1)
+    const janela = Math.min(Math.max(page - 2, 2), totalPaginas - 3)
+    return [1, '…', janela, janela + 1, janela + 2, '…', totalPaginas]
+  }, [page, totalPaginas])
+
+  useEffect(() => setPage(1), [tab])
 
   // Gera o checkout no InfinityPay e leva o contratante para pagar.
   const realizarPagamento = async (id: string) => {
@@ -66,7 +81,7 @@ export function ContractorBookingsPage() {
 
       {isLoading ? (
         <p className="py-10 text-center text-sm text-muted-foreground">Carregando...</p>
-      ) : (data?.items.length ?? 0) === 0 ? (
+      ) : items.length === 0 ? (
         <EmptyState
           title="Nenhuma solicitação"
           description="Busque artistas e envie solicitações de contratação."
@@ -74,7 +89,7 @@ export function ContractorBookingsPage() {
         />
       ) : (
         <div className="space-y-2">
-          {data!.items.map((booking) => (
+          {items.map((booking) => (
             <Link key={booking.id} to={`/contractor/solicitacoes/${booking.id}`} className="block">
               <Card className="mb-2 hover:shadow-md">
                 <CardContent className="space-y-2 p-4">
@@ -116,6 +131,52 @@ export function ContractorBookingsPage() {
               </Card>
             </Link>
           ))}
+
+          {/* Paginação */}
+          <div className="flex flex-col items-center gap-2 pt-2 sm:flex-row sm:justify-between">
+            <p className="text-xs text-muted-foreground">
+              Total de {total} solicitaç{total !== 1 ? 'ões' : 'ão'}
+            </p>
+            {totalPaginas > 1 && (
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page <= 1 || isFetching}
+                  title="Página anterior"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                {paginas.map((p, i) =>
+                  p === '…' ? (
+                    <span key={`elipse-${i}`} className="px-1 text-muted-foreground">…</span>
+                  ) : (
+                    <Button
+                      key={p}
+                      variant={p === page ? 'default' : 'outline'}
+                      size="icon"
+                      className="h-8 w-8 text-xs"
+                      onClick={() => setPage(p as number)}
+                    >
+                      {p}
+                    </Button>
+                  )
+                )}
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setPage((p) => Math.min(totalPaginas, p + 1))}
+                  disabled={page >= totalPaginas || isFetching}
+                  title="Próxima página"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
