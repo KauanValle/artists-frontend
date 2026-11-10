@@ -1,276 +1,384 @@
-import {useEffect, useState} from 'react'
-import {ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Copy, Link2, Megaphone, MessageCircle} from 'lucide-react'
-import { toast } from 'sonner'
-import { useAuth } from '@/hooks/useAuth'
-import { Avatar } from '@/components/ui/avatar'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { useMemo, useState } from 'react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
-import {artistsApi, bookingsApi} from '@/services'
 import { Link } from 'react-router-dom'
-import { BookingStatusBadge, EmptyState, eventTypeLabel } from '@/components/badges'
-import { formatDate, formatMoney, formatTime } from '@/lib/utils'
-import type {ArtistCard, Booking, BookingStatus} from '@/types'
-import {StatCard} from "@/pages/artist/ArtistDashboardPage.tsx";
-import {useDebounce} from "@/hooks/useDebounce.ts";
-import {Tabs, TabsList, TabsTrigger} from "@/components/ui/tabs.tsx";
-import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select.tsx";
+import {
+  ChevronLeft,
+  ChevronRight,
+  MapPin,
+  Music,
+  Star,
+  Users,
+  UserCircle,
+} from 'lucide-react'
+import { artistsApi, bookingsApi } from '@/services'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { EmptyState } from '@/components/badges'
+import { cn, formatMoney } from '@/lib/utils'
+import type { ArtistCard } from '@/types'
 
-const tabs: { value: string; label: string; status?: BookingStatus }[] = [
-    { value: 'all', label: 'Todos' },
-    { value: 'proposal', label: 'Orçamento/Proposta', status: 'Proposed' },
-    { value: 'awaitingAccount', label: 'Aguardando Conta', status: 'AwaitingAccount' },
-    { value: 'negotiating', label: 'Em negociação', status: 'Negotiating' },
-    { value: 'confirmed', label: 'Confirmados', status: 'Confirmed' },
-    { value: 'completed', label: 'Concluídos', status: 'Completed' },
-    { value: 'cancelled', label: 'Cancelados', status: 'Cancelled' },
-]
+type UserTab = 'artists' | 'contractors'
 
-const PER_PAGE = 8
+const PER_PAGE = 10
 
-const opcoesOrdenacao = [
-    { value: 'recentes', label: 'Mais recentes' },
-    { value: 'data', label: 'Data do show' },
-    { value: 'valor', label: 'Valor' },
-    { value: 'contratante', label: 'Contratante' },
-]
-
-/**
- * Painel do administrador.
- * Seção principal: Solicitações Anônimas — shows confirmados contratados por
- * visitantes (sem cadastro), com contato direto pelo WhatsApp informado.
- */
 export function UsersPage() {
-  const { user } = useAuth()
+  const [activeTab, setActiveTab] = useState<UserTab>('artists')
 
   return (
     <div className="space-y-6">
-        <div>
-            <h1 className="text-2xl font-bold">Painel de controle de usuarios</h1>
-            <p className="text-sm text-muted-foreground">Visualização de todos os usuarios</p>
-        </div>
-      <ArtistsSection />
+      <div>
+        <h1 className="text-2xl font-bold">Usuários</h1>
+        <p className="text-sm text-muted-foreground">Visualização de todos os usuários da plataforma</p>
+      </div>
+
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as UserTab)}>
+        <TabsList>
+          <TabsTrigger value="artists" className="gap-1.5">
+            <Music className="h-4 w-4" /> Artistas
+          </TabsTrigger>
+          <TabsTrigger value="contractors" className="gap-1.5">
+            <Users className="h-4 w-4" /> Contratantes
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+
+      {activeTab === 'artists' ? <ArtistsList /> : <ContractorsList />}
     </div>
   )
 }
 
-/** Lista de shows confirmados contratados por visitantes (sem cadastro). */
-function ArtistsSection() {
-    const { data, isLoading } = useQuery({
-        queryKey: ['admin-total-artists'],
-        queryFn: async () => (await artistsApi.search({})).data,
-        placeholderData: keepPreviousData,
-    })
-    const artists = data?.items ?? []
+/* ═══════════════════════════ Lista de Artistas ═══════════════════════════ */
 
-    // @ts-ignore
-    // @ts-ignore
-    return (
-        <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-base">Dashboard de artistas</CardTitle>
-                <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
-                  Artistas cadastrados: {artists.length}
-                </span>
-            </CardHeader>
-            <CardContent className="space-y-6">
-                {isLoading ? (
-                    <p className="py-6 text-center text-sm text-muted-foreground">Carregando...</p>
-                ) : artists.length === 0 ? (
-                    <EmptyState
-                        title="Nenhum evento cadastrado no sistema."
-                        description="Eventos confirmados no sistema aparecem aqui."
-                    />
-                ) : (
-                    <ArtistsPage/>
-                )}
-            </CardContent>
-        </Card>
-    );
-}
+function ArtistsList() {
+  const [search, setSearch] = useState('')
+  const [page, setPage] = useState(1)
 
-export function ArtistsPage() {
-    const { user } = useAuth()
-    const [tab, setTab] = useState('all')
-    const [search, setSearch] = useState('')
-    const [page, setPage] = useState(1)
-    const [ordenar, setOrdenar] = useState('recentes')
-    const [decrescente, setDecrescente] = useState(true)
-    const debouncedSearch = useDebounce(search)
-    const status = tabs.find((t) => t.value === tab)?.status
-    const [expandedId, setExpandedId] = useState<string | null>(null)
+  const { data, isLoading, isFetching } = useQuery({
+    queryKey: ['admin-artists', search, page],
+    queryFn: async () =>
+      (await artistsApi.search({ search: search || undefined, page, pageSize: PER_PAGE })).data,
+    placeholderData: keepPreviousData,
+  })
 
-    // Busca, ordenação e paginação no servidor (a lista cresce — 50 por vez não escala).
-    const { data, isLoading, isFetching } = useQuery({
-        queryKey: ['artists', status ?? 'all', debouncedSearch, page, ordenar, decrescente],
-        queryFn: async () => (await artistsApi.search({})).data,
-    })
+  const items = data?.items ?? []
+  const total = data?.totalCount ?? items.length
+  const totalPaginas = Math.max(1, Math.ceil(total / PER_PAGE))
 
-    const items = data?.items ?? []
+  const paginas: (number | '…')[] = useMemo(() => {
+    if (totalPaginas <= 7) return Array.from({ length: totalPaginas }, (_, i) => i + 1)
+    const janela = Math.min(Math.max(page - 2, 2), totalPaginas - 3)
+    return [1, '…', janela, janela + 1, janela + 2, '…', totalPaginas]
+  }, [page, totalPaginas])
 
-    // Filtros mudaram → volta para a primeira página.
-    useEffect(() => setPage(1), [tab, debouncedSearch, ordenar, decrescente])
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <input
+          className="h-9 w-full sm:w-64 rounded-md border border-input bg-transparent px-3 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          placeholder="Buscar artista..."
+          value={search}
+          onChange={(e) => {
+            setSearch(e.target.value)
+            setPage(1)
+          }}
+        />
+        <span className="text-sm text-muted-foreground">
+          {total} artista{total !== 1 ? 's' : ''} cadastrado{total !== 1 ? 's' : ''}
+        </span>
+      </div>
 
-    return (
-        <div className="space-y-6">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-                <input
-                    className="h-9 w-56 rounded-md border border-input bg-transparent px-3 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    placeholder="Buscar por contratante/local..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                />
-            </div>
-
-            {/* Ordenação */}
-            <div className="flex flex-wrap items-center gap-2">
-                <span className="text-sm text-muted-foreground">Ordenar por</span>
-                <Select value={ordenar} onValueChange={setOrdenar}>
-                    <SelectTrigger className="w-44">
-                        <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {opcoesOrdenacao.map((o) => (
-                            <SelectItem key={o.value} value={o.value}>
-                                {o.label}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-                {ordenar !== 'recentes' && (
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setDecrescente((d) => !d)}
-                        title={decrescente ? 'Ordem decrescente' : 'Ordem crescente'}
-                    >
-                        {decrescente ? <ArrowDown className="h-4 w-4" /> : <ArrowUp className="h-4 w-4" />}
-                        {decrescente ? 'Decrescente' : 'Crescente'}
-                    </Button>
-                )}
-            </div>
-
-            {isLoading ? (
-                <p className="py-10 text-center text-sm text-muted-foreground">Carregando...</p>
-            ) : items.length === 0 ? (
-                <EmptyState
-                    title="Nada por aqui"
-                    description={
-                        debouncedSearch
-                            ? 'Nenhum show encontrado para essa busca.'
-                            : 'As contratações aparecem nesta lista conforme o ciclo avança.'
-                    }
-                    icon={<Megaphone />}
-                />
-            ) : (
-                <>
-                    <div className={`space-y-2 transition-opacity ${isFetching ? 'opacity-60' : ''}`}>
-                        {items.map((artist) => (
-                            <Link key={artist.id} to={``}>
-                                <Card className="mb-2 transition-shadow hover:shadow-md">
-                                    <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
-                                        <div className="flex flex-row items-center justify-between">
-                                            <p className="font-medium">
-                                                {artist.artisticName}
-                                            </p>
-                                            <span className="px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
-                                              <ArtistInformationsCard
-                                                  key={artist.id}
-                                                  artist={artist}
-                                                  expanded={expandedId === artist.id}
-                                                  onToggle={() => setExpandedId(expandedId === artist.id ? null : artist.id)}
-                                              />
-                                            </span>
-                                            
-                                            {/*<p className="text-sm text-muted-foreground">*/}
-                                            {/*    {new Date(booking.eventDate + 'T00:00:00').toLocaleDateString('pt-BR')} •{' '}*/}
-                                            {/*    {booking.startTime.slice(0, 5)}–{booking.endTime.slice(0, 5)} • {booking.location}*/}
-                                            {/*</p>*/}
-                                        </div>
-                                        {/*<div className="flex items-center gap-3">*/}
-                                        {/*    {artist.budget !== null && (*/}
-                                        {/*        <span className="text-sm font-medium">*/}
-                                        {/*          Orçamento: R$ {booking.budget.toLocaleString('pt-BR')}*/}
-                                        {/*        </span>*/}
-                                        {/*    )}*/}
-                                        {/*    <BookingStatusBadge status={booking.status} />*/}
-                                        {/*</div>*/}
-                                    </CardContent>
-                                </Card>
-                            </Link>
-                        ))}
-                    </div>
-
-                    {/*/!* Paginação *!/*/}
-                    {/*<div className="flex flex-wrap items-center justify-between gap-3">*/}
-                    {/*    <p className="text-sm text-muted-foreground">*/}
-                    {/*        {total} {total === 1 ? 'show' : 'shows'} • página {page} de {totalPaginas}*/}
-                    {/*    </p>*/}
-                    {/*    {totalPaginas > 1 && (*/}
-                    {/*        <div className="flex items-center gap-2">*/}
-                    {/*            <Button*/}
-                    {/*                variant="outline"*/}
-                    {/*                size="sm"*/}
-                    {/*                onClick={() => setPage((p) => Math.max(1, p - 1))}*/}
-                    {/*                disabled={page <= 1 || isFetching}*/}
-                    {/*            >*/}
-                    {/*                <ChevronLeft className="h-4 w-4" /> Anterior*/}
-                    {/*            </Button>*/}
-                    {/*            <Button*/}
-                    {/*                variant="outline"*/}
-                    {/*                size="sm"*/}
-                    {/*                onClick={() => setPage((p) => Math.min(totalPaginas, p + 1))}*/}
-                    {/*                disabled={page >= totalPaginas || isFetching}*/}
-                    {/*            >*/}
-                    {/*                Próxima <ChevronRight className="h-4 w-4" />*/}
-                    {/*            </Button>*/}
-                    {/*        </div>*/}
-                    {/*    )}*/}
-                    {/*</div>*/}
-                </>
-            )}
+      {isLoading ? (
+        <p className="py-10 text-center text-sm text-muted-foreground">Carregando...</p>
+      ) : items.length === 0 ? (
+        <EmptyState
+          title="Nenhum artista encontrado"
+          description={search ? 'Tente outro termo de busca.' : 'Nenhum artista cadastrado na plataforma.'}
+          icon={<Music />}
+        />
+      ) : (
+        <div className={cn('space-y-2 transition-opacity', isFetching && 'opacity-60')}>
+          {items.map((artist) => (
+            <ArtistRow key={artist.id} artist={artist} />
+          ))}
         </div>
-    )
-}
+      )}
 
-// @ts-ignore
-function ArtistInformationsCard({
-                                  artist,
-                                  expanded,
-                                  onToggle,
-                              }: {
-    artist: ArtistCard
-    expanded: boolean
-    onToggle: () => void
-}) {
-
-    return (
-        <div className="">
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-                <Button size="sm" variant="ghost" onClick={onToggle}>
-                    {expanded ? 'Ocultar informações' : 'Ver informações do artista'}
+      {/* Paginação */}
+      {totalPaginas > 1 && (
+        <div className="flex flex-col items-center gap-2 pt-2 sm:flex-row sm:justify-between">
+          <p className="text-xs text-muted-foreground">
+            Página {page} de {totalPaginas}
+          </p>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1 || isFetching}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            {paginas.map((p, i) =>
+              p === '…' ? (
+                <span key={`e-${i}`} className="px-1 text-muted-foreground">…</span>
+              ) : (
+                <Button
+                  key={p}
+                  variant={p === page ? 'default' : 'outline'}
+                  size="icon"
+                  className="h-8 w-8 text-xs"
+                  onClick={() => setPage(p as number)}
+                >
+                  {p}
                 </Button>
-            </div>
-
-            {expanded && (
-                <div className="mt-4 grid gap-3 rounded-lg bg-muted/40 p-4 text-sm sm:grid-cols-2">
-                    <InfoRow label="Nome" value={eventTypeLabel[artist.artisticName]} />
-                    {/*<div className="sm:col-span-2">*/}
-                    {/*    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Mensagem</p>*/}
-                    {/*    <p className="mt-1 text-muted-foreground">{booking.message || '—'}</p>*/}
-                    {/*</div>*/}
-                </div>
+              ),
             )}
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setPage((p) => Math.min(totalPaginas, p + 1))}
+              disabled={page >= totalPaginas || isFetching}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
-    )
+      )}
+    </div>
+  )
 }
 
-function InfoRow({ label, value }: { label: string; value: string }) {
-    return (
-        <div className="flex items-center justify-between gap-3">
-            <span className="text-muted-foreground">{label}</span>
-            <span className="max-w-56 truncate text-right font-medium">{value}</span>
+function ArtistRow({ artist }: { artist: ArtistCard }) {
+  return (
+    <Link to={`/artist/${artist.slug}`}>
+      <Card className="hover:shadow-md transition-shadow">
+        <CardContent className="flex items-center gap-4 p-4">
+          {/* Avatar */}
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+            {artist.profilePhotoUrl ? (
+              <img
+                src={artist.profilePhotoUrl}
+                alt={artist.artisticName}
+                className="h-12 w-12 rounded-full object-cover"
+              />
+            ) : (
+              <Music className="h-5 w-5" />
+            )}
+          </div>
+
+          {/* Info */}
+          <div className="min-w-0 flex-1">
+            <p className="font-medium truncate">{artist.artisticName}</p>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+              <span>{artist.categoryName}</span>
+              {artist.city && (
+                <span className="flex items-center gap-0.5">
+                  <MapPin className="h-3 w-3" />
+                  {artist.city}, {artist.state}
+                </span>
+              )}
+              {artist.averageRating !== null && (
+                <span className="flex items-center gap-0.5">
+                  <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                  {artist.averageRating.toFixed(1)} ({artist.reviewCount})
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Preço */}
+          <div className="shrink-0 text-right">
+            {artist.startingPrice !== null && (
+              <p className="text-sm font-medium">
+                A partir de {formatMoney(artist.startingPrice)}
+              </p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    </Link>
+  )
+}
+
+/* ═══════════════════════════ Lista de Contratantes ═══════════════════════════ */
+
+interface ContractorInfo {
+  id: string
+  name: string
+  totalBookings: number
+  confirmedBookings: number
+  totalSpent: number
+}
+
+function ContractorsList() {
+  const [search, setSearch] = useState('')
+  const [page, setPage] = useState(1)
+
+  /* Busca todos os bookings e agrupa por contratante */
+  const { data: allBookingsData, isLoading } = useQuery({
+    queryKey: ['admin-all-bookings-for-contractors'],
+    queryFn: async () => (await bookingsApi.list(undefined, 1, 500)).data,
+  })
+
+  const contractors = useMemo(() => {
+    const items = allBookingsData?.items ?? []
+    const map = new Map<string, ContractorInfo>()
+
+    for (const b of items) {
+      const key = b.contractorId ?? b.contractorName
+      if (!key) continue
+
+      const existing = map.get(key)
+      if (existing) {
+        existing.totalBookings += 1
+        if (b.status === 'Confirmed' || b.status === 'Completed') {
+          existing.confirmedBookings += 1
+          existing.totalSpent += b.budget ?? 0
+        }
+      } else {
+        const isConfirmed = b.status === 'Confirmed' || b.status === 'Completed'
+        map.set(key, {
+          id: b.contractorId ?? key,
+          name: b.contractorName,
+          totalBookings: 1,
+          confirmedBookings: isConfirmed ? 1 : 0,
+          totalSpent: isConfirmed ? (b.budget ?? 0) : 0,
+        })
+      }
+    }
+
+    let list = Array.from(map.values()).sort((a, b) => b.totalBookings - a.totalBookings)
+
+    if (search) {
+      const q = search.toLowerCase()
+      list = list.filter((c) => c.name.toLowerCase().includes(q))
+    }
+
+    return list
+  }, [allBookingsData, search])
+
+  const total = contractors.length
+  const totalPaginas = Math.max(1, Math.ceil(total / PER_PAGE))
+  const paginatedItems = useMemo(
+    () => contractors.slice((page - 1) * PER_PAGE, page * PER_PAGE),
+    [contractors, page],
+  )
+
+  const paginas: (number | '…')[] = useMemo(() => {
+    if (totalPaginas <= 7) return Array.from({ length: totalPaginas }, (_, i) => i + 1)
+    const janela = Math.min(Math.max(page - 2, 2), totalPaginas - 3)
+    return [1, '…', janela, janela + 1, janela + 2, '…', totalPaginas]
+  }, [page, totalPaginas])
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <input
+          className="h-9 w-full sm:w-64 rounded-md border border-input bg-transparent px-3 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          placeholder="Buscar contratante..."
+          value={search}
+          onChange={(e) => {
+            setSearch(e.target.value)
+            setPage(1)
+          }}
+        />
+        <span className="text-sm text-muted-foreground">
+          {total} contratante{total !== 1 ? 's' : ''}
+        </span>
+      </div>
+
+      {isLoading ? (
+        <p className="py-10 text-center text-sm text-muted-foreground">Carregando...</p>
+      ) : paginatedItems.length === 0 ? (
+        <EmptyState
+          title="Nenhum contratante encontrado"
+          description={search ? 'Tente outro termo de busca.' : 'Nenhum contratante com solicitações na plataforma.'}
+          icon={<Users />}
+        />
+      ) : (
+        <div className="space-y-2">
+          {paginatedItems.map((contractor) => (
+            <ContractorRow key={contractor.id} contractor={contractor} />
+          ))}
         </div>
-    )
+      )}
+
+      {/* Paginação */}
+      {totalPaginas > 1 && (
+        <div className="flex flex-col items-center gap-2 pt-2 sm:flex-row sm:justify-between">
+          <p className="text-xs text-muted-foreground">
+            Página {page} de {totalPaginas}
+          </p>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            {paginas.map((p, i) =>
+              p === '…' ? (
+                <span key={`e-${i}`} className="px-1 text-muted-foreground">…</span>
+              ) : (
+                <Button
+                  key={p}
+                  variant={p === page ? 'default' : 'outline'}
+                  size="icon"
+                  className="h-8 w-8 text-xs"
+                  onClick={() => setPage(p as number)}
+                >
+                  {p}
+                </Button>
+              ),
+            )}
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setPage((p) => Math.min(totalPaginas, p + 1))}
+              disabled={page >= totalPaginas}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ContractorRow({ contractor }: { contractor: ContractorInfo }) {
+  return (
+    <Card className="hover:shadow-md transition-shadow">
+      <CardContent className="flex items-center gap-4 p-4">
+        {/* Avatar */}
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-600">
+          <UserCircle className="h-6 w-6" />
+        </div>
+
+        {/* Info */}
+        <div className="min-w-0 flex-1">
+          <p className="font-medium truncate">{contractor.name}</p>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+            <span>{contractor.totalBookings} solicitaç{contractor.totalBookings !== 1 ? 'ões' : 'ão'}</span>
+            <span>{contractor.confirmedBookings} confirmada{contractor.confirmedBookings !== 1 ? 's' : ''}</span>
+          </div>
+        </div>
+
+        {/* Valor gasto */}
+        <div className="shrink-0 text-right">
+          {contractor.totalSpent > 0 && (
+            <p className="text-sm font-medium">{formatMoney(contractor.totalSpent)}</p>
+          )}
+          <p className="text-xs text-muted-foreground">em shows</p>
+        </div>
+      </CardContent>
+    </Card>
+  )
 }
