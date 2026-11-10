@@ -3,6 +3,7 @@ import { keepPreviousData, useQuery, useMutation, useQueryClient } from '@tansta
 import {
   AlertTriangle,
   Ban,
+  CheckCircle,
   ChevronLeft,
   ChevronRight,
   Eye,
@@ -20,13 +21,13 @@ import {
   DollarSign,
   TrendingUp,
 } from 'lucide-react'
-import { artistsApi, adminUsersApi } from '@/services'
+import { adminUsersApi } from '@/services'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { EmptyState } from '@/components/badges'
 import { cn, formatMoney } from '@/lib/utils'
-import type { ArtistCard, AdminArtistStats, AdminContractorStats, AdminContractorList } from '@/types'
+import type { AdminArtistList, AdminArtistStats, AdminContractorStats, AdminContractorList } from '@/types'
 
 type UserTab = 'artists' | 'contractors'
 
@@ -141,29 +142,62 @@ function StatCard({ icon: Icon, label, value, sub }: {
   )
 }
 
+type ArtistFilter = 'all' | 'published' | 'unpublished' | 'deactivated'
+
+const artistFilterLabels: Record<ArtistFilter, string> = {
+  all: 'Todos',
+  published: 'Publicados',
+  unpublished: 'Não publicados',
+  deactivated: 'Desativados',
+}
+
 /* ═══════════════════════════ Lista de Artistas ═══════════════════════════ */
 
 function ArtistsList() {
   const [search, setSearch] = useState('')
+  const [filter, setFilter] = useState<ArtistFilter>('all')
   const [page, setPage] = useState(1)
   const [menuOpen, setMenuOpen] = useState<string | null>(null)
-  const [deactivateTarget, setDeactivateTarget] = useState<ArtistCard | null>(null)
+  const [deactivateTarget, setDeactivateTarget] = useState<AdminArtistList | null>(null)
   const [deactivateMsg, setDeactivateMsg] = useState('')
-  const [deleteTarget, setDeleteTarget] = useState<ArtistCard | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<AdminArtistList | null>(null)
   const [statsTarget, setStatsTarget] = useState<string | null>(null)
 
   const queryClient = useQueryClient()
 
-  const { data, isLoading, isFetching } = useQuery({
-    queryKey: ['admin-artists', search, page],
-    queryFn: async () =>
-      (await artistsApi.search({ search: search || undefined, page, pageSize: PER_PAGE })).data,
-    placeholderData: keepPreviousData,
+  const { data: allArtists, isLoading } = useQuery({
+    queryKey: ['admin-artists'],
+    queryFn: async () => (await adminUsersApi.listArtists()).data,
   })
 
-  const items = data?.items ?? []
-  const total = data?.totalCount ?? items.length
+  const filtered = useMemo(() => {
+    let list = allArtists ?? []
+
+    // Filtro de status
+    if (filter === 'published') list = list.filter((a) => a.isPublished && !a.isDeactivated)
+    else if (filter === 'unpublished') list = list.filter((a) => !a.isPublished && !a.isDeactivated)
+    else if (filter === 'deactivated') list = list.filter((a) => a.isDeactivated)
+
+    // Busca
+    if (search) {
+      const q = search.toLowerCase()
+      list = list.filter(
+        (a) =>
+          a.artisticName.toLowerCase().includes(q) ||
+          a.name.toLowerCase().includes(q) ||
+          a.categoryName.toLowerCase().includes(q),
+      )
+    }
+
+    return list
+  }, [allArtists, filter, search])
+
+  const total = filtered.length
   const totalPaginas = Math.max(1, Math.ceil(total / PER_PAGE))
+  const items = useMemo(
+    () => filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE),
+    [filtered, page],
+  )
 
   const paginas: (number | '…')[] = useMemo(() => {
     if (totalPaginas <= 7) return Array.from({ length: totalPaginas }, (_, i) => i + 1)
@@ -183,10 +217,8 @@ function ArtistsList() {
   })
 
   const deactivateMut = useMutation({
-    mutationFn: async ({ artistId, message }: { artistId: string; message: string }) => {
-      const { data: userData } = await adminUsersApi.getArtistUserId(artistId)
-      return adminUsersApi.deactivateUser(userData.userId, message)
-    },
+    mutationFn: async ({ userId, message }: { userId: string; message: string }) =>
+      adminUsersApi.deactivateUser(userId, message),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-artists'] })
       setDeactivateTarget(null)
@@ -194,11 +226,13 @@ function ArtistsList() {
     },
   })
 
+  const reactivateMut = useMutation({
+    mutationFn: (userId: string) => adminUsersApi.reactivateUser(userId),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['admin-artists'] }) },
+  })
+
   const deleteMut = useMutation({
-    mutationFn: async (artistId: string) => {
-      const { data: userData } = await adminUsersApi.getArtistUserId(artistId)
-      return adminUsersApi.deleteUser(userData.userId)
-    },
+    mutationFn: (userId: string) => adminUsersApi.deleteUser(userId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-artists'] })
       setDeleteTarget(null)
@@ -207,15 +241,32 @@ function ArtistsList() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      {/* Filtros + busca */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap gap-1.5">
+          {(Object.keys(artistFilterLabels) as ArtistFilter[]).map((f) => (
+            <button
+              key={f}
+              className={cn(
+                'rounded-full px-3 py-1 text-xs font-medium transition-colors',
+                filter === f
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-muted text-muted-foreground hover:bg-accent',
+              )}
+              onClick={() => { setFilter(f); setPage(1) }}
+            >
+              {artistFilterLabels[f]}
+            </button>
+          ))}
+        </div>
         <input
           className="h-9 w-full sm:w-64 rounded-md border border-input bg-transparent px-3 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           placeholder="Buscar artista..."
           value={search}
           onChange={(e) => { setSearch(e.target.value); setPage(1) }}
         />
-        <span className="text-sm text-muted-foreground">
-          {total} artista{total !== 1 ? 's' : ''} cadastrado{total !== 1 ? 's' : ''}
+        <span className="ml-auto text-sm text-muted-foreground">
+          {total} artista{total !== 1 ? 's' : ''}
         </span>
       </div>
 
@@ -224,13 +275,13 @@ function ArtistsList() {
       ) : items.length === 0 ? (
         <EmptyState
           title="Nenhum artista encontrado"
-          description={search ? 'Tente outro termo de busca.' : 'Nenhum artista cadastrado na plataforma.'}
+          description={search || filter !== 'all' ? 'Tente outro filtro ou termo de busca.' : 'Nenhum artista cadastrado na plataforma.'}
           icon={<Music />}
         />
       ) : (
-        <div className={cn('space-y-2 transition-opacity', isFetching && 'opacity-60')}>
+        <div className="space-y-2">
           {items.map((artist) => (
-            <Card key={artist.id} className="hover:shadow-md transition-shadow">
+            <Card key={artist.artistId} className="hover:shadow-md transition-shadow">
               <CardContent className="flex items-center gap-4 p-4">
                 {/* Avatar */}
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
@@ -243,7 +294,20 @@ function ArtistsList() {
 
                 {/* Info */}
                 <div className="min-w-0 flex-1">
-                  <p className="font-medium truncate">{artist.artisticName}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="font-medium truncate">{artist.artisticName}</p>
+                    {artist.isDeactivated && (
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-red-100 text-red-700">Desativado</span>
+                    )}
+                    {!artist.isDeactivated && (
+                      <span className={cn(
+                        'px-1.5 py-0.5 rounded text-[10px] font-medium',
+                        artist.isPublished ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600',
+                      )}>
+                        {artist.isPublished ? 'Publicado' : 'Não publicado'}
+                      </span>
+                    )}
+                  </div>
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                     <span>{artist.categoryName}</span>
                     {artist.city && (
@@ -257,22 +321,21 @@ function ArtistsList() {
                         {Number(artist.averageRating).toFixed(1)} ({artist.reviewCount})
                       </span>
                     )}
+                    <span>{artist.totalBookings} show{artist.totalBookings !== 1 ? 's' : ''}</span>
                   </div>
                 </div>
 
-                {/* Preço */}
-                <div className="hidden sm:block shrink-0 text-right">
-                  {artist.startingPrice !== null && artist.startingPrice !== undefined && (
-                    <p className="text-sm font-medium">A partir de {formatMoney(artist.startingPrice)}</p>
-                  )}
-                </div>
-
                 {/* Ações */}
-                <ActionMenu open={menuOpen === artist.id} onToggle={() => setMenuOpen(menuOpen === artist.id ? null : artist.id)}>
-                  <ActionItem icon={Eye} label="Ver perfil / stats" onClick={() => { setStatsTarget(artist.id); setMenuOpen(null) }} />
-                  <ActionItem icon={EyeOff} label="Despublicar perfil" onClick={() => { unpublishMut.mutate(artist.id); setMenuOpen(null) }} />
-                  <ActionItem icon={RefreshCw} label="Republicar perfil" onClick={() => { publishMut.mutate(artist.id); setMenuOpen(null) }} />
-                  <ActionItem icon={Ban} label="Desativar conta" onClick={() => { setDeactivateTarget(artist); setMenuOpen(null) }} />
+                <ActionMenu open={menuOpen === artist.artistId} onToggle={() => setMenuOpen(menuOpen === artist.artistId ? null : artist.artistId)}>
+                  <ActionItem icon={Eye} label="Ver perfil / stats" onClick={() => { setStatsTarget(artist.artistId); setMenuOpen(null) }} />
+                  {artist.isPublished
+                    ? <ActionItem icon={EyeOff} label="Despublicar perfil" onClick={() => { unpublishMut.mutate(artist.artistId); setMenuOpen(null) }} />
+                    : <ActionItem icon={RefreshCw} label="Publicar perfil" onClick={() => { publishMut.mutate(artist.artistId); setMenuOpen(null) }} />
+                  }
+                  {artist.isDeactivated
+                    ? <ActionItem icon={CheckCircle} label="Reativar conta" onClick={() => { reactivateMut.mutate(artist.userId); setMenuOpen(null) }} />
+                    : <ActionItem icon={Ban} label="Desativar conta" onClick={() => { setDeactivateTarget(artist); setMenuOpen(null) }} />
+                  }
                   <ActionItem icon={Trash2} label="Excluir perfil" onClick={() => { setDeleteTarget(artist); setMenuOpen(null) }} variant="destructive" />
                 </ActionMenu>
               </CardContent>
@@ -286,7 +349,7 @@ function ArtistsList() {
         <div className="flex flex-col items-center gap-2 pt-2 sm:flex-row sm:justify-between">
           <p className="text-xs text-muted-foreground">Página {page} de {totalPaginas}</p>
           <div className="flex items-center gap-1">
-            <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1 || isFetching}>
+            <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1}>
               <ChevronLeft className="h-4 w-4" />
             </Button>
             {paginas.map((p, i) =>
@@ -298,7 +361,7 @@ function ArtistsList() {
                 </Button>
               ),
             )}
-            <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setPage((p) => Math.min(totalPaginas, p + 1))} disabled={page >= totalPaginas || isFetching}>
+            <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setPage((p) => Math.min(totalPaginas, p + 1))} disabled={page >= totalPaginas}>
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
@@ -323,7 +386,7 @@ function ArtistsList() {
           <Button
             variant="destructive"
             disabled={!deactivateMsg.trim() || deactivateMut.isPending}
-            onClick={() => deactivateTarget && deactivateMut.mutate({ artistId: deactivateTarget.id, message: deactivateMsg })}
+            onClick={() => deactivateTarget && deactivateMut.mutate({ userId: deactivateTarget.userId, message: deactivateMsg })}
           >
             {deactivateMut.isPending ? 'Desativando...' : 'Desativar'}
           </Button>
@@ -342,7 +405,7 @@ function ArtistsList() {
         </p>
         <div className="flex justify-end gap-2">
           <Button variant="outline" onClick={() => setDeleteTarget(null)}>Cancelar</Button>
-          <Button variant="destructive" disabled={deleteMut.isPending} onClick={() => deleteTarget && deleteMut.mutate(deleteTarget.id)}>
+          <Button variant="destructive" disabled={deleteMut.isPending} onClick={() => deleteTarget && deleteMut.mutate(deleteTarget.userId)}>
             {deleteMut.isPending ? 'Excluindo...' : 'Excluir permanentemente'}
           </Button>
         </div>
@@ -468,6 +531,11 @@ function ContractorsList() {
     },
   })
 
+  const reactivateMut = useMutation({
+    mutationFn: (userId: string) => adminUsersApi.reactivateUser(userId),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['admin-contractors'] }) },
+  })
+
   const deleteMut = useMutation({
     mutationFn: (userId: string) => adminUsersApi.deleteUser(userId),
     onSuccess: () => {
@@ -536,7 +604,10 @@ function ContractorsList() {
                 {/* Ações */}
                 <ActionMenu open={menuOpen === contractor.contractorId} onToggle={() => setMenuOpen(menuOpen === contractor.contractorId ? null : contractor.contractorId)}>
                   <ActionItem icon={Eye} label="Ver perfil / stats" onClick={() => { setStatsTarget(contractor.contractorId); setMenuOpen(null) }} />
-                  <ActionItem icon={Ban} label="Desativar conta" onClick={() => { setDeactivateTarget(contractor); setMenuOpen(null) }} />
+                  {contractor.isDeactivated
+                    ? <ActionItem icon={CheckCircle} label="Reativar conta" onClick={() => { reactivateMut.mutate(contractor.userId); setMenuOpen(null) }} />
+                    : <ActionItem icon={Ban} label="Desativar conta" onClick={() => { setDeactivateTarget(contractor); setMenuOpen(null) }} />
+                  }
                   <ActionItem icon={Trash2} label="Excluir perfil" onClick={() => { setDeleteTarget(contractor); setMenuOpen(null) }} variant="destructive" />
                 </ActionMenu>
               </CardContent>

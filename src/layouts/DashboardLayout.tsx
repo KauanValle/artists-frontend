@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
     BadgeCheck,
+    Ban,
     CalendarDays,
     CalendarRange,
     ClipboardList,
@@ -306,7 +307,8 @@ function BottomTabBar({
 }
 
 export function DashboardLayout() {
-  const { user } = useAuth()
+  const { user, logout } = useAuth()
+  const navigate = useNavigate()
   const [menuOpen, setMenuOpen] = useState(false)
   const tutorialArtista = useTutorialProgress('reprissa.tutorial.artista', artistTutorialSteps)
   // Feature flag (AppSettings → /api/branding): assinatura desligada = acesso livre.
@@ -345,6 +347,37 @@ export function DashboardLayout() {
         ? contractorBottomTabs
         : artistBottomTabs
 
+  // ── Tela de bloqueio para contas desativadas (não-admin) ──
+  if (user?.isDeactivated && user.role !== 'Admin') {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-secondary/40 p-4">
+        <div className="w-full max-w-md space-y-6 text-center">
+          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30">
+            <Ban className="h-10 w-10 text-red-500" />
+          </div>
+          <div className="space-y-2">
+            <h1 className="text-2xl font-bold text-red-700 dark:text-red-400">Conta desativada</h1>
+            <p className="text-muted-foreground">
+              Sua conta foi desativada pelo administrador da plataforma.
+            </p>
+          </div>
+          {user.deactivationMessage && (
+            <div className="rounded-lg border border-red-500/40 bg-red-500/10 px-5 py-4 text-left text-sm">
+              <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-red-600 dark:text-red-400">Motivo</p>
+              <p className="text-red-700 dark:text-red-300">{user.deactivationMessage}</p>
+            </div>
+          )}
+          <p className="text-xs text-muted-foreground">
+            Se você acredita que isso é um engano, entre em contato com o suporte.
+          </p>
+          <Button variant="outline" onClick={() => { logout(); navigate('/login') }}>
+            <LogOut className="mr-2 h-4 w-4" /> Sair
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-secondary/40">
       {/* Sidebar fixa apenas em telas grandes */}
@@ -373,22 +406,6 @@ export function DashboardLayout() {
           </div>
         </header>
         <main className="flex-1 p-4 pb-20 lg:p-6 lg:pb-6">
-          {user?.isDeactivated && (
-            <div
-              role="alert"
-              className="mb-4 rounded-lg border border-red-500/60 bg-red-500/10 px-4 py-4 text-sm"
-            >
-              <div className="flex items-start gap-3">
-                <TriangleAlert className="mt-0.5 h-5 w-5 shrink-0 text-red-500" />
-                <div>
-                  <p className="font-semibold text-red-700 dark:text-red-400">Sua conta foi desativada pelo administrador</p>
-                  {user.deactivationMessage && (
-                    <p className="mt-1 text-red-600 dark:text-red-300">{user.deactivationMessage}</p>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
           {user?.role === 'Artist' && tutorialArtista && !tutorialArtista.state.done && (
             <div
               role="status"

@@ -747,6 +747,22 @@ export interface AdminArtistStats {
   taxaAdministrativa: number
 }
 
+export interface AdminArtistList {
+  artistId: string
+  userId: string
+  name: string
+  artisticName: string
+  profilePhotoUrl: string | null
+  categoryName: string
+  city: string
+  state: string
+  averageRating: number | null
+  reviewCount: number
+  isPublished: boolean
+  isDeactivated: boolean
+  totalBookings: number
+}
+
 export interface AdminContractorStats {
   contractorId: string
   name: string

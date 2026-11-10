@@ -338,6 +338,8 @@ export const brandingApi = {
 // Admin User Management
 export const adminUsersApi = {
   // Artistas
+  listArtists: () =>
+    api.get<import('@/types').AdminArtistList[]>(`/admin/users/artists`),
   getArtistStats: (artistId: string) =>
     api.get<import('@/types').AdminArtistStats>(`/admin/users/artists/${artistId}/stats`),
   unpublishArtist: (artistId: string) =>
