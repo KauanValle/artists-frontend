@@ -28,6 +28,7 @@ import { ArtistProfilePage } from '@/pages/artist/ArtistProfilePage'
 import { EpkPage } from '@/pages/artist/EpkPage'
 import { SettingsPage } from '@/pages/artist/SettingsPage'
 import { SubscriptionPage } from '@/pages/artist/SubscriptionPage'
+import { SaquePage } from '@/pages/artist/SaquePage'
 import { ArtistConversationsPage } from '@/pages/artist/ConversationsPage'
 
 import { ContractorDashboardPage, ContractorEventsPage } from '@/pages/contractor/ContractorDashboardPage'
@@ -105,6 +106,7 @@ export const router = createBrowserRouter([
           { path: '/artist/shows', element: <ShowsPage /> },
           { path: '/artist/shows/:id', element: <BookingDetailPage /> },
           { path: '/artist/financeiro', element: <FinancialPage /> },
+          { path: '/artist/saque', element: <SaquePage /> },
           { path: '/artist/equipe', element: <TeamPage /> },
           { path: '/artist/equipamentos', element: <EquipmentPage /> },
           { path: '/artist/perfil', element: <ArtistProfilePage /> },
