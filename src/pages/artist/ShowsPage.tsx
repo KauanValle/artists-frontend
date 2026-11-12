@@ -26,7 +26,7 @@ const tabs: { value: string; label: string; status?: BookingStatus }[] = [
   { value: 'all', label: 'Todos' },
   { value: 'proposal', label: 'Orçamento/Proposta', status: 'Proposed' },
   { value: 'awaitingPayment', label: 'Aguardando pagamento', status: 'AwaitingPayment' },
-  { value: 'awaitingAccount', label: 'Aguardando Conta', status: 'AwaitingAccount' },
+  { value: 'awaitingCompletion', label: 'Aguardando Conclusão', status: 'AwaitingCompletionAccept' },
   { value: 'negotiating', label: 'Em negociação', status: 'Negotiating' },
   { value: 'confirmed', label: 'Confirmados', status: 'Confirmed' },
   { value: 'completed', label: 'Concluídos', status: 'Completed' },
