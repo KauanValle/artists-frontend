@@ -20,7 +20,7 @@ export function PublicLayout() {
           </Link>
           <div className="flex items-center gap-1 sm:gap-2">
             <ThemeToggle />
-            <Link to="/artistas" className="hidden text-sm font-medium text-muted-foreground hover:text-foreground sm:inline">
+            <Link to="/artistas" className="hidden text-sm font-medium text-muted-foreground hover:text-foreground sm:inline mr-6">
               Buscar artistas
             </Link>
 
@@ -48,7 +48,7 @@ export function PublicLayout() {
               </>
             ) : (
               <>
-                <Link to="/login" className="text-sm font-medium text-muted-foreground hover:text-foreground">
+                <Link to="/login" className="text-sm font-medium text-muted-foreground hover:text-foreground mr-2">
                   Entrar
                 </Link>
                 <Link

@@ -273,9 +273,9 @@ export function LandingPage() {
       {/* ── SOCIAL PROOF ── */}
       <section className="border-y border-border/50 bg-card/30 py-12 backdrop-blur-sm">
         <div className="mx-auto grid max-w-4xl grid-cols-2 gap-8 px-4 sm:grid-cols-4">
-          <StatPill value="500+" label="Artistas cadastrados" />
-          <StatPill value="1.200+" label="Shows realizados" />
-          <StatPill value="50+" label="Cidades atendidas" />
+          <StatPill value="10+" label="Artistas cadastrados" />
+          <StatPill value="300+" label="Shows realizados" />
+          <StatPill value="5+" label="Cidades atendidas" />
           <StatPill value="4.9★" label="Avaliação média" />
         </div>
       </section>
