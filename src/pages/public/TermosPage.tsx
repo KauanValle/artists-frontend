@@ -27,7 +27,7 @@ const secoes: { titulo: string; paragrafos: string[] }[] = [
     titulo: '4. Contratações, propostas e pagamento',
     paragrafos: [
       'Propostas, aceites e alterações registrados na Plataforma fazem parte do histórico da contratação e servem como registro das condições combinadas entre as partes.',
-      'O pagamento do show é obrigatoriamente realizado pelos meios disponibilizados na Plataforma. Uma taxa administrativa percentual, sempre exibida ao contratante antes da confirmação, é acrescida ao valor do show.',
+      'O pagamento do show é obrigatoriamente realizado pelos meios disponibilizados na Plataforma. Uma taxa administrativa percentual é descontada do artista no momento do saque do cachê. O contratante paga apenas o valor acordado do show.',
       'O show somente é considerado confirmado após a confirmação do pagamento, e somente é concluído mediante confirmação de ambas as partes (artista e contratante), diretamente no painel ou pelo link de confirmação enviado ao contratante.',
     ],
   },

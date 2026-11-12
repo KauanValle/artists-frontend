@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
 /**
- * Taxa administrativa cobrada do contratante sobre o cachê do show
+ * Taxa administrativa descontada do artista no saque do cachê
  * (configuração global da plataforma, em % — aplica-se aos próximos checkouts).
  */
 export function TaxaAdministrativaCard() {
@@ -31,7 +31,7 @@ export function TaxaAdministrativaCard() {
     onSuccess: (data) => {
       queryClient.setQueryData(['admin-taxa'], data)
       queryClient.invalidateQueries({ queryKey: ['branding'] })
-      toast.success(`Taxa administrativa definida em ${data.percentual}%. Aplica-se aos próximos pagamentos.`)
+      toast.success(`Taxa administrativa definida em ${data.percentual}%. Será descontada do artista nos próximos saques.`)
     },
     onError: (e) => toast.error(extractApiError(e)),
   })
@@ -46,7 +46,7 @@ export function TaxaAdministrativaCard() {
       <CardContent className="space-y-3">
         <div className="flex items-end gap-3">
           <div className="space-y-1.5">
-            <Label htmlFor="taxa-admin">Percentual sobre o cachê do show</Label>
+            <Label htmlFor="taxa-admin">Percentual descontado do artista no saque</Label>
             <div className="relative">
               <Input
                 id="taxa-admin"

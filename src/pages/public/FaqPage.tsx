@@ -28,7 +28,7 @@ const faqs: { grupo: string; itens: { q: string; a: React.ReactNode }[] }[] = [
       },
       {
         q: 'O que é a taxa administrativa?',
-        a: 'É uma taxa percentual sobre o valor do show, exibida de forma clara antes do pagamento. Exemplo: um show de R$ 100 com taxa de 5% resulta em R$ 105 cobrados do contratante — os R$ 100 continuam sendo do artista.',
+        a: 'É uma taxa percentual sobre o valor do show, descontada do artista no momento do saque. O contratante paga apenas o valor do cachê, sem acréscimos. Exemplo: um show de R$ 100 com taxa de 2% resulta em R$ 98 disponíveis para saque pelo artista.',
       },
       {
         q: 'Quando o artista recebe o dinheiro?',

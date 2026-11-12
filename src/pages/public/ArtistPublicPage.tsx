@@ -36,13 +36,11 @@ export function ArtistPublicPage() {
   const [isFavorite, setIsFavorite] = useState(false)
   const location = useLocation()
 
-  // Taxa administrativa da plataforma (configurável pelo admin) — exibida no orçamento.
   const { data: branding } = useQuery({
     queryKey: ['branding'],
     queryFn: async () => (await brandingApi.get()).data,
     staleTime: 60_000,
   })
-  const taxaAdministrativa = branding?.taxaAdministrativa ?? 0
 
   // A contratação exige cadastro de contratante: sem conta, redireciona para o registro
   // (que devolve para esta página depois de concluir o cadastro).
@@ -862,7 +860,6 @@ export function ArtistPublicPage() {
         workingTimesByDate={workingTimesByDate}
         fees={artist.fees}
         aceitaNegociar={artist.aceitaNegociarPropostas}
-        taxaAdministrativa={taxaAdministrativa}
       />
     </div>
   )
@@ -928,7 +925,6 @@ export function BookingRequestDialog({
   workingTimesByDate = {},
   fees = [],
   aceitaNegociar = true,
-  taxaAdministrativa = 0,
 }: {
   artistId: string
   artistName: string
@@ -943,7 +939,6 @@ export function BookingRequestDialog({
   workingTimesByDate?: Record<string, TimeInterval[]>
   fees?: Fee[]
   aceitaNegociar?: boolean
-  taxaAdministrativa?: number
 }) {
   const [eventDate, setEventDate] = useState('')
   const [startTime, setStartTime] = useState<string | null>(null)
@@ -1430,38 +1425,7 @@ export function BookingRequestDialog({
                       
           ))}
 
-          {/* Transparência: taxa administrativa da plataforma sobre o orçamento */}
-          {baseBudget > 0 && taxaAdministrativa > 0 && [2, 3].includes(step) && (
-            <div className="rounded-lg border p-3 text-sm">
-              <p className="flex justify-between">
-                <span className="text-muted-foreground">Orçamento do show</span>
-                <span className="font-medium">{formatMoney(baseBudget)}</span>
-              </p>
-              {addonsTotal > 0 && (
-                <p className="flex justify-between">
-                  <span className="text-muted-foreground">Adicionais</span>
-                  <span className="font-medium">{formatMoney(addonsTotal)}</span>
-                </p>
-              )}
-              <p className="flex justify-between">
-                <span className="text-muted-foreground">
-                  Taxa administrativa ({taxaAdministrativa.toString().replace('.', ',')}%)
-                </span>
-                <span className="font-medium">
-                  {formatMoney(((baseBudget + addonsTotal) * taxaAdministrativa) / 100)}
-                </span>
-              </p>
-              <p className="mt-1 flex justify-between border-t pt-2 font-semibold">
-                <span>Total a pagar</span>
-                <span className="text-primary">
-                  {formatMoney((baseBudget + addonsTotal) * (1 + taxaAdministrativa / 100))}
-                </span>
-              </p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                A taxa administrativa é da plataforma e é cobrada no pagamento do show.
-              </p>
-            </div>
-          )}
+
 
           {/* Passo 3 — Confirmação (revisão) */}
           {step === 3 && (
@@ -1517,20 +1481,11 @@ export function BookingRequestDialog({
                     <span className="font-medium">{formatMoney(detail.amount)}</span>
                   </p>
                 ))}
-                {taxaAdministrativa > 0 && baseBudget + addonsTotal > 0 && (
-                  <p className="flex justify-between">
-                    <span className="text-muted-foreground">
-                      Taxa administrativa ({taxaAdministrativa.toString().replace('.', ',')}%)
-                    </span>
-                    <span className="font-medium">
-                      {formatMoney(((baseBudget + addonsTotal) * taxaAdministrativa) / 100)}
-                    </span>
-                  </p>
-                )}
+
                 <p className="mt-2 flex justify-between border-t pt-2 font-semibold">
-                  <span>Total a pagar no checkout</span>
+                  <span>Total a pagar</span>
                   <span className="text-primary">
-                    {formatMoney((baseBudget + addonsTotal) * (1 + taxaAdministrativa / 100))}
+                    {formatMoney(baseBudget + addonsTotal)}
                   </span>
                 </p>
               </div>

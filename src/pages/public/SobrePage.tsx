@@ -16,7 +16,7 @@ const beneficios = [
   {
     icon: <CreditCard className="h-5 w-5" />,
     titulo: 'Pagamento protegido',
-    texto: 'O pagamento do show é feito pelo próprio site via gateway seguro, com taxa administrativa transparente exibida antes de você pagar.',
+    texto: 'O pagamento do show é feito pelo próprio site via gateway seguro. O contratante paga apenas o valor do cachê — a taxa da plataforma é descontada do artista no saque.',
   },
   {
     icon: <CalendarCheck className="h-5 w-5" />,
