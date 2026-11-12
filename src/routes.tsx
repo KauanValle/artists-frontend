@@ -49,6 +49,7 @@ import {GuestSolicitationPage} from "@/pages/admin/GuestSolicitationPage.tsx";
 import {BookingsAnalysisPage} from "@/pages/admin/BookingsAnalysisPage.tsx";
 import {FinancialAdminPage} from "@/pages/admin/FinancialPage.tsx";
 import {UsersPage} from "@/pages/admin/UsersPage.tsx";
+import {AdminWithdrawalsPage} from '@/pages/admin/AdminWithdrawalsPage'
 
 /** Landing para visitantes; redireciona usuários logados ao painel. */
 function HomeOrRedirect() {
@@ -159,6 +160,7 @@ export const router = createBrowserRouter([
           { path: '/eventos', element: <BookingsAnalysisPage /> },
           { path: '/financeiro', element: <FinancialAdminPage /> },
           { path: '/usuarios', element: <UsersPage /> },
+          { path: '/admin/saques', element: <AdminWithdrawalsPage /> },
         ],
       },
     ],
