@@ -1,7 +1,9 @@
-import { createBrowserRouter } from 'react-router-dom'
+import { createBrowserRouter, Navigate } from 'react-router-dom'
 import { ProtectedRoute, RoleRedirect } from '@/components/ProtectedRoute'
 import { PublicLayout } from '@/layouts/PublicLayout'
 import { DashboardLayout } from '@/layouts/DashboardLayout'
+import { useAuth } from '@/hooks/useAuth'
+import { homePathFor } from '@/lib/utils'
 
 import { LoginPage } from '@/pages/auth/LoginPage'
 import { RegisterPage } from '@/pages/auth/RegisterPage'
@@ -37,6 +39,7 @@ import { ContractorProfilePage } from '@/pages/contractor/ContractorProfilePage'
 import { ReviewsPage } from '@/pages/shared/ReviewsPage'
 import { SobrePage } from '@/pages/public/SobrePage'
 import { FaqPage } from '@/pages/public/FaqPage'
+import { LandingPage } from '@/pages/public/LandingPage'
 import { TermosPage } from '@/pages/public/TermosPage'
 
 import { BookingDetailPage } from '@/pages/shared/BookingDetailPage'
@@ -45,6 +48,23 @@ import {GuestSolicitationPage} from "@/pages/admin/GuestSolicitationPage.tsx";
 import {BookingsAnalysisPage} from "@/pages/admin/BookingsAnalysisPage.tsx";
 import {FinancialAdminPage} from "@/pages/admin/FinancialPage.tsx";
 import {UsersPage} from "@/pages/admin/UsersPage.tsx";
+
+/** Landing para visitantes; redireciona usuários logados ao painel. */
+function HomeOrRedirect() {
+  const { isAuthenticated, isLoading, user } = useAuth()
+  if (isLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    )
+  }
+  if (isAuthenticated && user) {
+    if (!user.perfilCompleto && user.role !== 'Admin') return <Navigate to="/completar-perfil" replace />
+    return <Navigate to={homePathFor(user.role)} replace />
+  }
+  return <LandingPage />
+}
 
 export const router = createBrowserRouter([
   {
@@ -66,7 +86,7 @@ export const router = createBrowserRouter([
       { path: '/contrato/:token', element: <ContractorSigningPage /> },
       { path: '/confirmar-conclusao/:token', element: <CompletionConfirmPage /> },
       { path: '/pagamento-concluido', element: <PaymentCallbackPage /> },
-      { path: '/', element: <RoleRedirect /> },
+      { path: '/', element: <HomeOrRedirect /> },
     ],
   },
   {
