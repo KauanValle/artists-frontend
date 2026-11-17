@@ -11,7 +11,7 @@ interface AuthContextValue {
   isAuthenticated: boolean
   isLoading: boolean
   login: (email: string, password: string) => Promise<User>
-  register: (payload: { name: string; email: string; password: string }) => Promise<User>
+  register: (payload: { name: string; email: string; password: string; referralCode?: string }) => Promise<User>
   applySession: (data: AuthResponse) => User
   registerArtist: (payload: Record<string, unknown>) => Promise<User>
   registerContractor: (payload: Record<string, unknown>) => Promise<User>
@@ -77,7 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return u
   }, [])
 
-  const register = useCallback(async (payload: { name: string; email: string; password: string }) => {
+  const register = useCallback(async (payload: { name: string; email: string; password: string; referralCode?: string }) => {
     const { data } = await authApi.register(payload) as { data: AuthResponse }
     const u = applyAuthResponse(data)
     setUser(u)

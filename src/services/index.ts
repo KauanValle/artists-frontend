@@ -44,7 +44,7 @@ interface AuthResponseLike {
 
 export const authApi = {
   login: (email: string, password: string) => api.post('/auth/login', { email, password }),
-  register: (payload: { name: string; email: string; password: string }) =>
+  register: (payload: { name: string; email: string; password: string; referralCode?: string }) =>
     api.post<AuthResponseLike>('/auth/register', payload),
   google: (idToken: string) => api.post<AuthResponseLike>('/auth/google', { idToken }),
   registerArtist: (payload: Record<string, unknown>) => api.post('/auth/register/artist', payload),

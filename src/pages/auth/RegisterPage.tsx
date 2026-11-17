@@ -37,6 +37,7 @@ export function RegisterPage() {
 
   // Pré-preenchimento via link gerado no admin (contratante visitante → cadastro)
   const prefillName = searchParams.get('nome') ?? ''
+  const referralCode = searchParams.get('ref') ?? ''
 
   const [error, setError] = useState('')
 
@@ -53,9 +54,9 @@ export function RegisterPage() {
   const onSubmit = async (data: Record<string, string>) => {
     setError('')
     try {
-      await criarConta({ name: data.name, email: data.email, password: data.password })
+      await criarConta({ name: data.name, email: data.email, password: data.password, referralCode: referralCode || undefined })
       toast.success('Conta criada! Agora complete o seu perfil.')
-      navigate('/completar-perfil')
+      navigate('/completar-perfil', { state: { referralCode: referralCode || undefined } })
     } catch (err) {
       setError(extractApiError(err))
     }

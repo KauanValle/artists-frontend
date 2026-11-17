@@ -60,6 +60,9 @@ export function CompleteProfilePage() {
   const [eventTypes, setEventTypes] = useState<string[]>([])
   const [error, setError] = useState('')
 
+  // Código de indicação vindo do RegisterPage (via navigation state)
+  const referralCode = (location.state as { referralCode?: string } | null)?.referralCode
+
   const { data: categories = [] } = useQuery({
     queryKey: ['categories'],
     queryFn: async () => (await artistsApi.categories()).data,
@@ -140,6 +143,7 @@ export function CompleteProfilePage() {
               phone: data.phone ?? valores.phone,
               cpf: data.cpf ?? valores.cpf,
               cep: data.cep ?? valores.cep,
+              referralCode: referralCode || undefined,
             }
           : {
               tipo: 'Contratante',
@@ -149,6 +153,7 @@ export function CompleteProfilePage() {
               phone: data.phone ?? valores.phone,
               cpf: data.cpf ?? valores.cpf,
               cep: data.cep ?? valores.cep,
+              referralCode: referralCode || undefined,
             }
 
       const { data: auth } = await perfilApi.completar(payload)

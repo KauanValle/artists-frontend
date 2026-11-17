@@ -21,6 +21,7 @@ import {
     TriangleAlert,
     Users,
     Wallet,
+    UserPlus,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useQuery } from '@tanstack/react-query'
@@ -42,6 +43,7 @@ const artistNav = [
   { to: '/avaliacoes', label: 'Avaliações', icon: Star },
   { to: '/artist/financeiro', label: 'Financeiro', icon: CreditCard },
   { to: '/artist/saque', label: 'Saque', icon: Wallet },
+  { to: '/artist/indicacoes', label: 'Indicações', icon: UserPlus },
   { to: '/artist/equipe', label: 'Equipe', icon: Users },
   { to: '/artist/equipamentos', label: 'Equipamentos', icon: Guitar },
   { to: '/artist/perfil', label: 'Meu Perfil', icon: Music },
