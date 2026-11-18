@@ -4,7 +4,8 @@ import { useMutation } from '@tanstack/react-query'
 import { CheckCircle2, Clock, Loader2, Mail, PackageSearch } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { ticketOrdersApi, api } from '@/services'
+import { ticketOrdersApi } from '@/services'
+import { api } from '@/services/api'
 import { generateTicketPdfBase64, getTicketPdfFileName } from '@/lib/ticket-pdf'
 
 /**
