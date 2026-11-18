@@ -15,9 +15,9 @@ import { extractApiError } from '@/services/api'
 
 const MAX_PER_ORDER = 10
 
-const onlyDigits = (v: string) => v.replace(/\D/g, '')
+export const onlyDigits = (v: string) => v.replace(/\D/g, '')
 
-function maskPhone(v: string): string {
+export function maskPhone(v: string): string {
   const d = onlyDigits(v).slice(0, 11)
   if (d.length <= 2) return d
   if (d.length <= 6) return `(${d.slice(0, 2)}) ${d.slice(2)}`
@@ -25,7 +25,7 @@ function maskPhone(v: string): string {
   return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`
 }
 
-function maskCpf(v: string): string {
+export function maskCpf(v: string): string {
   const d = onlyDigits(v).slice(0, 11)
   if (d.length <= 3) return d
   if (d.length <= 6) return `${d.slice(0, 3)}.${d.slice(3)}`

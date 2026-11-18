@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, Outlet, useNavigate } from 'react-router-dom'
-import { LayoutGrid, LogOut, Menu, Search, X } from 'lucide-react'
+import { LayoutGrid, LogOut, Menu, PackageSearch, Search, X } from 'lucide-react'
 import { BrandMark } from '@/components/ui/brand-logo'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
 import { Button } from '@/components/ui/button'
@@ -45,7 +45,7 @@ export function PublicLayout() {
           </Link>
 
           {/* Desktop: links centralizados */}
-          <nav className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-6 md:flex">
+          <nav className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-6 lg:flex">
             <Link
               to="/#produtos"
               className="whitespace-nowrap text-sm font-medium text-muted-foreground hover:text-foreground"
@@ -58,13 +58,19 @@ export function PublicLayout() {
             >
               Buscar artistas
             </Link>
+            <Link
+              to="/acompanhar-pedidos"
+              className="whitespace-nowrap text-sm font-medium text-muted-foreground hover:text-foreground"
+            >
+              Acompanhar pedidos
+            </Link>
           </nav>
 
           <div className="flex items-center gap-1 sm:gap-2">
             <ThemeToggle />
 
             {/* Desktop: entrar / criar conta (ou painel / sair) */}
-            <div className="hidden items-center gap-1 md:flex md:gap-2">
+            <div className="hidden items-center gap-1 lg:flex lg:gap-2">
               {isLoading ? null : isAuthenticated && user ? (
                 <>
                   <Button
@@ -103,7 +109,7 @@ export function PublicLayout() {
             </div>
 
             {/* Mobile: menu hambúrguer */}
-            <div ref={menuRef} className="relative md:hidden">
+            <div ref={menuRef} className="relative lg:hidden">
               <button
                 type="button"
                 aria-label="Menu"
@@ -125,6 +131,9 @@ export function PublicLayout() {
                   </Link>
                   <Link to="/artistas" role="menuitem" onClick={close} className={menuItemClass}>
                     <Search className="h-4 w-4 text-primary" /> Buscar artistas
+                  </Link>
+                  <Link to="/acompanhar-pedidos" role="menuitem" onClick={close} className={menuItemClass}>
+                    <PackageSearch className="h-4 w-4 text-primary" /> Acompanhar pedidos
                   </Link>
 
                   <div className="my-1 border-t" />

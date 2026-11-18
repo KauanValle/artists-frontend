@@ -44,6 +44,7 @@ import { FaqPage } from '@/pages/public/FaqPage'
 import { LandingPage } from '@/pages/public/LandingPage'
 import { TicketsPage } from '@/pages/public/TicketsPage'
 import { TicketEventPage } from '@/pages/public/tickets/TicketEventPage'
+import { TrackOrdersPage } from '@/pages/public/tickets/TrackOrdersPage'
 import { TermosPage } from '@/pages/public/TermosPage'
 
 import { BookingDetailPage } from '@/pages/shared/BookingDetailPage'
@@ -85,6 +86,7 @@ export const router = createBrowserRouter([
       { path: '/eventos', element: <TicketsPage /> },
       { path: '/ingressos', element: <Navigate to="/eventos" replace /> },
       { path: '/evento/:id', element: <TicketEventPage /> },
+      { path: '/acompanhar-pedidos', element: <TrackOrdersPage /> },
       { path: '/artistas', element: <ArtistsDirectoryPage /> },
       { path: '/sobre', element: <SobrePage /> },
       { path: '/faq', element: <FaqPage /> },

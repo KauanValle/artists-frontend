@@ -470,7 +470,32 @@ export interface TicketCheckout {
   paid: boolean
 }
 
+export interface TicketOrderSummary {
+  id: string
+  ticketEventId: string
+  eventName: string
+  eventImageUrl: string
+  eventStartDate: string
+  eventStartTime: string
+  venue: string
+  city: string
+  state: string
+  ticketTitle: string
+  quantity: number
+  totalAmount: number
+  /** AwaitingPayment | Paid | Cancelled */
+  status: string
+  /** Aguardando pagamento com a reserva vencida. */
+  expired: boolean
+  createdAt: string
+  paidAt: string | null
+  checkoutUrl: string | null
+}
+
 export const ticketOrdersApi = {
+  /** Pedidos do comprador (CPF + telefone). */
+  lookup: (payload: { cpf: string; phone: string }) =>
+    api.post<TicketOrderSummary[]>('/public/ticket-orders/lookup', payload),
   /** Gera o checkout do InfinityPay (ou confirma direto se o ingresso for gratuito). */
   checkout: (eventId: string, orderId: string) =>
     api.post<TicketCheckout>(`/public/ticket-events/${eventId}/orders/${orderId}/checkout`),
