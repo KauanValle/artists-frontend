@@ -17,8 +17,10 @@ import {
   Users,
   TicketCheck,
   Zap,
+  Instagram,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { BrandMark } from '@/components/ui/brand-logo'
 
 /* ─── tiny helpers ─── */
 function GradientText({ children }: { children: React.ReactNode }) {
@@ -609,6 +611,31 @@ export function LandingPage() {
           </p>
         </div>
       </section>
+      {/* ── FOOTER ── */}
+      <footer className="border-t border-border/50 py-6">
+        <div className="mx-auto max-w-5xl px-4">
+          <div className="flex flex-col items-center gap-3">
+            <Link to="/" className="transition-opacity hover:opacity-80">
+              <BrandMark />
+            </Link>
+            <div className="flex items-center gap-3">
+              <p className="text-xs text-muted-foreground">
+                © {new Date().getFullYear()} Reprissa
+              </p>
+              <span className="text-muted-foreground/30">·</span>
+              <a
+                href="https://instagram.com/reprissaoficial"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-primary"
+              >
+                <Instagram className="h-3.5 w-3.5" />
+                @reprissaoficial
+              </a>
+            </div>
+          </div>
+        </div>
+      </footer>
     </main>
   )
 }
