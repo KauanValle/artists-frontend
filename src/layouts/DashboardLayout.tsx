@@ -157,6 +157,7 @@ const adminNav = [
     { to: '/financeiro', label: 'Financeiro', icon: DollarSignIcon},
     { to: '/usuarios', label: 'Usuarios', icon: PersonStandingIcon},
     { to: '/admin/saques', label: 'Solicitações de Saque', icon: Wallet },
+    { to: '/admin/campanhas', label: 'Campanhas', icon: Megaphone },
 ]
 
 function SidebarContent({
