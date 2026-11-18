@@ -14,6 +14,7 @@ import {
   Star,
   TrendingUp,
   Users,
+  Ticket,
   Zap,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -277,6 +278,107 @@ export function LandingPage() {
           <StatPill value="300+" label="Shows realizados" />
           <StatPill value="5+" label="Cidades atendidas" />
           <StatPill value="4.9★" label="Avaliação média" />
+        </div>
+      </section>
+
+
+      {/* ── NOSSOS PRODUTOS ── */}
+      <section id="produtos" className="py-20 sm:py-28">
+        <div className="mx-auto max-w-6xl px-4">
+          <div className="mx-auto max-w-2xl text-center">
+            <SectionLabel>Nossos Produtos</SectionLabel>
+            <h2 className="text-3xl font-extrabold tracking-tight sm:text-4xl">
+              Soluções completas para o{' '}
+              <GradientText>mundo da música</GradientText>
+            </h2>
+            <p className="mt-4 text-muted-foreground">
+              Ferramentas profissionais pensadas para artistas e produtores de eventos.
+            </p>
+          </div>
+
+          <div className="mt-14 grid gap-8 md:grid-cols-2">
+            {/* Produto 1 — Gestão de carreira */}
+            <div className="group relative overflow-hidden rounded-2xl border border-border/50 bg-card/40 backdrop-blur-sm transition-all hover:border-primary/30 hover:shadow-xl hover:shadow-purple-900/10">
+              <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 via-transparent to-purple-600/5 opacity-0 transition-opacity group-hover:opacity-100" />
+              <div className="relative p-8">
+                <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-purple-700 shadow-lg shadow-purple-500/25">
+                  <Music className="h-7 w-7 text-white" />
+                </div>
+                <h3 className="text-xl font-extrabold sm:text-2xl">
+                  Sistema de gestão de carreira para artistas
+                </h3>
+                <p className="mt-3 leading-relaxed text-muted-foreground">
+                  Plataforma completa para artistas gerenciarem sua carreira: perfil profissional, agenda inteligente, 
+                  contratos digitais, painel financeiro, EPK digital e muito mais. Tudo em um só lugar para 
+                  você focar no que mais importa — sua arte.
+                </p>
+                <ul className="mt-5 space-y-2">
+                  {[
+                    'Perfil público e EPK digital',
+                    'Agenda com bloqueio automático',
+                    'Contratos e pagamentos integrados',
+                    'Dashboard financeiro completo',
+                    'Avaliações e reputação',
+                    'Link de indicação',
+                  ].map((item) => (
+                    <li key={item} className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/10">
+                        <ArrowRight className="h-3 w-3 text-emerald-500" />
+                      </div>
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+                <div className="mt-6">
+                  <Button size="lg" className="gap-2 rounded-xl px-6 shadow-lg shadow-purple-500/25" asChild>
+                    <Link to="/register">
+                      Começar grátis <ArrowRight className="h-4 w-4" />
+                    </Link>
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            {/* Produto 2 — Emissor de ingressos */}
+            <div className="group relative overflow-hidden rounded-2xl border border-border/50 bg-card/40 backdrop-blur-sm transition-all hover:border-primary/30 hover:shadow-xl hover:shadow-purple-900/10">
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-cyan-600/5 opacity-0 transition-opacity group-hover:opacity-100" />
+              <div className="relative p-8">
+                <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-600 shadow-lg shadow-blue-500/25">
+                  <Ticket className="h-7 w-7 text-white" />
+                </div>
+                <h3 className="text-xl font-extrabold sm:text-2xl">
+                  Emissor de ingressos
+                </h3>
+                <p className="mt-3 leading-relaxed text-muted-foreground">
+                  Venda ingressos para seus shows e eventos diretamente pela plataforma. 
+                  Sistema completo de emissão, controle de entrada e gestão de público, 
+                  integrado ao seu perfil de artista.
+                </p>
+                <ul className="mt-5 space-y-2">
+                  {[
+                    'Criação e venda de ingressos online',
+                    'QR Code para controle de entrada',
+                    'Gestão de lotes e preços',
+                    'Relatórios de vendas em tempo real',
+                    'Integrado ao perfil do artista',
+                    'Pagamento seguro via plataforma',
+                  ].map((item) => (
+                    <li key={item} className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/10">
+                        <ArrowRight className="h-3 w-3 text-emerald-500" />
+                      </div>
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+                <div className="mt-6">
+                  <span className="inline-flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-sm font-semibold text-amber-500">
+                    <Zap className="h-4 w-4" /> Em breve
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 

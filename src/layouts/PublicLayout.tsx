@@ -20,9 +20,9 @@ export function PublicLayout() {
           </Link>
           <div className="flex items-center gap-1 sm:gap-2">
             <ThemeToggle />
-            <Link to="/artistas" className="hidden text-sm font-medium text-muted-foreground hover:text-foreground sm:inline mr-6">
-              Buscar artistas
-            </Link>
+            <a href="/#produtos" className="hidden text-sm font-medium text-muted-foreground hover:text-foreground sm:inline mr-6">
+              Nossos Produtos
+            </a>
 
             {isLoading ? null : isAuthenticated && user ? (
               <>
