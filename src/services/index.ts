@@ -515,6 +515,7 @@ export interface IssuedTicket {
 export interface TicketReturn {
   found: boolean
   paid: boolean
+  orderSummary?: TicketOrderSummary
 }
 
 export const ticketOrdersApi = {

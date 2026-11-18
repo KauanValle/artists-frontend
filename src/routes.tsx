@@ -58,6 +58,7 @@ import {UsersPage} from "@/pages/admin/UsersPage.tsx";
 import {AdminWithdrawalsPage} from '@/pages/admin/AdminWithdrawalsPage'
 import {CampaignsPage} from '@/pages/admin/CampaignsPage'
 import {CampaignPage} from '@/pages/public/CampaignPage'
+import {CampaignsListPage} from '@/pages/public/CampaignsListPage'
 
 /** Landing para visitantes; redireciona usuários logados ao painel. */
 function HomeOrRedirect() {
@@ -95,6 +96,7 @@ export const router = createBrowserRouter([
       { path: '/acompanhar-pedidos', element: <TrackOrdersPage /> },
       { path: '/eventos/:id/gerenciar', element: <TicketEventManagePage /> },
       { path: '/artistas', element: <ArtistsDirectoryPage /> },
+      { path: '/campanhas', element: <CampaignsListPage /> },
       { path: '/sobre', element: <SobrePage /> },
       { path: '/faq', element: <FaqPage /> },
       { path: '/termos-de-uso', element: <TermosPage /> },

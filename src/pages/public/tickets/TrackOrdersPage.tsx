@@ -2,14 +2,15 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useMutation } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { CalendarDays, CheckCircle2, Clock, CreditCard, Download, Loader2, MapPin, PackageSearch, Search, XCircle } from 'lucide-react'
+import { CalendarDays, CheckCircle2, Clock, CreditCard, Loader2, Mail, MapPin, PackageSearch, Search, XCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { formatDate, formatDateTime, formatMoney, formatTime } from '@/lib/utils'
 import { ticketOrdersApi, type TicketOrderSummary } from '@/services'
 import { extractApiError } from '@/services/api'
-import { downloadTicketPdf } from '@/lib/ticket-pdf'
+import { generateTicketPdfBase64, getTicketPdfFileName } from '@/lib/ticket-pdf'
+import { api } from '@/services/api'
 import { isValidCpf, maskCpf, maskPhone, onlyDigits } from './BuyTicketModal'
 
 type StatusInfo = { label: string; className: string; icon: typeof Clock }
@@ -23,15 +24,24 @@ function statusInfo(o: TicketOrderSummary): StatusInfo {
 
 function OrderCard({ order }: { order: TicketOrderSummary }) {
   const st = statusInfo(order)
-  const [generating, setGenerating] = useState(false)
-  const download = async () => {
-    setGenerating(true)
+  const [sending, setSending] = useState(false)
+  const sendByEmail = async () => {
+    setSending(true)
     try {
-      await downloadTicketPdf(order)
+      const pdfBase64 = await generateTicketPdfBase64(order)
+      await api.post('/public/ticket-orders/send-ticket-email', {
+        email: order.buyerEmail,
+        buyerName: order.buyerName,
+        eventName: order.eventName,
+        eventDate: formatDate(order.eventStartDate),
+        pdfBase64,
+        fileName: getTicketPdfFileName(order),
+      })
+      toast.success(`Ingresso enviado para ${order.buyerEmail}!`)
     } catch {
-      toast.error('Não foi possível gerar o PDF do ingresso.')
+      toast.error('Não foi possível enviar o ingresso por email.')
     } finally {
-      setGenerating(false)
+      setSending(false)
     }
   }
   const Icon = st.icon
@@ -72,9 +82,9 @@ function OrderCard({ order }: { order: TicketOrderSummary }) {
             <div className="flex items-center gap-3">
               <span className="text-lg font-extrabold">{order.totalAmount === 0 ? 'Gratuito' : formatMoney(order.totalAmount)}</span>
               {order.status === 'Paid' && (
-                <Button size="sm" className="gap-1.5" onClick={() => void download()} disabled={generating}>
-                  {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-                  Baixar ingresso (PDF)
+                <Button size="sm" className="gap-1.5" onClick={() => void sendByEmail()} disabled={sending}>
+                  {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+                  Enviar por email
                 </Button>
               )}
               {order.checkoutUrl && (

@@ -10,6 +10,7 @@ import {
   Mic2,
   PackageSearch,
   Search,
+  Megaphone,
   Sparkles,
   X,
   type LucideIcon,
@@ -25,11 +26,7 @@ const menuItemClass =
   'flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-medium text-foreground hover:bg-accent'
 
 /** Links que rolam até uma seção da página inicial. */
-const ANCHORS = [
-  { to: '/#para-artistas', label: 'Para artistas' },
-  { to: '/#para-contratantes', label: 'Para contratantes' },
-  { to: '/#como-funciona', label: 'Como funciona' },
-]
+const ANCHORS: { to: string; label: string }[] = []
 
 interface NavDropdownItem {
   to: string
@@ -149,12 +146,9 @@ export function PublicLayout() {
                 { to: '/acompanhar-pedidos', label: 'Acompanhar pedidos', icon: PackageSearch },
               ]}
             />
-            {/* Âncoras da página inicial */}
-            {ANCHORS.map(({ to, label }) => (
-              <Link key={to} to={to} className="whitespace-nowrap text-sm font-medium text-muted-foreground hover:text-foreground">
-                {label}
-              </Link>
-            ))}
+            <Link to="/campanhas" className="whitespace-nowrap text-sm font-medium text-muted-foreground hover:text-foreground">
+              Campanhas
+            </Link>
           </nav>
 
           <div className="flex items-center gap-1 sm:gap-2">
@@ -239,14 +233,9 @@ export function PublicLayout() {
                   </Link>
 
                   <div className="my-1 border-t" />
-                  <p className="flex items-center gap-2 px-3 pb-1 pt-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    <Compass className="h-3.5 w-3.5" /> Nesta página
-                  </p>
-                  {ANCHORS.map(({ to, label }) => (
-                    <Link key={to} to={to} role="menuitem" onClick={close} className={`${menuItemClass} pl-8`}>
-                      {label}
-                    </Link>
-                  ))}
+                  <Link to="/campanhas" role="menuitem" onClick={close} className={menuItemClass}>
+                    <Megaphone className="h-4 w-4 shrink-0 text-primary" /> Campanhas
+                  </Link>
 
                   <div className="my-1 border-t" />
 

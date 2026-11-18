@@ -160,7 +160,7 @@ export function CampaignPage() {
             {/* Card de tipo/data/meta */}
             {campaign.type === 0 ? (
               <>
-                {campaign.startDate && (
+                {(campaign.startDate || campaign.endDate) && (
                   <div className="group flex items-center gap-4 rounded-2xl border border-border/50 bg-card/50 p-5 backdrop-blur-sm transition-all hover:border-primary/20 hover:shadow-lg hover:shadow-purple-900/5">
                     <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500/20 to-purple-600/10">
                       <Calendar className="h-6 w-6 text-primary" />
@@ -170,8 +170,9 @@ export function CampaignPage() {
                         Período
                       </p>
                       <p className="mt-0.5 font-semibold">
-                        {formatDate(campaign.startDate)}
-                        {campaign.endDate && ` — ${formatDate(campaign.endDate)}`}
+                        {campaign.startDate ? formatDate(campaign.startDate) : ''}
+                        {campaign.startDate && campaign.endDate ? ' — ' : ''}
+                        {campaign.endDate ? formatDate(campaign.endDate) : ''}
                       </p>
                     </div>
                   </div>

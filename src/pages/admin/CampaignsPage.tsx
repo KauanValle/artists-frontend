@@ -151,14 +151,10 @@ export function CampaignsPage() {
       description: form.description,
       rules: form.rules,
       type: form.type,
-    }
-
-    if (form.type === 0) {
-      payload.startDate = form.startDate ? new Date(form.startDate).toISOString() : null
-      payload.endDate = form.endDate ? new Date(form.endDate).toISOString() : null
-    } else {
-      payload.goalDescription = form.goalDescription || null
-      payload.goalTarget = form.goalTarget ? parseInt(form.goalTarget) : null
+      startDate: form.type === 0 && form.startDate ? form.startDate + 'T00:00:00' : null,
+      endDate: form.type === 0 && form.endDate ? form.endDate + 'T23:59:59' : null,
+      goalDescription: form.type === 1 ? (form.goalDescription || null) : null,
+      goalTarget: form.type === 1 && form.goalTarget ? parseInt(form.goalTarget) : null,
     }
 
     if (editingId) {

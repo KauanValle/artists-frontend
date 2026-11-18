@@ -1,10 +1,11 @@
-import { useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useMutation } from '@tanstack/react-query'
-import { CheckCircle2, Clock, Loader2, PackageSearch } from 'lucide-react'
+import { CheckCircle2, Clock, Loader2, Mail, PackageSearch } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { ticketOrdersApi } from '@/services'
+import { ticketOrdersApi, api } from '@/services'
+import { generateTicketPdfBase64, getTicketPdfFileName } from '@/lib/ticket-pdf'
 
 /**
  * Redirect do checkout do InfinityPay — landing informativa do pagamento de shows.
@@ -14,6 +15,8 @@ import { ticketOrdersApi } from '@/services'
 export function PaymentCallbackPage() {
   const [params] = useSearchParams()
   const orderNsu = params.get('order_nsu')
+  const emailSentRef = useRef(false)
+  const [emailStatus, setEmailStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle')
 
   // Pedido de ingresso: o redirect traz order_nsu/transaction_nsu/slug e conferimos o pagamento no InfinityPay.
   const verify = useMutation({
@@ -26,10 +29,39 @@ export function PaymentCallbackPage() {
         })
       ).data,
   })
+
   useEffect(() => {
     if (orderNsu) verify.mutate()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderNsu])
+
+  // Envia o ingresso por email automaticamente quando o pagamento é confirmado
+  useEffect(() => {
+    const data = verify.data
+    if (!data?.paid || !data.orderSummary || emailSentRef.current) return
+    emailSentRef.current = true
+
+    const sendEmail = async () => {
+      try {
+        setEmailStatus('sending')
+        const order = data.orderSummary!
+        const pdfBase64 = await generateTicketPdfBase64(order)
+        const fileName = getTicketPdfFileName(order)
+        await api.post('/public/ticket-orders/send-ticket-email', {
+          email: order.buyerEmail,
+          buyerName: order.buyerName,
+          eventName: order.eventName,
+          eventDate: order.eventStartDate,
+          pdfBase64,
+          fileName,
+        })
+        setEmailStatus('sent')
+      } catch {
+        setEmailStatus('error')
+      }
+    }
+    sendEmail()
+  }, [verify.data])
 
   if (orderNsu && (verify.isIdle || verify.isPending)) {
     return (
@@ -52,6 +84,24 @@ export function PaymentCallbackPage() {
                 ? 'Seu pedido de ingresso foi confirmado.'
                 : 'Ainda não recebemos a confirmação do pagamento. Pode levar alguns instantes; acompanhe o status do pedido.'}
             </p>
+
+            {/* Status do envio do email */}
+            {paid && emailStatus === 'sending' && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" /> Enviando ingresso para seu email...
+              </div>
+            )}
+            {paid && emailStatus === 'sent' && (
+              <div className="flex items-center gap-2 text-sm text-emerald-600">
+                <Mail className="h-4 w-4" /> Ingresso enviado para seu email!
+              </div>
+            )}
+            {paid && emailStatus === 'error' && (
+              <p className="text-xs text-muted-foreground">
+                Não foi possível enviar o ingresso por email agora. Você pode reenviá-lo na página de pedidos.
+              </p>
+            )}
+
             <Button asChild size="lg" className="w-full">
               <Link to="/acompanhar-pedidos">
                 <PackageSearch /> Acompanhar pedidos
