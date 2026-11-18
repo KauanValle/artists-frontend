@@ -1,4 +1,4 @@
-import { createBrowserRouter, Navigate } from 'react-router-dom'
+import { createBrowserRouter, Navigate, useLocation } from 'react-router-dom'
 import { ProtectedRoute, RoleRedirect } from '@/components/ProtectedRoute'
 import { PublicLayout } from '@/layouts/PublicLayout'
 import { DashboardLayout } from '@/layouts/DashboardLayout'
@@ -42,6 +42,8 @@ import { ReviewsPage } from '@/pages/shared/ReviewsPage'
 import { SobrePage } from '@/pages/public/SobrePage'
 import { FaqPage } from '@/pages/public/FaqPage'
 import { LandingPage } from '@/pages/public/LandingPage'
+import { TicketsPage } from '@/pages/public/TicketsPage'
+import { TicketEventPage } from '@/pages/public/tickets/TicketEventPage'
 import { TermosPage } from '@/pages/public/TermosPage'
 
 import { BookingDetailPage } from '@/pages/shared/BookingDetailPage'
@@ -55,6 +57,7 @@ import {AdminWithdrawalsPage} from '@/pages/admin/AdminWithdrawalsPage'
 /** Landing para visitantes; redireciona usuários logados ao painel. */
 function HomeOrRedirect() {
   const { isAuthenticated, isLoading, user } = useAuth()
+  const { hash } = useLocation()
   if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -62,7 +65,8 @@ function HomeOrRedirect() {
       </div>
     )
   }
-  if (isAuthenticated && user) {
+  // com âncora (ex.: /#produtos, vindo do menu) mostra a landing mesmo logado
+  if (isAuthenticated && user && !hash) {
     if (!user.perfilCompleto && user.role !== 'Admin') return <Navigate to="/completar-perfil" replace />
     return <Navigate to={homePathFor(user.role)} replace />
   }
@@ -78,6 +82,9 @@ export const router = createBrowserRouter([
       { path: '/completar-perfil', element: <CompleteProfilePage /> },
       { path: '/forgot-password', element: <ForgotPasswordPage /> },
       { path: '/reset-password', element: <ResetPasswordPage /> },
+      { path: '/eventos', element: <TicketsPage /> },
+      { path: '/ingressos', element: <Navigate to="/eventos" replace /> },
+      { path: '/evento/:id', element: <TicketEventPage /> },
       { path: '/artistas', element: <ArtistsDirectoryPage /> },
       { path: '/sobre', element: <SobrePage /> },
       { path: '/faq', element: <FaqPage /> },
@@ -159,7 +166,7 @@ export const router = createBrowserRouter([
         children: [
           { path: '/admin', element: <AdminDashboardPage /> },
           { path: '/solicitacoes-anonimas', element: <GuestSolicitationPage /> },
-          { path: '/eventos', element: <BookingsAnalysisPage /> },
+          { path: '/admin/eventos', element: <BookingsAnalysisPage /> },
           { path: '/financeiro', element: <FinancialAdminPage /> },
           { path: '/usuarios', element: <UsersPage /> },
           { path: '/admin/saques', element: <AdminWithdrawalsPage /> },

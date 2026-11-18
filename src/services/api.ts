@@ -1,7 +1,8 @@
 import axios, { AxiosError, AxiosRequestConfig } from 'axios'
 
 export const API_BASE = import.meta.env.VITE_API_URL ?? '/api'
-export const API_VIACEP = import.meta.env.VITE_VIACEP_URL
+// Padrão público do ViaCEP quando VITE_VIACEP_URL não está definida no .env
+export const API_VIACEP = import.meta.env.VITE_VIACEP_URL ?? 'https://viacep.com.br/ws'
 
 export interface StoredSession {
   accessToken: string

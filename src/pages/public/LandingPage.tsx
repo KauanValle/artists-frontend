@@ -1,5 +1,5 @@
-import { Link } from 'react-router-dom'
-import { useId } from 'react'
+import { Link, useLocation } from 'react-router-dom'
+import { useEffect, useId } from 'react'
 import {
   ArrowRight,
   Calendar,
@@ -12,6 +12,7 @@ import {
   Shield,
   Smartphone,
   Star,
+  Ticket,
   TrendingUp,
   Users,
   Zap,
@@ -202,6 +203,54 @@ function FeatureCard({
   )
 }
 
+/* ─── product card ─── */
+function ProductCard({
+  title,
+  description,
+  icon: Icon,
+  highlights,
+  to,
+}: {
+  title: string
+  description: string
+  icon: React.ElementType
+  highlights: string[]
+  to?: string
+}) {
+  const card = (
+    <div className="group relative h-full">
+      <div className="absolute -inset-1 rounded-3xl bg-gradient-to-br from-violet-500/15 to-transparent opacity-0 blur-xl transition-opacity group-hover:opacity-100" />
+      <div className="relative h-full space-y-4 rounded-3xl border border-border/50 bg-card/50 p-8 backdrop-blur-sm transition-all group-hover:border-primary/30 group-hover:shadow-xl group-hover:shadow-purple-900/10">
+        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-purple-700 shadow-lg shadow-purple-500/25">
+          <Icon className="h-7 w-7 text-white" />
+        </div>
+        <h3 className="text-xl font-bold">{title}</h3>
+        <p className="text-sm leading-relaxed text-muted-foreground">{description}</p>
+        <ul className="space-y-2 pt-1">
+          {highlights.map((h) => (
+            <li key={h} className="flex items-start gap-2 text-sm">
+              <Zap className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+              <span>{h}</span>
+            </li>
+          ))}
+        </ul>
+        {to && (
+          <p className="flex items-center gap-1.5 pt-2 text-sm font-semibold text-primary">
+            Acessar <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+          </p>
+        )}
+      </div>
+    </div>
+  )
+  return to ? (
+    <Link to={to} className="block h-full">
+      {card}
+    </Link>
+  ) : (
+    card
+  )
+}
+
 /* ─── stat pill ─── */
 function StatPill({ value, label }: { value: string; label: string }) {
   return (
@@ -216,6 +265,15 @@ function StatPill({ value, label }: { value: string; label: string }) {
 
 /* ═══════════════ PAGE ═══════════════ */
 export function LandingPage() {
+  const { hash } = useLocation()
+
+  // rola até a seção quando a URL tem âncora (ex.: /#produtos)
+  useEffect(() => {
+    if (!hash) return
+    const el = document.getElementById(hash.slice(1))
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [hash])
+
   return (
     <main className="overflow-x-hidden">
       {/* ── HERO ── */}
@@ -277,6 +335,38 @@ export function LandingPage() {
           <StatPill value="300+" label="Shows realizados" />
           <StatPill value="5+" label="Cidades atendidas" />
           <StatPill value="4.9★" label="Avaliação média" />
+        </div>
+      </section>
+
+      {/* ── NOSSOS PRODUTOS ── */}
+      <section id="produtos" className="scroll-mt-16 py-20 sm:py-28">
+        <div className="mx-auto max-w-6xl px-4">
+          <div className="mx-auto max-w-2xl text-center">
+            <SectionLabel>Nossos Produtos</SectionLabel>
+            <h2 className="text-3xl font-extrabold tracking-tight sm:text-4xl">
+              Sistema de gestão de carreira para artistas{' '}
+              <GradientText>e emissor de ingressos</GradientText>
+            </h2>
+            <p className="mt-4 text-muted-foreground">
+              Ferramentas para o artista cuidar da carreira e para vender ingressos dos seus eventos.
+            </p>
+          </div>
+
+          <div className="mx-auto mt-14 grid max-w-4xl gap-6 md:grid-cols-2">
+            <ProductCard
+              icon={TrendingUp}
+              title="Sistema de gestão de carreira para artistas"
+              description="Perfil público, agenda, contratos, equipe e financeiro reunidos em um só lugar para você profissionalizar a carreira."
+              highlights={['Perfil público e EPK', 'Agenda e propostas', 'Contratos e painel financeiro']}
+            />
+            <ProductCard
+              icon={Ticket}
+              title="Emissor de ingressos"
+              to="/eventos"
+              description="Emita e venda ingressos dos seus shows e eventos, com controle simples das vendas."
+              highlights={['Emissão de ingressos para eventos', 'Controle de vendas', 'Integrado à sua carreira']}
+            />
+          </div>
         </div>
       </section>
 
