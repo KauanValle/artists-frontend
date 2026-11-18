@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
-import { CalendarDays, Copy, ExternalLink, Loader2, MapPin, PlusCircle, Ticket, Trash2, User } from 'lucide-react'
+import { CalendarDays, Copy, ExternalLink, Loader2, MapPin, PlusCircle, Settings2, Ticket, Trash2, User } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/button'
 import { cn, formatDate, formatMoney, formatTime } from '@/lib/utils'
@@ -145,7 +145,8 @@ export function TicketsPanel() {
                     variant="ghost"
                     size="sm"
                     aria-label={`Remover ${ev.name}`}
-                    disabled={remove.isPending}
+                    disabled={remove.isPending || (ev.tickets ?? []).some((t) => t.sold > 0)}
+                    title={(ev.tickets ?? []).some((t) => t.sold > 0) ? 'Eventos com ingressos vendidos não podem ser removidos' : undefined}
                     onClick={() => handleRemove(ev.id, ev.name)}
                   >
                     <Trash2 className="h-4 w-4" />
@@ -174,6 +175,11 @@ export function TicketsPanel() {
                   <Button asChild size="sm" variant="outline" className="gap-2">
                     <Link to={`/evento/${ev.id}`}>
                       <ExternalLink className="h-4 w-4" /> Ver página
+                    </Link>
+                  </Button>
+                  <Button asChild size="sm" className="gap-2">
+                    <Link to={`/eventos/${ev.id}/gerenciar`}>
+                      <Settings2 className="h-4 w-4" /> Gerenciar
                     </Link>
                   </Button>
                   <Button size="sm" variant="ghost" className="gap-2" onClick={() => void copyLink(ev.id)}>

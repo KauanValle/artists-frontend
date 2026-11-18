@@ -45,6 +45,8 @@ import { LandingPage } from '@/pages/public/LandingPage'
 import { TicketsPage } from '@/pages/public/TicketsPage'
 import { TicketEventPage } from '@/pages/public/tickets/TicketEventPage'
 import { TrackOrdersPage } from '@/pages/public/tickets/TrackOrdersPage'
+import { TicketEventManagePage } from '@/pages/public/tickets/TicketEventManagePage'
+import { GatePage } from '@/pages/public/GatePage'
 import { TermosPage } from '@/pages/public/TermosPage'
 
 import { BookingDetailPage } from '@/pages/shared/BookingDetailPage'
@@ -75,6 +77,8 @@ function HomeOrRedirect() {
 }
 
 export const router = createBrowserRouter([
+  // Portaria: tela própria (sem header do site), pensada para o celular de quem lê os ingressos.
+  { path: '/portaria', element: <GatePage /> },
   {
     element: <PublicLayout />,
     children: [
@@ -87,6 +91,7 @@ export const router = createBrowserRouter([
       { path: '/ingressos', element: <Navigate to="/eventos" replace /> },
       { path: '/evento/:id', element: <TicketEventPage /> },
       { path: '/acompanhar-pedidos', element: <TrackOrdersPage /> },
+      { path: '/eventos/:id/gerenciar', element: <TicketEventManagePage /> },
       { path: '/artistas', element: <ArtistsDirectoryPage /> },
       { path: '/sobre', element: <SobrePage /> },
       { path: '/faq', element: <FaqPage /> },

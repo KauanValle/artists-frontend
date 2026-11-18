@@ -490,6 +490,26 @@ export interface TicketOrderSummary {
   createdAt: string
   paidAt: string | null
   checkoutUrl: string | null
+  eventEndDate: string
+  eventEndTime: string
+  street: string
+  number: string
+  complement: string
+  neighborhood: string
+  cep: string
+  producerName: string
+  buyerName: string
+  buyerEmail: string
+  buyerPhone: string
+  buyerCpf: string
+  /** Ingressos individuais (código do QR code) — só em pedidos pagos. */
+  tickets: IssuedTicket[]
+}
+
+export interface IssuedTicket {
+  sequence: number
+  code: string
+  checkedInAt: string | null
 }
 
 export interface TicketReturn {
@@ -510,4 +530,113 @@ export const ticketOrdersApi = {
   /** Compra pública (sem login): registra o pedido e reserva os ingressos. */
   create: (eventId: string, payload: CreateTicketOrderPayload) =>
     api.post<TicketOrder>(`/public/ticket-events/${eventId}/orders`, payload),
+}
+
+// ── Painel do produtor / check-in ──
+
+export interface TicketTypeStats {
+  ticketId: string
+  title: string
+  quantity: number
+  sold: number
+  reserved: number
+  available: number
+  checkedIn: number
+  buyerPrice: number
+  receiveAmount: number
+  grossRevenue: number
+  netRevenue: number
+}
+
+export interface TicketEventStats {
+  eventId: string
+  name: string
+  totalCapacity: number
+  totalSold: number
+  totalReserved: number
+  totalCheckedIn: number
+  pendingOrders: number
+  grossRevenue: number
+  netRevenue: number
+  types: TicketTypeStats[]
+}
+
+export interface EventOrder {
+  id: string
+  buyerName: string
+  buyerEmail: string
+  buyerPhone: string
+  buyerCpf: string
+  ticketTitle: string
+  quantity: number
+  totalAmount: number
+  status: string
+  expired: boolean
+  createdAt: string
+  paidAt: string | null
+  checkedIn: number
+}
+
+export interface CheckInLog {
+  ticketId: string
+  code: string
+  ticketTitle: string
+  buyerName: string
+  sequence: number
+  quantity: number
+  checkedInAt: string
+  checkedInBy: string
+}
+
+export type CheckInStatus = 'Valid' | 'AlreadyUsed' | 'WrongEvent' | 'NotFound' | 'Cancelled'
+
+export interface CheckInResult {
+  status: CheckInStatus
+  message: string
+  ticketTitle: string | null
+  buyerName: string | null
+  sequence: number | null
+  quantity: number | null
+  checkedInAt: string | null
+  checkedInBy: string | null
+  enteredCount: number
+  totalSold: number
+}
+
+export interface GateAccess {
+  id: string
+  name: string
+  code: string
+  createdAt: string
+  revokedAt: string | null
+  checkIns: number
+}
+
+export interface GateSession {
+  eventId: string
+  eventName: string
+  gateName: string
+  startDate: string
+  startTime: string
+  venue: string
+  enteredCount: number
+  totalSold: number
+}
+
+export const ticketManagementApi = {
+  stats: (eventId: string) => api.get<TicketEventStats>(`/ticket-events/${eventId}/stats`),
+  orders: (eventId: string) => api.get<EventOrder[]>(`/ticket-events/${eventId}/orders`),
+  checkIn: (eventId: string, code: string) => api.post<CheckInResult>(`/ticket-events/${eventId}/check-in`, { code }),
+  checkIns: (eventId: string) => api.get<CheckInLog[]>(`/ticket-events/${eventId}/check-ins`),
+  undoCheckIn: (eventId: string, ticketId: string) => api.post(`/ticket-events/${eventId}/check-ins/${ticketId}/undo`),
+  gates: (eventId: string) => api.get<GateAccess[]>(`/ticket-events/${eventId}/gates`),
+  createGate: (eventId: string, name: string) => api.post<GateAccess>(`/ticket-events/${eventId}/gates`, { name }),
+  revokeGate: (eventId: string, gateId: string) => api.delete(`/ticket-events/${eventId}/gates/${gateId}`),
+}
+
+/** Portaria: sem login, identificada pelo código do acesso. */
+export const gateApi = {
+  open: (code: string) => api.post<GateSession>('/public/gate/session', { code }),
+  checkIn: (gateCode: string, ticketCode: string) =>
+    api.post<CheckInResult>('/public/gate/check-in', { gateCode, ticketCode }),
 }
