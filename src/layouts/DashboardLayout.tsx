@@ -190,7 +190,7 @@ function SidebarContent({
   return (
     <>
       <div className="flex h-16 items-center gap-2 border-b px-5">
-        <Link to="/"><BrandMark /></Link>
+        <Link to="/#home"><BrandMark /></Link>
       </div>
       <nav className="flex-1 space-y-1 overflow-y-auto p-3">
         {nav.map((item) => (
@@ -407,7 +407,7 @@ export function DashboardLayout() {
       <div className="flex min-h-screen flex-col lg:pl-60">
         <header className="sticky top-0 z-30 flex h-14 lg:h-16 items-center justify-between gap-2 border-b bg-background/95 px-4 backdrop-blur lg:justify-end lg:px-6">
           <div className="flex items-center gap-2 lg:hidden">
-            <Link to="/"><BrandMark /></Link>
+            <Link to="/#home"><BrandMark /></Link>
           </div>
           <div className="flex items-center gap-1">
             <ThemeToggle />
