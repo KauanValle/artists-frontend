@@ -492,7 +492,15 @@ export interface TicketOrderSummary {
   checkoutUrl: string | null
 }
 
+export interface TicketReturn {
+  found: boolean
+  paid: boolean
+}
+
 export const ticketOrdersApi = {
+  /** Volta do checkout: confere o pagamento do pedido direto no InfinityPay. */
+  verify: (payload: { orderNsu: string; transactionNsu?: string | null; slug?: string | null }) =>
+    api.post<TicketReturn>('/public/ticket-orders/verify', payload),
   /** Pedidos do comprador (CPF + telefone). */
   lookup: (payload: { cpf: string; phone: string }) =>
     api.post<TicketOrderSummary[]>('/public/ticket-orders/lookup', payload),
