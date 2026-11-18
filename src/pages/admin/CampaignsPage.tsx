@@ -213,14 +213,7 @@ export function CampaignsPage() {
               <Input
                 required
                 value={form.name}
-                onChange={(e) => {
-                  const name = e.target.value
-                  setForm((f) => ({
-                    ...f,
-                    name,
-                    slug: editingId ? f.slug : slugify(name),
-                  }))
-                }}
+                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                 placeholder="Ex: Sorteio de Ingressos"
               />
             </div>
