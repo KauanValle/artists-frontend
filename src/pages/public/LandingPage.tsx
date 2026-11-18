@@ -14,7 +14,7 @@ import {
   Star,
   TrendingUp,
   Users,
-  Ticket,
+  TicketCheck,
   Zap,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -344,7 +344,7 @@ export function LandingPage() {
               <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-cyan-600/5 opacity-0 transition-opacity group-hover:opacity-100" />
               <div className="relative p-8">
                 <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-600 shadow-lg shadow-blue-500/25">
-                  <Ticket className="h-7 w-7 text-white" />
+                  <TicketCheck className="h-7 w-7 text-white" />
                 </div>
                 <h3 className="text-xl font-extrabold sm:text-2xl">
                   Emissor de ingressos
