@@ -84,7 +84,7 @@ export function TicketsPanel() {
     <section className="mx-auto max-w-3xl space-y-6 px-4 py-10 sm:py-14">
       <div>
         <span className="mb-2 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-primary">
-          <Ticket className="h-3.5 w-3.5" /> Emissor de ingressos
+          <Ticket className="h-3.5 w-3.5" /> Criador de eventos
         </span>
         <h1 className="text-3xl font-extrabold tracking-tight">Painel de eventos</h1>
         <p className="mt-1 text-sm text-muted-foreground">Olá, {user?.displayName}. Crie e acompanhe seus eventos.</p>

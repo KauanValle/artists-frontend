@@ -1,4 +1,5 @@
 import type { TicketOrderSummary } from '@/services'
+import logoUrl from '@/assets/images/reprissa-logo.png'
 import { formatDate, formatMoney, formatTime } from '@/lib/utils'
 
 const VIOLET: [number, number, number] = [124, 58, 237]
@@ -18,6 +19,21 @@ export function formatTicketCode(code: string): string {
   return code.replace(/(.{4})(?=.)/g, '$1-')
 }
 
+/** Carrega a logo (PNG branco, fundo transparente) como data URL para o jsPDF. */
+async function loadLogo(): Promise<string | null> {
+  try {
+    const blob = await (await fetch(logoUrl)).blob()
+    return await new Promise<string>((resolve, reject) => {
+      const r = new FileReader()
+      r.onload = () => resolve(String(r.result))
+      r.onerror = () => reject(r.error)
+      r.readAsDataURL(blob)
+    })
+  } catch {
+    return null
+  }
+}
+
 /**
  * Gera o PDF do ingresso (uma página por ingresso do pedido) e dispara o download.
  * Cada ingresso tem um código secreto próprio; o QR code contém só esse código e é lido na portaria.
@@ -25,6 +41,7 @@ export function formatTicketCode(code: string): string {
 export async function downloadTicketPdf(order: TicketOrderSummary): Promise<void> {
   if (order.tickets.length < order.quantity) throw new Error('Os ingressos deste pedido ainda não foram emitidos.')
   const [{ jsPDF }, QRCode] = await Promise.all([import('jspdf'), import('qrcode')])
+  const logo = await loadLogo()
   const doc = new jsPDF({ unit: 'mm', format: 'a4' })
   const W = 210
   const M = 16
@@ -73,11 +90,15 @@ export async function downloadTicketPdf(order: TicketOrderSummary): Promise<void
     // Cabeçalho
     doc.setFillColor(...DARK)
     doc.rect(0, 0, W, 38, 'F')
-    drawLogo(M, 8, 22)
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(22)
-    doc.setTextColor(255, 255, 255)
-    doc.text('reprissa', M + 27, 22)
+    if (logo) {
+      doc.addImage(logo, 'PNG', M - 2, 11.5, 60, 15) // proporção original 683x171
+    } else {
+      drawLogo(M, 8, 22)
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(22)
+      doc.setTextColor(255, 255, 255)
+      doc.text('reprissa', M + 27, 22)
+    }
     doc.setFontSize(10)
     doc.setTextColor(...VIOLET_LIGHT)
     doc.text('INGRESSO', W - M, 18, { align: 'right' })

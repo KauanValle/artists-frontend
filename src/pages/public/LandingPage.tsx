@@ -371,7 +371,7 @@ export function LandingPage() {
       </section>
 
       {/* ── PARA ARTISTAS ── */}
-      <section className="py-20 sm:py-28">
+      <section id="para-artistas" className="scroll-mt-4 py-20 sm:py-28">
         <div className="mx-auto max-w-6xl px-4">
           <div className="mx-auto max-w-2xl text-center">
             <SectionLabel>Para Artistas</SectionLabel>
@@ -420,7 +420,7 @@ export function LandingPage() {
       </section>
 
       {/* ── PARA CONTRATANTES ── */}
-      <section className="border-y border-border/30 bg-gradient-to-b from-card/40 to-background py-20 sm:py-28">
+      <section id="para-contratantes"  className="border-y border-border/30 bg-gradient-to-b from-card/40 to-background py-20 sm:py-28">
         <div className="mx-auto max-w-6xl px-4">
           <div className="mx-auto max-w-2xl text-center">
             <SectionLabel>Para Contratantes</SectionLabel>
@@ -469,7 +469,7 @@ export function LandingPage() {
       </section>
 
       {/* ── COMO FUNCIONA ── */}
-      <section className="py-20 sm:py-28">
+      <section id="como-funciona"  className="py-20 sm:py-28">
         <div className="mx-auto max-w-6xl px-4">
           <div className="mx-auto max-w-2xl text-center">
             <SectionLabel>Como funciona</SectionLabel>
