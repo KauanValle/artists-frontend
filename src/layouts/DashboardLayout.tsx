@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
     BadgeCheck,
     Ban,
@@ -153,7 +153,7 @@ const artistTutorialSteps: TutorialStep[] = [
 const adminNav = [
     { to: '/admin', label: 'Painel', icon: LayoutDashboard },
     { to: '/solicitacoes-anonimas', label: 'Solicitações Anonimas', icon: GlassesIcon },
-    { to: '/eventos', label: 'Eventos', icon: MicIcon},
+    { to: '/admin/eventos', label: 'Eventos', icon: MicIcon},
     { to: '/financeiro', label: 'Financeiro', icon: DollarSignIcon},
     { to: '/usuarios', label: 'Usuarios', icon: PersonStandingIcon},
     { to: '/admin/saques', label: 'Solicitações de Saque', icon: Wallet },
@@ -190,13 +190,14 @@ function SidebarContent({
   return (
     <>
       <div className="flex h-16 items-center gap-2 border-b px-5">
-        <BrandMark />
+        <Link to="/"><BrandMark /></Link>
       </div>
       <nav className="flex-1 space-y-1 overflow-y-auto p-3">
         {nav.map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
+            end={item.to === '/admin'}
             onClick={onNavigate}
             className={({ isActive }) =>
               cn(
@@ -265,7 +266,7 @@ const contractorBottomTabs = [
 const adminBottomTabs = [
   { to: '/admin', label: 'Painel', icon: LayoutDashboard },
   { to: '/solicitacoes-anonimas', label: 'Solicitações', icon: GlassesIcon },
-  { to: '/eventos', label: 'Eventos', icon: MicIcon },
+  { to: '/admin/eventos', label: 'Eventos', icon: MicIcon },
   { to: '/financeiro', label: 'Financeiro', icon: DollarSignIcon },
 ]
 
@@ -277,13 +278,15 @@ function BottomTabBar({
   onMoreClick: () => void
 }) {
   const location = useLocation()
-  const moreActive = !tabs.some((t) => location.pathname.startsWith(t.to))
+  // '/admin' só é a aba ativa na própria raiz (senão ficaria ativa em /admin/eventos, /admin/saques...)
+  const matches = (to: string) => (to === '/admin' ? location.pathname === '/admin' : location.pathname.startsWith(to))
+  const moreActive = !tabs.some((t) => matches(t.to))
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t bg-background pb-[env(safe-area-inset-bottom)] lg:hidden">
       <div className="flex h-14 items-stretch">
         {tabs.map((item) => {
-          const active = location.pathname.startsWith(item.to)
+          const active = matches(item.to)
           return (
             <NavLink
               key={item.to}
@@ -404,7 +407,7 @@ export function DashboardLayout() {
       <div className="flex min-h-screen flex-col lg:pl-60">
         <header className="sticky top-0 z-30 flex h-14 lg:h-16 items-center justify-between gap-2 border-b bg-background/95 px-4 backdrop-blur lg:justify-end lg:px-6">
           <div className="flex items-center gap-2 lg:hidden">
-            <BrandMark />
+            <Link to="/"><BrandMark /></Link>
           </div>
           <div className="flex items-center gap-1">
             <ThemeToggle />

@@ -1,5 +1,5 @@
-import { Link } from 'react-router-dom'
-import { useId } from 'react'
+import { Link, useLocation } from 'react-router-dom'
+import { useEffect, useId } from 'react'
 import {
   ArrowRight,
   Calendar,
@@ -12,6 +12,7 @@ import {
   Shield,
   Smartphone,
   Star,
+  Ticket,
   TrendingUp,
   Users,
   TicketCheck,
@@ -203,6 +204,54 @@ function FeatureCard({
   )
 }
 
+/* ─── product card ─── */
+function ProductCard({
+  title,
+  description,
+  icon: Icon,
+  highlights,
+  to,
+}: {
+  title: string
+  description: string
+  icon: React.ElementType
+  highlights: string[]
+  to?: string
+}) {
+  const card = (
+    <div className="group relative h-full">
+      <div className="absolute -inset-1 rounded-3xl bg-gradient-to-br from-violet-500/15 to-transparent opacity-0 blur-xl transition-opacity group-hover:opacity-100" />
+      <div className="relative h-full space-y-4 rounded-3xl border border-border/50 bg-card/50 p-8 backdrop-blur-sm transition-all group-hover:border-primary/30 group-hover:shadow-xl group-hover:shadow-purple-900/10">
+        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-purple-700 shadow-lg shadow-purple-500/25">
+          <Icon className="h-7 w-7 text-white" />
+        </div>
+        <h3 className="text-xl font-bold">{title}</h3>
+        <p className="text-sm leading-relaxed text-muted-foreground">{description}</p>
+        <ul className="space-y-2 pt-1">
+          {highlights.map((h) => (
+            <li key={h} className="flex items-start gap-2 text-sm">
+              <Zap className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+              <span>{h}</span>
+            </li>
+          ))}
+        </ul>
+        {to && (
+          <p className="flex items-center gap-1.5 pt-2 text-sm font-semibold text-primary">
+            Acessar <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+          </p>
+        )}
+      </div>
+    </div>
+  )
+  return to ? (
+    <Link to={to} className="block h-full">
+      {card}
+    </Link>
+  ) : (
+    card
+  )
+}
+
 /* ─── stat pill ─── */
 function StatPill({ value, label }: { value: string; label: string }) {
   return (
@@ -217,6 +266,15 @@ function StatPill({ value, label }: { value: string; label: string }) {
 
 /* ═══════════════ PAGE ═══════════════ */
 export function LandingPage() {
+  const { hash } = useLocation()
+
+  // rola até a seção quando a URL tem âncora (ex.: /#produtos)
+  useEffect(() => {
+    if (!hash) return
+    const el = document.getElementById(hash.slice(1))
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [hash])
+
   return (
     <main className="overflow-x-hidden">
       {/* ── HERO ── */}
@@ -281,109 +339,40 @@ export function LandingPage() {
         </div>
       </section>
 
-
       {/* ── NOSSOS PRODUTOS ── */}
-      <section id="produtos" className="py-20 sm:py-28">
+      <section id="produtos" className="scroll-mt-16 py-20 sm:py-28">
         <div className="mx-auto max-w-6xl px-4">
           <div className="mx-auto max-w-2xl text-center">
             <SectionLabel>Nossos Produtos</SectionLabel>
             <h2 className="text-3xl font-extrabold tracking-tight sm:text-4xl">
-              Soluções completas para o{' '}
-              <GradientText>mundo da música</GradientText>
+              Sistema de gestão de carreira para artistas{' '}
+              <GradientText>e emissor de ingressos</GradientText>
             </h2>
             <p className="mt-4 text-muted-foreground">
-              Ferramentas profissionais pensadas para artistas e produtores de eventos.
+              Ferramentas para o artista cuidar da carreira e para vender ingressos dos seus eventos.
             </p>
           </div>
 
-          <div className="mt-14 grid gap-8 md:grid-cols-2">
-            {/* Produto 1 — Gestão de carreira */}
-            <div className="group relative overflow-hidden rounded-2xl border border-border/50 bg-card/40 backdrop-blur-sm transition-all hover:border-primary/30 hover:shadow-xl hover:shadow-purple-900/10">
-              <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 via-transparent to-purple-600/5 opacity-0 transition-opacity group-hover:opacity-100" />
-              <div className="relative p-8">
-                <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-purple-700 shadow-lg shadow-purple-500/25">
-                  <Music className="h-7 w-7 text-white" />
-                </div>
-                <h3 className="text-xl font-extrabold sm:text-2xl">
-                  Sistema de gestão de carreira para artistas
-                </h3>
-                <p className="mt-3 leading-relaxed text-muted-foreground">
-                  Plataforma completa para artistas gerenciarem sua carreira: perfil profissional, agenda inteligente, 
-                  contratos digitais, painel financeiro, EPK digital e muito mais. Tudo em um só lugar para 
-                  você focar no que mais importa — sua arte.
-                </p>
-                <ul className="mt-5 space-y-2">
-                  {[
-                    'Perfil público e EPK digital',
-                    'Agenda com bloqueio automático',
-                    'Contratos e pagamentos integrados',
-                    'Dashboard financeiro completo',
-                    'Avaliações e reputação',
-                    'Link de indicação',
-                  ].map((item) => (
-                    <li key={item} className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/10">
-                        <ArrowRight className="h-3 w-3 text-emerald-500" />
-                      </div>
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-                <div className="mt-6">
-                  <Button size="lg" className="gap-2 rounded-xl px-6 shadow-lg shadow-purple-500/25" asChild>
-                    <Link to="/register">
-                      Começar grátis <ArrowRight className="h-4 w-4" />
-                    </Link>
-                  </Button>
-                </div>
-              </div>
-            </div>
-
-            {/* Produto 2 — Emissor de ingressos */}
-            <div className="group relative overflow-hidden rounded-2xl border border-border/50 bg-card/40 backdrop-blur-sm transition-all hover:border-primary/30 hover:shadow-xl hover:shadow-purple-900/10">
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-cyan-600/5 opacity-0 transition-opacity group-hover:opacity-100" />
-              <div className="relative p-8">
-                <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-600 shadow-lg shadow-blue-500/25">
-                  <TicketCheck className="h-7 w-7 text-white" />
-                </div>
-                <h3 className="text-xl font-extrabold sm:text-2xl">
-                  Emissor de ingressos
-                </h3>
-                <p className="mt-3 leading-relaxed text-muted-foreground">
-                  Venda ingressos para seus shows e eventos diretamente pela plataforma. 
-                  Sistema completo de emissão, controle de entrada e gestão de público, 
-                  integrado ao seu perfil de artista.
-                </p>
-                <ul className="mt-5 space-y-2">
-                  {[
-                    'Criação e venda de ingressos online',
-                    'QR Code para controle de entrada',
-                    'Gestão de lotes e preços',
-                    'Relatórios de vendas em tempo real',
-                    'Integrado ao perfil do artista',
-                    'Pagamento seguro via plataforma',
-                  ].map((item) => (
-                    <li key={item} className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/10">
-                        <ArrowRight className="h-3 w-3 text-emerald-500" />
-                      </div>
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-                <div className="mt-6">
-                  <span className="inline-flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-sm font-semibold text-amber-500">
-                    <Zap className="h-4 w-4" /> Em breve
-                  </span>
-                </div>
-              </div>
-            </div>
+          <div className="mx-auto mt-14 grid max-w-4xl gap-6 md:grid-cols-2">
+            <ProductCard
+              icon={TrendingUp}
+              title="Sistema de gestão de carreira para artistas"
+              description="Perfil público, agenda, contratos, equipe e financeiro reunidos em um só lugar para você profissionalizar a carreira."
+              highlights={['Perfil público e EPK', 'Agenda e propostas', 'Contratos e painel financeiro']}
+            />
+            <ProductCard
+              icon={Ticket}
+              title="Emissor de ingressos"
+              to="/eventos"
+              description="Emita e venda ingressos dos seus shows e eventos, com controle simples das vendas."
+              highlights={['Emissão de ingressos para eventos', 'Controle de vendas', 'Integrado à sua carreira']}
+            />
           </div>
         </div>
       </section>
 
       {/* ── PARA ARTISTAS ── */}
-      <section className="py-20 sm:py-28">
+      <section id="para-artistas" className="scroll-mt-4 py-20 sm:py-28">
         <div className="mx-auto max-w-6xl px-4">
           <div className="mx-auto max-w-2xl text-center">
             <SectionLabel>Para Artistas</SectionLabel>
@@ -432,7 +421,7 @@ export function LandingPage() {
       </section>
 
       {/* ── PARA CONTRATANTES ── */}
-      <section className="border-y border-border/30 bg-gradient-to-b from-card/40 to-background py-20 sm:py-28">
+      <section id="para-contratantes"  className="border-y border-border/30 bg-gradient-to-b from-card/40 to-background py-20 sm:py-28">
         <div className="mx-auto max-w-6xl px-4">
           <div className="mx-auto max-w-2xl text-center">
             <SectionLabel>Para Contratantes</SectionLabel>
@@ -481,7 +470,7 @@ export function LandingPage() {
       </section>
 
       {/* ── COMO FUNCIONA ── */}
-      <section className="py-20 sm:py-28">
+      <section id="como-funciona"  className="py-20 sm:py-28">
         <div className="mx-auto max-w-6xl px-4">
           <div className="mx-auto max-w-2xl text-center">
             <SectionLabel>Como funciona</SectionLabel>
