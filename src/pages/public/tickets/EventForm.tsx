@@ -27,7 +27,7 @@ const schema = z
     endDate: z.string().min(1, 'Informe a data de término'),
     endTime: z.string().min(1, 'Informe o horário de término'),
     description: z.string().trim().min(10, 'Descreva o evento (mínimo de 10 caracteres)').max(2000, 'Máximo de 2000 caracteres'),
-    addressTbd: z.boolean().default(false),
+    addressTbd: z.boolean(),
     cep: z.string(),
     venue: z.string().trim(),
     street: z.string().trim(),
@@ -63,7 +63,7 @@ const schema = z
 export type EventFormData = z.infer<typeof schema>
 
 /** Dados do formulário + ingressos criados na modal. */
-export type EventSubmitData = EventFormData & { tickets: SaveEventTicketPayload[] }
+export type EventSubmitData = Omit<EventFormData, 'addressTbd'> & { tickets: SaveEventTicketPayload[] }
 
 const MAX_IMAGE_MB = 10
 const ALLOWED_IMAGES = ['image/jpeg', 'image/png', 'image/webp']
@@ -230,7 +230,7 @@ export function EventForm({
   const shownImage = preview
 
   return (
-    <form onSubmit={handleSubmit(({ addressTbd: _, ...data }) => onSubmit({ ...data, tickets }))} className="space-y-6" noValidate>
+    <form onSubmit={handleSubmit((data) => { const { addressTbd: _, ...rest } = data; onSubmit({ ...rest, tickets }); })} className="space-y-6" noValidate>
       {/* ── Informações do evento ── */}
       <Section title="Informações do evento">
         <div className="space-y-1.5">
