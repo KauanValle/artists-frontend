@@ -325,6 +325,9 @@ export const brandingApi = {
   getTaxaAdministrativa: () => api.get<{ percentual: number }>('/admin/taxa'),
   saveTaxaAdministrativa: (percentual: number) =>
     api.put<{ percentual: number }>('/admin/taxa', { percentual }),
+  getTaxaIngressos: () => api.get<{ percentual: number }>('/admin/taxa/ingressos'),
+  saveTaxaIngressos: (percentual: number) =>
+    api.put<{ percentual: number }>('/admin/taxa/ingressos', { percentual }),
   uploadLogo: (file: File) => {
     const form = new FormData()
     form.append('file', file)

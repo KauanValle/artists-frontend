@@ -11,6 +11,7 @@ import { bookingsApi } from '@/services'
 import { Link } from 'react-router-dom'
 import { BookingStatusBadge, EmptyState, eventTypeLabel } from '@/components/badges'
 import { TaxaAdministrativaCard } from '@/pages/admin/TaxaAdministrativaCard'
+import { TaxaIngressosCard } from '@/pages/admin/TaxaIngressosCard'
 import { formatDate, formatMoney, formatTime } from '@/lib/utils'
 import type { Booking } from '@/types'
 import {StatCard} from "@/pages/artist/ArtistDashboardPage.tsx";
@@ -42,6 +43,7 @@ export function AdminDashboardPage() {
       </Card>
 
       <TaxaAdministrativaCard />
+      <TaxaIngressosCard />
 
       <TotalBookingsSection />
     </div>
