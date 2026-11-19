@@ -138,7 +138,7 @@ function EventCard({ event: ev, past }: { event: TicketEvent; past?: boolean }) 
           </p>
           <p className="flex items-center gap-2">
             <MapPin className="h-3.5 w-3.5 shrink-0 text-primary" />
-            <span className="truncate">{ev.venue} · {ev.city}/{ev.state}</span>
+            <span className="truncate">{ev.venue === 'A definir' ? 'Endereço a definir' : `${ev.venue} · ${ev.city}/${ev.state}`}</span>
           </p>
           <p className="flex items-center gap-2">
             <User className="h-3.5 w-3.5 shrink-0 text-primary" />

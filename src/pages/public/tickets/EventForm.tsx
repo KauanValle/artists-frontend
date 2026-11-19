@@ -3,7 +3,7 @@ import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
-import { ImagePlus, Loader2, Pencil, Plus, Ticket, Trash2 } from 'lucide-react'
+import { ImagePlus, Loader2, MapPinOff, Pencil, Plus, Ticket, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -11,9 +11,11 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { uploadsApi, viaCepApi, type SaveEventTicketPayload } from '@/services'
 import { extractApiError } from '@/services/api'
-import { formatDate, formatMoney, toDateInput } from '@/lib/utils'
+import { cn, formatDate, formatMoney, toDateInput } from '@/lib/utils'
 import { EVENT_CATEGORIES } from './eventStore'
 import { calcBuyerPrice, TicketModal, useTicketFee } from './TicketModal'
+
+const TBD = 'A definir'
 
 const schema = z
   .object({
@@ -25,14 +27,15 @@ const schema = z
     endDate: z.string().min(1, 'Informe a data de término'),
     endTime: z.string().min(1, 'Informe o horário de término'),
     description: z.string().trim().min(10, 'Descreva o evento (mínimo de 10 caracteres)').max(2000, 'Máximo de 2000 caracteres'),
-    cep: z.string().refine((v) => v.replace(/\D/g, '').length === 8, 'CEP inválido'),
-    venue: z.string().trim().min(2, 'Informe o nome do local'),
-    street: z.string().trim().min(2, 'Informe a rua'),
-    number: z.string().trim().min(1, 'Informe o número'),
+    addressTbd: z.boolean().default(false),
+    cep: z.string(),
+    venue: z.string().trim(),
+    street: z.string().trim(),
+    number: z.string().trim(),
     complement: z.string().trim().optional(),
-    neighborhood: z.string().trim().min(2, 'Informe o bairro'),
-    city: z.string().trim().min(2, 'Informe a cidade'),
-    state: z.string().trim().length(2, 'UF com 2 letras'),
+    neighborhood: z.string().trim(),
+    city: z.string().trim(),
+    state: z.string().trim(),
     producerName: z.string().trim().min(2, 'Informe o nome do produtor'),
     producerDescription: z.string().trim().min(10, 'Descreva o produtor (mínimo de 10 caracteres)').max(1000, 'Máximo de 1000 caracteres'),
   })
@@ -44,6 +47,16 @@ const schema = z
       if (`${d.endDate}T${d.endTime}` <= `${d.startDate}T${d.startTime}`) {
         ctx.addIssue({ code: 'custom', path: ['endDate'], message: 'O término deve ser depois do início' })
       }
+    }
+    // Validação de endereço apenas quando não é "a definir"
+    if (!d.addressTbd) {
+      if (d.cep.replace(/\D/g, '').length !== 8) ctx.addIssue({ code: 'custom', path: ['cep'], message: 'CEP inválido' })
+      if (d.venue.length < 2) ctx.addIssue({ code: 'custom', path: ['venue'], message: 'Informe o nome do local' })
+      if (d.street.length < 2) ctx.addIssue({ code: 'custom', path: ['street'], message: 'Informe a rua' })
+      if (d.number.length < 1) ctx.addIssue({ code: 'custom', path: ['number'], message: 'Informe o número' })
+      if (d.neighborhood.length < 2) ctx.addIssue({ code: 'custom', path: ['neighborhood'], message: 'Informe o bairro' })
+      if (d.city.length < 2) ctx.addIssue({ code: 'custom', path: ['city'], message: 'Informe a cidade' })
+      if (d.state.length !== 2) ctx.addIssue({ code: 'custom', path: ['state'], message: 'UF com 2 letras' })
     }
   })
 
@@ -96,6 +109,7 @@ export function EventForm({
       endDate: '',
       endTime: '',
       description: '',
+      addressTbd: false,
       cep: '',
       venue: '',
       street: '',
@@ -113,6 +127,30 @@ export function EventForm({
   const [preview, setPreview] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
   const [cepLoading, setCepLoading] = useState(false)
+  const addressTbd = watch('addressTbd')
+
+  const toggleAddressTbd = (checked: boolean) => {
+    setValue('addressTbd', checked)
+    if (checked) {
+      setValue('cep', '00000-000', { shouldValidate: true })
+      setValue('venue', TBD, { shouldValidate: true })
+      setValue('street', TBD, { shouldValidate: true })
+      setValue('number', TBD, { shouldValidate: true })
+      setValue('complement', '')
+      setValue('neighborhood', TBD, { shouldValidate: true })
+      setValue('city', TBD, { shouldValidate: true })
+      setValue('state', 'TD', { shouldValidate: true })
+    } else {
+      setValue('cep', '', { shouldValidate: false })
+      setValue('venue', '', { shouldValidate: false })
+      setValue('street', '', { shouldValidate: false })
+      setValue('number', '', { shouldValidate: false })
+      setValue('complement', '')
+      setValue('neighborhood', '', { shouldValidate: false })
+      setValue('city', '', { shouldValidate: false })
+      setValue('state', '', { shouldValidate: false })
+    }
+  }
   const [ticketModalOpen, setTicketModalOpen] = useState(false)
   const [tickets, setTickets] = useState<SaveEventTicketPayload[]>([])
   const [editingIndex, setEditingIndex] = useState<number | null>(null)
@@ -192,7 +230,7 @@ export function EventForm({
   const shownImage = preview
 
   return (
-    <form onSubmit={handleSubmit((data) => onSubmit({ ...data, tickets }))} className="space-y-6" noValidate>
+    <form onSubmit={handleSubmit(({ addressTbd: _, ...data }) => onSubmit({ ...data, tickets }))} className="space-y-6" noValidate>
       {/* ── Informações do evento ── */}
       <Section title="Informações do evento">
         <div className="space-y-1.5">
@@ -306,80 +344,103 @@ export function EventForm({
 
       {/* ── Local ── */}
       <Section title="Local do evento" description="Informe o CEP para preencher o endereço automaticamente.">
-        <div className="grid gap-4 sm:grid-cols-3">
-          <div className="space-y-1.5">
-            <Label htmlFor="ev-cep">CEP</Label>
-            <div className="relative">
-              <Input
-                id="ev-cep"
-                inputMode="numeric"
-                placeholder="00000-000"
-                maxLength={9}
-                {...register('cep', {
-                  onChange: (e) => {
-                    const d = e.target.value.replace(/\D/g, '').slice(0, 8)
-                    e.target.value = d.length > 5 ? `${d.slice(0, 5)}-${d.slice(5)}` : d
-                    if (d.length === 8) void lookupCep(d)
-                  },
-                })}
-              />
-              {cepLoading && <Loader2 className="absolute right-3 top-2.5 h-4 w-4 animate-spin text-muted-foreground" />}
+        <button
+          type="button"
+          onClick={() => toggleAddressTbd(!addressTbd)}
+          className={cn(
+            'inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-colors',
+            addressTbd
+              ? 'border-primary/40 bg-primary/10 text-primary'
+              : 'border-border/50 text-muted-foreground hover:bg-accent hover:text-foreground'
+          )}
+        >
+          <MapPinOff className="h-4 w-4" />
+          Endereço a definir
+        </button>
+
+        {addressTbd ? (
+          <p className="rounded-xl border border-dashed border-border/60 p-4 text-center text-sm text-muted-foreground">
+            O endereço será exibido como <strong>"A definir"</strong> na página do evento.<br />
+            Você poderá atualizar o endereço depois.
+          </p>
+        ) : (
+          <>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="ev-cep">CEP</Label>
+                <div className="relative">
+                  <Input
+                    id="ev-cep"
+                    inputMode="numeric"
+                    placeholder="00000-000"
+                    maxLength={9}
+                    {...register('cep', {
+                      onChange: (e) => {
+                        const d = e.target.value.replace(/\D/g, '').slice(0, 8)
+                        e.target.value = d.length > 5 ? `${d.slice(0, 5)}-${d.slice(5)}` : d
+                        if (d.length === 8) void lookupCep(d)
+                      },
+                    })}
+                  />
+                  {cepLoading && <Loader2 className="absolute right-3 top-2.5 h-4 w-4 animate-spin text-muted-foreground" />}
+                </div>
+                <FieldError message={errors.cep?.message} />
+              </div>
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label htmlFor="ev-venue">Nome do local</Label>
+                <Input id="ev-venue" placeholder="Ex.: Casa de Shows Central" {...register('venue')} />
+                <FieldError message={errors.venue?.message} />
+              </div>
             </div>
-            <FieldError message={errors.cep?.message} />
-          </div>
-          <div className="space-y-1.5 sm:col-span-2">
-            <Label htmlFor="ev-venue">Nome do local</Label>
-            <Input id="ev-venue" placeholder="Ex.: Casa de Shows Central" {...register('venue')} />
-            <FieldError message={errors.venue?.message} />
-          </div>
-        </div>
 
-        <div className="grid gap-4 sm:grid-cols-3">
-          <div className="space-y-1.5 sm:col-span-2">
-            <Label htmlFor="ev-street">Rua</Label>
-            <Input id="ev-street" {...register('street')} />
-            <FieldError message={errors.street?.message} />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="ev-number">Número</Label>
-            <Input id="ev-number" placeholder="Ex.: 123 ou S/N" {...register('number')} />
-            <FieldError message={errors.number?.message} />
-          </div>
-        </div>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label htmlFor="ev-street">Rua</Label>
+                <Input id="ev-street" {...register('street')} />
+                <FieldError message={errors.street?.message} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="ev-number">Número</Label>
+                <Input id="ev-number" placeholder="Ex.: 123 ou S/N" {...register('number')} />
+                <FieldError message={errors.number?.message} />
+              </div>
+            </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label htmlFor="ev-complement">Complemento (opcional)</Label>
-            <Input id="ev-complement" placeholder="Ex.: Pavilhão B" {...register('complement')} />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="ev-neighborhood">Bairro</Label>
-            <Input id="ev-neighborhood" {...register('neighborhood')} />
-            <FieldError message={errors.neighborhood?.message} />
-          </div>
-        </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="ev-complement">Complemento (opcional)</Label>
+                <Input id="ev-complement" placeholder="Ex.: Pavilhão B" {...register('complement')} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="ev-neighborhood">Bairro</Label>
+                <Input id="ev-neighborhood" {...register('neighborhood')} />
+                <FieldError message={errors.neighborhood?.message} />
+              </div>
+            </div>
 
-        <div className="grid gap-4 sm:grid-cols-3">
-          <div className="space-y-1.5 sm:col-span-2">
-            <Label htmlFor="ev-city">Cidade</Label>
-            <Input id="ev-city" {...register('city')} />
-            <FieldError message={errors.city?.message} />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="ev-state">Estado (UF)</Label>
-            <Input
-              id="ev-state"
-              maxLength={2}
-              placeholder="SP"
-              {...register('state', {
-                onChange: (e) => {
-                  e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g, '')
-                },
-              })}
-            />
-            <FieldError message={errors.state?.message} />
-          </div>
-        </div>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label htmlFor="ev-city">Cidade</Label>
+                <Input id="ev-city" {...register('city')} />
+                <FieldError message={errors.city?.message} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="ev-state">Estado (UF)</Label>
+                <Input
+                  id="ev-state"
+                  maxLength={2}
+                  placeholder="SP"
+                  {...register('state', {
+                    onChange: (e) => {
+                      e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g, '')
+                    },
+                  })}
+                />
+                <FieldError message={errors.state?.message} />
+              </div>
+            </div>
+          </>
+        )}
       </Section>
 
       {/* ── Ingressos ── */}

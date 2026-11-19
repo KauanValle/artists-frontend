@@ -62,10 +62,15 @@ function TicketCard({ ticket, onBuy }: { ticket: EventTicket; onBuy: (t: EventTi
 
 function EventContent({ ev }: { ev: TicketEvent }) {
   const sameDay = ev.startDate === ev.endDate
-  const address = `${ev.street}, ${ev.number}${ev.complement ? ` – ${ev.complement}` : ''} · ${ev.neighborhood}, ${ev.city}/${ev.state} · CEP ${ev.cep}`
-  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-    `${ev.street}, ${ev.number}, ${ev.neighborhood}, ${ev.city} - ${ev.state}, ${ev.cep}`
-  )}`
+  const isTbd = ev.venue === 'A definir' || ev.cep === '00000-000'
+  const address = isTbd
+    ? 'Endereço a definir'
+    : `${ev.street}, ${ev.number}${ev.complement ? ` – ${ev.complement}` : ''} · ${ev.neighborhood}, ${ev.city}/${ev.state} · CEP ${ev.cep}`
+  const mapsUrl = isTbd
+    ? null
+    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+        `${ev.street}, ${ev.number}, ${ev.neighborhood}, ${ev.city} - ${ev.state}, ${ev.cep}`
+      )}`
   const tickets = ev.tickets ?? []
   const [buying, setBuying] = useState<EventTicket | null>(null)
 
@@ -117,14 +122,14 @@ function EventContent({ ev }: { ev: TicketEvent }) {
               <div className="min-w-0 text-sm">
                 <p className="font-semibold">{ev.venue}</p>
                 <p className="text-muted-foreground">{address}</p>
-                <a
+                {mapsUrl && <a
                   href={mapsUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="mt-1.5 inline-flex items-center gap-1 font-medium text-primary hover:underline"
                 >
                   Ver no mapa <ExternalLink className="h-3.5 w-3.5" />
-                </a>
+                </a>}
               </div>
             </div>
           </section>
