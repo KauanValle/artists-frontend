@@ -437,6 +437,8 @@ export interface TicketEvent extends Required<Omit<SaveTicketEventPayload, 'tick
 
 export const ticketEventsApi = {
   list: () => api.get<TicketEvent[]>('/ticket-events'),
+  /** Lista todos os eventos da plataforma (público, sem login). */
+  listPublic: () => api.get<TicketEvent[]>('/public/ticket-events'),
   get: (id: string) => api.get<TicketEvent>(`/ticket-events/${id}`),
   /** Página pública do evento — não exige login. */
   getPublic: (id: string) => api.get<TicketEvent>(`/public/ticket-events/${id}`),

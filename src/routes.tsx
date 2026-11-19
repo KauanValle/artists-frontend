@@ -43,6 +43,7 @@ import { SobrePage } from '@/pages/public/SobrePage'
 import { FaqPage } from '@/pages/public/FaqPage'
 import { LandingPage } from '@/pages/public/LandingPage'
 import { TicketsPage } from '@/pages/public/TicketsPage'
+import { TicketsPanelPage } from '@/pages/public/TicketsPanelPage'
 import { TicketEventPage } from '@/pages/public/tickets/TicketEventPage'
 import { TrackOrdersPage } from '@/pages/public/tickets/TrackOrdersPage'
 import { TicketEventManagePage } from '@/pages/public/tickets/TicketEventManagePage'
@@ -91,6 +92,7 @@ export const router = createBrowserRouter([
       { path: '/forgot-password', element: <ForgotPasswordPage /> },
       { path: '/reset-password', element: <ResetPasswordPage /> },
       { path: '/eventos', element: <TicketsPage /> },
+      { path: '/eventos/painel', element: <TicketsPanelPage /> },
       { path: '/ingressos', element: <Navigate to="/eventos" replace /> },
       { path: '/evento/:id', element: <TicketEventPage /> },
       { path: '/acompanhar-pedidos', element: <TrackOrdersPage /> },

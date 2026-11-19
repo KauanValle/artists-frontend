@@ -12,6 +12,7 @@ import {
   Search,
   Megaphone,
   Sparkles,
+  Ticket,
   X,
   type LucideIcon,
 } from 'lucide-react'
@@ -135,7 +136,8 @@ export function PublicLayout() {
             <NavDropdown
               label="Produtos"
               items={[
-                { to: '/eventos', label: 'Criador de evento', icon: CalendarPlus },
+                { to: '/eventos', label: 'Eventos', icon: Ticket },
+                { to: '/eventos/painel', label: 'Criador de evento', icon: CalendarPlus },
                 { to: careerPath, label: 'Gestão de carreira para artistas', icon: Mic2 },
               ]}
             />
@@ -216,6 +218,9 @@ export function PublicLayout() {
                     <LayoutGrid className="h-3.5 w-3.5" /> Produtos
                   </p>
                   <Link to="/eventos" role="menuitem" onClick={close} className={`${menuItemClass} pl-8`}>
+                    <Ticket className="h-4 w-4 shrink-0 text-primary" /> Eventos
+                  </Link>
+                  <Link to="/eventos/painel" role="menuitem" onClick={close} className={`${menuItemClass} pl-8`}>
                     <CalendarPlus className="h-4 w-4 shrink-0 text-primary" /> Criador de evento
                   </Link>
                   <Link to={careerPath} role="menuitem" onClick={close} className={`${menuItemClass} pl-8`}>
