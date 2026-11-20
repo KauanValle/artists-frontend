@@ -445,6 +445,7 @@ export const ticketEventsApi = {
   /** Taxa administrativa (%) dos ingressos — configurável pelo admin no futuro. */
   fee: () => api.get<{ feePercent: number }>('/ticket-events/fee'),
   create: (payload: SaveTicketEventPayload) => api.post<TicketEvent>('/ticket-events', payload),
+  update: (id: string, payload: SaveTicketEventPayload) => api.put<TicketEvent>("/ticket-events/" + id, payload),
   remove: (id: string) => api.delete(`/ticket-events/${id}`),
 }
 

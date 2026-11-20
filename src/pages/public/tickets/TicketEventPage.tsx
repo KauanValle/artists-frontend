@@ -1,12 +1,13 @@
-import { useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import axios from 'axios'
-import { ArrowLeft, CalendarDays, Clock, ExternalLink, Loader2, MapPin, Ticket, User } from 'lucide-react'
+import { ArrowLeft, CalendarDays, Clock, Copy, ExternalLink, Loader2, MapPin, ShoppingCart, Ticket, User } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { formatDate, formatMoney, formatTime, toDateInput } from '@/lib/utils'
 import { ticketEventsApi, type EventTicket, type TicketEvent } from '@/services'
 import { extractApiError } from '@/services/api'
+import { toast } from 'sonner'
 import { BuyTicketModal } from './BuyTicketModal'
 
 /** "sábado, 20 de dezembro de 2026" */
@@ -34,7 +35,7 @@ const SALES_LABEL: Record<SalesState, { text: string; className: string }> = {
   closed: { text: 'Vendas encerradas', className: 'bg-muted text-muted-foreground' },
 }
 
-function TicketCard({ ticket, onBuy }: { ticket: EventTicket; onBuy: (t: EventTicket) => void }) {
+function TicketCard({ ticket, onBuy, onCopyLink }: { ticket: EventTicket; onBuy: (t: EventTicket) => void; onCopyLink?: (id: string) => void }) {
   const state = salesState(ticket)
   const label = SALES_LABEL[state]
   const soldOut = ticket.available <= 0
@@ -53,14 +54,22 @@ function TicketCard({ ticket, onBuy }: { ticket: EventTicket; onBuy: (t: EventTi
       <p className="text-xs text-muted-foreground">
         Vendas de {formatDate(ticket.salesStartDate)} até {formatDate(ticket.salesEndDate)} · {ticket.available} disponíve{ticket.available === 1 ? 'l' : 'is'}
       </p>
-      <Button className="w-full" disabled={state !== 'open' || soldOut} onClick={() => onBuy(ticket)}>
-        {soldOut ? 'Esgotado' : state === 'closed' ? 'Vendas encerradas' : state === 'soon' ? 'Vendas em breve' : 'Comprar ingresso'}
-      </Button>
+      <div className="flex gap-2">
+        <Button className="flex-1" disabled={state !== 'open' || soldOut} onClick={() => onBuy(ticket)}>
+          {soldOut ? 'Esgotado' : state === 'closed' ? 'Vendas encerradas' : state === 'soon' ? 'Vendas em breve' : 'Comprar ingresso'}
+        </Button>
+        {state === 'open' && !soldOut && onCopyLink && (
+          <Button variant="outline" size="icon" onClick={() => onCopyLink(ticket.id)} title="Copiar link de compra">
+            <Copy className="h-4 w-4" />
+          </Button>
+        )}
+      </div>
     </li>
   )
 }
 
 function EventContent({ ev }: { ev: TicketEvent }) {
+  const [searchParams, setSearchParams] = useSearchParams()
   const sameDay = ev.startDate === ev.endDate
   const isTbd = ev.venue === 'A definir' || ev.cep === '00000-000'
   const address = isTbd
@@ -73,6 +82,34 @@ function EventContent({ ev }: { ev: TicketEvent }) {
       )}`
   const tickets = ev.tickets ?? []
   const [buying, setBuying] = useState<EventTicket | null>(null)
+
+  // Abre o modal automaticamente se ?ingresso=TICKET_ID estiver na URL
+  useEffect(() => {
+    const ticketId = searchParams.get('ingresso')
+    if (ticketId && tickets.length > 0 && !buying) {
+      const found = tickets.find((t) => t.id === ticketId)
+      if (found && salesState(found) === 'open' && found.available > 0) {
+        setBuying(found)
+        // Limpa o param para não reabrir ao fechar
+        setSearchParams((prev) => { prev.delete('ingresso'); return prev }, { replace: true })
+      }
+    }
+  }, [searchParams, tickets]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const today = toDateInput()
+  const cheapestOpen = tickets
+    .filter((t) => salesState(t) === 'open' && t.available > 0)
+    .sort((a, b) => a.buyerPrice - b.buyerPrice)[0]
+
+  const copyTicketLink = async (ticketId: string) => {
+    const url = `${window.location.origin}/evento/${ev.id}?ingresso=${ticketId}`
+    try {
+      await navigator.clipboard.writeText(url)
+      toast.success('Link de compra copiado!')
+    } catch {
+      toast.error('Não foi possível copiar o link.')
+    }
+  }
 
   return (
     <main className="mx-auto w-full max-w-5xl space-y-8 px-4 py-8 sm:py-12">
@@ -134,6 +171,22 @@ function EventContent({ ev }: { ev: TicketEvent }) {
             </div>
           </section>
 
+          {/* CTA mobile — só aparece em telas pequenas */}
+          {cheapestOpen && (
+            <div className="lg:hidden">
+              <Button
+                size="lg"
+                className="w-full gap-2 text-base"
+                onClick={() => setBuying(cheapestOpen)}
+              >
+                <ShoppingCart className="h-5 w-5" />
+                {cheapestOpen.buyerPrice === 0
+                  ? 'Garantir ingresso gratuito'
+                  : `Comprar ingresso · ${formatMoney(cheapestOpen.buyerPrice)}`}
+              </Button>
+            </div>
+          )}
+
           <section className="space-y-3">
             <h2 className="text-xl font-bold">Sobre o evento</h2>
             <p className="whitespace-pre-line leading-relaxed text-muted-foreground">{ev.description}</p>
@@ -163,7 +216,7 @@ function EventContent({ ev }: { ev: TicketEvent }) {
             ) : (
               <ul className="space-y-3">
                 {tickets.map((t) => (
-                  <TicketCard key={t.id} ticket={t} onBuy={setBuying} />
+                  <TicketCard key={t.id} ticket={t} onBuy={setBuying} onCopyLink={copyTicketLink} />
                 ))}
               </ul>
             )}

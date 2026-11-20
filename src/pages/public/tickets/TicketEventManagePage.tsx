@@ -14,6 +14,7 @@ import {
   ScanLine,
   Search,
   Trash2,
+  Pencil,
   Undo2,
   Users,
 } from 'lucide-react'
@@ -31,15 +32,17 @@ import {
 } from '@/services'
 import { extractApiError } from '@/services/api'
 import { CheckInConsole } from './CheckInConsole'
+import { EventForm, type EventSubmitData } from './EventForm'
 import { TicketsLogin } from './TicketsLogin'
 
-type Tab = 'overview' | 'orders' | 'checkin' | 'gates'
+type Tab = 'overview' | 'orders' | 'checkin' | 'gates' | 'edit'
 
 const TABS: { id: Tab; label: string; icon: typeof BarChart3 }[] = [
   { id: 'overview', label: 'Visão geral', icon: BarChart3 },
   { id: 'orders', label: 'Pedidos', icon: Users },
   { id: 'checkin', label: 'Check-in', icon: ScanLine },
   { id: 'gates', label: 'Portaria', icon: KeyRound },
+  { id: 'edit', label: 'Editar', icon: Pencil },
 ]
 
 const fmtCpf = (v: string) => v.replace(/\D/g, '').replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')
@@ -452,6 +455,65 @@ function GatesTab({ eventId }: { eventId: string }) {
   )
 }
 
+
+// ─────────────── Editar evento ───────────────
+
+function EditTab({ ev, onSaved }: { ev: TicketEvent; onSaved: () => void }) {
+  const isTbd = ev.venue === 'A definir' || ev.cep === '00000-000'
+
+  const initialData = {
+    name: ev.name,
+    imageUrl: ev.imageUrl,
+    category: ev.category,
+    startDate: ev.startDate,
+    startTime: ev.startTime,
+    endDate: ev.endDate,
+    endTime: ev.endTime,
+    description: ev.description,
+    addressTbd: isTbd,
+    cep: isTbd ? '' : ev.cep,
+    venue: isTbd ? '' : ev.venue,
+    street: isTbd ? '' : ev.street,
+    number: isTbd ? '' : ev.number,
+    complement: ev.complement ?? '',
+    neighborhood: isTbd ? '' : ev.neighborhood,
+    city: isTbd ? '' : ev.city,
+    state: isTbd ? '' : ev.state,
+    producerName: ev.producerName,
+    producerDescription: ev.producerDescription,
+  }
+
+  const initialTickets = (ev.tickets ?? []).map((t) => ({
+    title: t.title,
+    quantity: t.quantity,
+    receiveAmount: t.receiveAmount,
+    salesStartDate: t.salesStartDate,
+    salesEndDate: t.salesEndDate,
+    description: t.description ?? '',
+  }))
+
+  const handleUpdate = async (data: EventSubmitData) => {
+    try {
+      await ticketEventsApi.update(ev.id, data)
+      toast.success('Evento atualizado!')
+      onSaved()
+    } catch (e) {
+      toast.error(extractApiError(e))
+    }
+  }
+
+  return (
+    <EventForm
+      initialData={initialData}
+      initialTickets={initialTickets}
+      onCancel={() => onSaved()}
+      onSubmit={handleUpdate}
+      submitLabel="Salvar alterações"
+      isEditing
+    />
+  )
+}
+
 // ─────────────── Página ───────────────
 
 function Manager({ id }: { id: string }) {
@@ -518,6 +580,7 @@ function Manager({ id }: { id: string }) {
       {tab === 'orders' && <OrdersTab eventId={id} eventName={ev.name} />}
       {tab === 'checkin' && <CheckInTab eventId={id} stats={stats} />}
       {tab === 'gates' && <GatesTab eventId={id} />}
+      {tab === 'edit' && <EditTab ev={ev} onSaved={() => { void evQuery.refetch(); void statsQuery.refetch(); setTab('overview') }} />}
     </main>
   )
 }

@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { uploadsApi, viaCepApi, type SaveEventTicketPayload } from '@/services'
 import { extractApiError } from '@/services/api'
-import { cn, formatDate, formatMoney, toDateInput } from '@/lib/utils'
+import { cn, formatDate, formatMoney } from '@/lib/utils'
 import { EVENT_CATEGORIES } from './eventStore'
 import { calcBuyerPrice, TicketModal, useTicketFee } from './TicketModal'
 
@@ -40,10 +40,7 @@ const schema = z
     producerDescription: z.string().trim().min(10, 'Descreva o produtor (mínimo de 10 caracteres)').max(1000, 'Máximo de 1000 caracteres'),
   })
   .superRefine((d, ctx) => {
-    if (d.startDate && d.startDate < toDateInput()) {
-      ctx.addIssue({ code: 'custom', path: ['startDate'], message: 'A data não pode estar no passado' })
-    }
-    if (d.startDate && d.startTime && d.endDate && d.endTime) {
+if (d.startDate && d.startTime && d.endDate && d.endTime) {
       if (`${d.endDate}T${d.endTime}` <= `${d.startDate}T${d.startTime}`) {
         ctx.addIssue({ code: 'custom', path: ['endDate'], message: 'O término deve ser depois do início' })
       }
@@ -87,9 +84,17 @@ function FieldError({ message }: { message?: string }) {
 export function EventForm({
   onCancel,
   onSubmit,
+  initialData,
+  initialTickets,
+  submitLabel,
+  isEditing,
 }: {
   onCancel: () => void
   onSubmit: (data: EventSubmitData) => void | Promise<void>
+  initialData?: Partial<EventFormData>
+  initialTickets?: SaveEventTicketPayload[]
+  submitLabel?: string
+  isEditing?: boolean
 }) {
   const {
     register,
@@ -101,30 +106,30 @@ export function EventForm({
   } = useForm<EventFormData>({
     resolver: zodResolver(schema),
     defaultValues: {
-      name: '',
-      imageUrl: '',
-      category: '',
-      startDate: '',
-      startTime: '',
-      endDate: '',
-      endTime: '',
-      description: '',
-      addressTbd: false,
-      cep: '',
-      venue: '',
-      street: '',
-      number: '',
-      complement: '',
-      neighborhood: '',
-      city: '',
-      state: '',
-      producerName: '',
-      producerDescription: '',
+      name: initialData?.name ?? '',
+      imageUrl: initialData?.imageUrl ?? '',
+      category: initialData?.category ?? '',
+      startDate: initialData?.startDate ?? '',
+      startTime: initialData?.startTime ?? '',
+      endDate: initialData?.endDate ?? '',
+      endTime: initialData?.endTime ?? '',
+      description: initialData?.description ?? '',
+      addressTbd: initialData?.addressTbd ?? false,
+      cep: initialData?.cep ?? '',
+      venue: initialData?.venue ?? '',
+      street: initialData?.street ?? '',
+      number: initialData?.number ?? '',
+      complement: initialData?.complement ?? '',
+      neighborhood: initialData?.neighborhood ?? '',
+      city: initialData?.city ?? '',
+      state: initialData?.state ?? '',
+      producerName: initialData?.producerName ?? '',
+      producerDescription: initialData?.producerDescription ?? '',
     },
   })
 
   const fileRef = useRef<HTMLInputElement>(null)
-  const [preview, setPreview] = useState<string | null>(null)
+  const [preview, setPreview] = useState<string | null>(initialData?.imageUrl ?? null)
   const [uploading, setUploading] = useState(false)
   const [cepLoading, setCepLoading] = useState(false)
   const addressTbd = watch('addressTbd')
@@ -152,7 +157,7 @@ export function EventForm({
     }
   }
   const [ticketModalOpen, setTicketModalOpen] = useState(false)
-  const [tickets, setTickets] = useState<SaveEventTicketPayload[]>([])
+  const [tickets, setTickets] = useState<SaveEventTicketPayload[]>(initialTickets ?? [])
   const [editingIndex, setEditingIndex] = useState<number | null>(null)
   const fee = useTicketFee()
   const eventEndDate = watch('endDate')
@@ -321,7 +326,7 @@ export function EventForm({
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
             <Label htmlFor="ev-start-date">Data de início</Label>
-            <Input id="ev-start-date" type="date" min={toDateInput()} {...register('startDate')} />
+            <Input id="ev-start-date" type="date" {...register('startDate')} />
             <FieldError message={errors.startDate?.message} />
           </div>
           <div className="space-y-1.5">
@@ -331,7 +336,7 @@ export function EventForm({
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="ev-end-date">Data de término</Label>
-            <Input id="ev-end-date" type="date" min={toDateInput()} {...register('endDate')} />
+            <Input id="ev-end-date" type="date" {...register('endDate')} />
             <FieldError message={errors.endDate?.message} />
           </div>
           <div className="space-y-1.5">
