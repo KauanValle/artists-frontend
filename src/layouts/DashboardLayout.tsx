@@ -22,6 +22,7 @@ import {
     Users,
     Wallet,
     UserPlus,
+    Ticket,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useQuery } from '@tanstack/react-query'
@@ -154,6 +155,7 @@ const adminNav = [
     { to: '/admin', label: 'Painel', icon: LayoutDashboard },
     { to: '/solicitacoes-anonimas', label: 'Solicitações Anonimas', icon: GlassesIcon },
     { to: '/admin/eventos', label: 'Eventos', icon: MicIcon},
+    { to: '/admin/ingressos', label: 'Ingressos', icon: Ticket},
     { to: '/financeiro', label: 'Financeiro', icon: DollarSignIcon},
     { to: '/usuarios', label: 'Usuarios', icon: PersonStandingIcon},
     { to: '/admin/saques', label: 'Solicitações de Saque', icon: Wallet },
@@ -268,6 +270,7 @@ const adminBottomTabs = [
   { to: '/admin', label: 'Painel', icon: LayoutDashboard },
   { to: '/solicitacoes-anonimas', label: 'Solicitações', icon: GlassesIcon },
   { to: '/admin/eventos', label: 'Eventos', icon: MicIcon },
+  { to: '/admin/ingressos', label: 'Ingressos', icon: Ticket },
   { to: '/financeiro', label: 'Financeiro', icon: DollarSignIcon },
 ]
 

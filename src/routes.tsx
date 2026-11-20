@@ -58,6 +58,7 @@ import {FinancialAdminPage} from "@/pages/admin/FinancialPage.tsx";
 import {UsersPage} from "@/pages/admin/UsersPage.tsx";
 import {AdminWithdrawalsPage} from '@/pages/admin/AdminWithdrawalsPage'
 import {CampaignsPage} from '@/pages/admin/CampaignsPage'
+import {AdminTicketEventsPage} from '@/pages/admin/AdminTicketEventsPage'
 import {CampaignPage} from '@/pages/public/CampaignPage'
 import {CampaignsListPage} from '@/pages/public/CampaignsListPage'
 
@@ -183,6 +184,7 @@ export const router = createBrowserRouter([
           { path: '/financeiro', element: <FinancialAdminPage /> },
           { path: '/usuarios', element: <UsersPage /> },
           { path: '/admin/saques', element: <AdminWithdrawalsPage /> },
+          { path: '/admin/ingressos', element: <AdminTicketEventsPage /> },
           { path: '/admin/campanhas', element: <CampaignsPage /> },
         ],
       },

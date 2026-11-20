@@ -647,3 +647,45 @@ export const gateApi = {
   checkIn: (gateCode: string, ticketCode: string) =>
     api.post<CheckInResult>('/public/gate/check-in', { gateCode, ticketCode }),
 }
+
+// ── Admin: ingressos ──
+
+export interface AdminTicketEvent {
+  id: string
+  name: string
+  imageUrl: string
+  category: string
+  startDate: string
+  startTime: string
+  endDate: string
+  endTime: string
+  venue: string
+  city: string
+  state: string
+  producerName: string
+  createdAt: string
+  ownerUserName: string
+  ownerUserEmail: string
+  totalTickets: number
+  totalSold: number
+  grossRevenue: number
+}
+
+export interface AdminTestTicket {
+  orderId: string
+  issuedTicketId: string
+  code: string
+  ticketTitle: string
+  buyerName: string
+}
+
+export const adminTicketEventsApi = {
+  list: () => api.get<AdminTicketEvent[]>('/admin/ticket-events'),
+  get: (id: string) => api.get<TicketEvent>(`/admin/ticket-events/${id}`),
+  stats: (id: string) => api.get<TicketEventStats>(`/admin/ticket-events/${id}/stats`),
+  orders: (id: string) => api.get<EventOrder[]>(`/admin/ticket-events/${id}/orders`),
+  checkIns: (id: string) => api.get<CheckInLog[]>(`/admin/ticket-events/${id}/check-ins`),
+  gates: (id: string) => api.get<GateAccess[]>(`/admin/ticket-events/${id}/gates`),
+  createTestTicket: (eventId: string, eventTicketId: string) =>
+    api.post<AdminTestTicket>(`/admin/ticket-events/${eventId}/test-ticket`, { eventTicketId }),
+}

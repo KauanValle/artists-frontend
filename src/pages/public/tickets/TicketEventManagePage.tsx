@@ -23,6 +23,7 @@ import { Input } from '@/components/ui/input'
 import { useAuth } from '@/hooks/useAuth'
 import { formatDate, formatDateTime, formatMoney, formatTime } from '@/lib/utils'
 import {
+  adminTicketEventsApi,
   ticketEventsApi,
   ticketManagementApi,
   type CheckInResult,
@@ -138,12 +139,12 @@ function Overview({ stats, ev }: { stats: TicketEventStats; ev: TicketEvent }) {
 const STATUS_LABEL = (o: EventOrder) =>
   o.status === 'Paid' ? 'Pago' : o.status === 'Cancelled' ? 'Cancelado' : o.expired ? 'Reserva expirada' : 'Aguardando'
 
-function OrdersTab({ eventId, eventName }: { eventId: string; eventName: string }) {
+function OrdersTab({ eventId, eventName, isAdmin = false }: { eventId: string; eventName: string; isAdmin?: boolean }) {
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState<'all' | 'Paid' | 'pending'>('all')
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ['ticket-event-orders', eventId],
-    queryFn: async () => (await ticketManagementApi.orders(eventId)).data,
+    queryFn: async () => (await (isAdmin ? adminTicketEventsApi.orders(eventId) : ticketManagementApi.orders(eventId))).data,
   })
 
   const rows = useMemo(() => {
@@ -258,11 +259,11 @@ function OrdersTab({ eventId, eventName }: { eventId: string; eventName: string 
 
 // ─────────────── Check-in (produtor) ───────────────
 
-function CheckInTab({ eventId, stats }: { eventId: string; stats: TicketEventStats }) {
+function CheckInTab({ eventId, stats, isAdmin = false }: { eventId: string; stats: TicketEventStats; isAdmin?: boolean }) {
   const qc = useQueryClient()
   const { data: logs } = useQuery({
     queryKey: ['ticket-event-checkins', eventId],
-    queryFn: async () => (await ticketManagementApi.checkIns(eventId)).data,
+    queryFn: async () => (await (isAdmin ? adminTicketEventsApi.checkIns(eventId) : ticketManagementApi.checkIns(eventId))).data,
     refetchInterval: 10_000,
   })
   const [counts, setCounts] = useState<{ entered: number; sold: number } | null>(null)
@@ -343,12 +344,12 @@ function CheckInTab({ eventId, stats }: { eventId: string; stats: TicketEventSta
 
 // ─────────────── Portaria ───────────────
 
-function GatesTab({ eventId }: { eventId: string }) {
+function GatesTab({ eventId, isAdmin = false }: { eventId: string; isAdmin?: boolean }) {
   const qc = useQueryClient()
   const [name, setName] = useState('')
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ['ticket-event-gates', eventId],
-    queryFn: async () => (await ticketManagementApi.gates(eventId)).data,
+    queryFn: async () => (await (isAdmin ? adminTicketEventsApi.gates(eventId) : ticketManagementApi.gates(eventId))).data,
   })
 
   const create = useMutation({
@@ -516,17 +517,17 @@ function EditTab({ ev, onSaved }: { ev: TicketEvent; onSaved: () => void }) {
 
 // ─────────────── Página ───────────────
 
-function Manager({ id }: { id: string }) {
+export function Manager({ id, isAdmin = false }: { id: string; isAdmin?: boolean }) {
   const [tab, setTab] = useState<Tab>('overview')
 
   const evQuery = useQuery({
-    queryKey: ['ticket-event', id],
-    queryFn: async () => (await ticketEventsApi.get(id)).data,
+    queryKey: ['ticket-event', id, isAdmin],
+    queryFn: async () => (await (isAdmin ? adminTicketEventsApi.get(id) : ticketEventsApi.get(id))).data,
     retry: false,
   })
   const statsQuery = useQuery({
-    queryKey: ['ticket-event-stats', id],
-    queryFn: async () => (await ticketManagementApi.stats(id)).data,
+    queryKey: ['ticket-event-stats', id, isAdmin],
+    queryFn: async () => (await (isAdmin ? adminTicketEventsApi.stats(id) : ticketManagementApi.stats(id))).data,
     refetchInterval: 15_000,
     retry: false,
   })
@@ -539,7 +540,7 @@ function Manager({ id }: { id: string }) {
       <div className="mx-auto flex max-w-md flex-1 flex-col items-center justify-center gap-3 px-4 py-24 text-center">
         <h1 className="text-xl font-bold">Não foi possível abrir este evento</h1>
         <p className="text-sm text-muted-foreground">{extractApiError(evQuery.error ?? statsQuery.error)}</p>
-        <Button asChild variant="outline"><Link to="/eventos">Voltar para meus eventos</Link></Button>
+        <Button asChild variant="outline"><Link to={isAdmin ? "/admin/ingressos" : "/eventos"}>{isAdmin ? 'Voltar' : 'Voltar para meus eventos'}</Link></Button>
       </div>
     )
   }
@@ -549,8 +550,8 @@ function Manager({ id }: { id: string }) {
 
   return (
     <main className="mx-auto w-full max-w-5xl space-y-6 px-4 py-8">
-      <Link to="/eventos" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
-        <ArrowLeft className="h-4 w-4" /> Meus eventos
+      <Link to={isAdmin ? "/admin/ingressos" : "/eventos"} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
+        <ArrowLeft className="h-4 w-4" /> {isAdmin ? 'Todos os eventos' : 'Meus eventos'}
       </Link>
 
       <div className="space-y-1">
@@ -562,7 +563,7 @@ function Manager({ id }: { id: string }) {
       </div>
 
       <div className="flex gap-1 overflow-x-auto rounded-xl border border-border/50 bg-card/40 p-1">
-        {TABS.map(({ id: tid, label, icon: Icon }) => (
+        {(isAdmin ? TABS.filter(t => t.id !== 'edit') : TABS).map(({ id: tid, label, icon: Icon }) => (
           <button
             key={tid}
             type="button"
@@ -577,10 +578,10 @@ function Manager({ id }: { id: string }) {
       </div>
 
       {tab === 'overview' && <Overview stats={stats} ev={ev} />}
-      {tab === 'orders' && <OrdersTab eventId={id} eventName={ev.name} />}
-      {tab === 'checkin' && <CheckInTab eventId={id} stats={stats} />}
-      {tab === 'gates' && <GatesTab eventId={id} />}
-      {tab === 'edit' && <EditTab ev={ev} onSaved={() => { void evQuery.refetch(); void statsQuery.refetch(); setTab('overview') }} />}
+      {tab === 'orders' && <OrdersTab eventId={id} eventName={ev.name} isAdmin={isAdmin} />}
+      {tab === 'checkin' && <CheckInTab eventId={id} stats={stats} isAdmin={isAdmin} />}
+      {tab === 'gates' && <GatesTab eventId={id} isAdmin={isAdmin} />}
+      {tab === 'edit' && !isAdmin && <EditTab ev={ev} onSaved={() => { void evQuery.refetch(); void statsQuery.refetch(); setTab('overview') }} />}
     </main>
   )
 }
@@ -596,5 +597,5 @@ export function TicketEventManagePage() {
   if (!isAuthenticated || !user) return <TicketsLogin />
   if (!user.perfilCompleto && user.role !== 'Admin') return <Navigate to="/completar-perfil" replace />
   if (!id) return <Navigate to="/eventos" replace />
-  return <Manager id={id} />
+  return <Manager id={id} isAdmin={false} />
 }
