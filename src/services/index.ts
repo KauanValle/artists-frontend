@@ -732,4 +732,6 @@ export const adminTicketEventsApi = {
     api.get<AdminOrderDetail>(`/admin/ticket-events/${eventId}/orders/${orderId}/detail`),
   forcePay: (eventId: string, orderId: string) =>
     api.post<{ message: string; ticketsIssued: number }>(`/admin/ticket-events/${eventId}/orders/${orderId}/force-pay`),
+  undoPay: (eventId: string, orderId: string) =>
+    api.post<{ message: string; ticketsRemoved: number }>(`/admin/ticket-events/${eventId}/orders/${orderId}/undo-pay`),
 }

@@ -201,6 +201,17 @@ function AdminOrderDetailModal({ eventId, orderId, onClose }: { eventId: string;
     onError: (err) => toast.error(extractApiError(err)),
   })
 
+  const undoPayMut = useMutation({
+    mutationFn: () => adminTicketEventsApi.undoPay(eventId, orderId),
+    onSuccess: (res) => {
+      toast.success(res.data.message)
+      void refetch()
+      void queryClient.invalidateQueries({ queryKey: ['ticket-event-orders', eventId] })
+      void queryClient.invalidateQueries({ queryKey: ['ticket-event-stats', eventId] })
+    },
+    onError: (err) => toast.error(extractApiError(err)),
+  })
+
   const [sendingEmail, setSendingEmail] = useState(false)
 
   const handleSendEmail = async () => {
@@ -326,6 +337,20 @@ function AdminOrderDetailModal({ eventId, orderId, onClose }: { eventId: string;
                 >
                   {forcePayMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
                   Contabilizar
+                </Button>
+              )}
+
+              {/* Descontabilizar pedido pago */}
+              {data.status === 'Paid' && (
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  className="gap-1.5"
+                  onClick={() => undoPayMut.mutate()}
+                  disabled={undoPayMut.isPending}
+                >
+                  {undoPayMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Undo2 className="h-4 w-4" />}
+                  Descontabilizar
                 </Button>
               )}
 
