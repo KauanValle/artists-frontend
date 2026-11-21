@@ -87,7 +87,7 @@ export function AdminTicketEventsPage() {
       )}
 
       {!isLoading && !isError && filtered.length === 0 && (
-        <EmptyState icon={Ticket} title="Nenhum evento encontrado" description={search ? 'Tente outro termo de busca.' : 'Nenhum evento de ingresso foi criado ainda.'} />
+        <EmptyState icon={<Ticket className="h-10 w-10" />} title="Nenhum evento encontrado" description={search ? 'Tente outro termo de busca.' : 'Nenhum evento de ingresso foi criado ainda.'} />
       )}
 
       <div className="space-y-3">
@@ -218,7 +218,7 @@ function TestTicketView({ eventId, onBack }: { eventId: string; onBack: () => vo
               <div>
                 <p className="font-medium">{t.title}</p>
                 <p className="text-xs text-muted-foreground">
-                  {formatMoney(t.buyerPrice)} · {t.soldQuantity}/{t.quantity} vendidos
+                  {formatMoney(t.buyerPrice)} · {t.sold}/{t.quantity} vendidos
                 </p>
               </div>
               <Button size="sm" disabled={mutation.isPending}>
