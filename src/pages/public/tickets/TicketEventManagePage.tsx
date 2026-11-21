@@ -5,11 +5,14 @@ import { toast } from 'sonner'
 import {
   ArrowLeft,
   BarChart3,
+  CheckCircle,
   Copy,
   Download,
+  Eye,
   ExternalLink,
   KeyRound,
   Loader2,
+  Mail,
   PlusCircle,
   ScanLine,
   Search,
@@ -17,6 +20,7 @@ import {
   Pencil,
   Undo2,
   Users,
+  X,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -26,12 +30,15 @@ import {
   adminTicketEventsApi,
   ticketEventsApi,
   ticketManagementApi,
+  type AdminOrderDetail,
   type CheckInResult,
   type EventOrder,
   type TicketEvent,
   type TicketEventStats,
 } from '@/services'
-import { extractApiError } from '@/services/api'
+import { generateTicketPdfBase64, getTicketPdfFileName, downloadTicketPdf, formatTicketCode } from '@/lib/ticket-pdf'
+import type { TicketOrderSummary } from '@/services'
+import { api, extractApiError } from '@/services/api'
 import { CheckInConsole } from './CheckInConsole'
 import { EventForm, type EventSubmitData } from './EventForm'
 import { TicketsLogin } from './TicketsLogin'
@@ -139,9 +146,215 @@ function Overview({ stats, ev }: { stats: TicketEventStats; ev: TicketEvent }) {
 const STATUS_LABEL = (o: EventOrder) =>
   o.status === 'Paid' ? 'Pago' : o.status === 'Cancelled' ? 'Cancelado' : o.expired ? 'Reserva expirada' : 'Aguardando'
 
+/** Converte AdminOrderDetail para TicketOrderSummary para reusar o PDF. */
+function toOrderSummary(d: AdminOrderDetail): TicketOrderSummary {
+  return {
+    id: d.id,
+    ticketEventId: '',
+    eventName: d.eventName,
+    eventImageUrl: d.eventImageUrl,
+    eventStartDate: d.eventStartDate,
+    eventStartTime: d.eventStartTime,
+    eventEndDate: d.eventEndDate,
+    eventEndTime: d.eventEndTime,
+    venue: d.venue,
+    city: d.city,
+    state: d.state,
+    street: d.street,
+    number: d.number,
+    complement: d.complement,
+    neighborhood: d.neighborhood,
+    cep: d.cep,
+    producerName: d.producerName,
+    ticketTitle: d.ticketTitle,
+    quantity: d.quantity,
+    totalAmount: d.totalAmount,
+    status: d.status,
+    expired: d.expired,
+    createdAt: d.createdAt,
+    paidAt: d.paidAt,
+    checkoutUrl: null,
+    buyerName: d.buyerName,
+    buyerEmail: d.buyerEmail,
+    buyerPhone: d.buyerPhone,
+    buyerCpf: d.buyerCpf,
+    tickets: d.tickets.map(t => ({ sequence: t.sequence, code: t.code, checkedInAt: t.checkedInAt })),
+  }
+}
+
+/** Modal de detalhe do pedido (admin): dados do cliente, ingressos, ações. */
+function AdminOrderDetailModal({ eventId, orderId, onClose }: { eventId: string; orderId: string; onClose: () => void }) {
+  const queryClient = useQueryClient()
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ['admin-order-detail', eventId, orderId],
+    queryFn: async () => (await adminTicketEventsApi.orderDetail(eventId, orderId)).data,
+  })
+
+  const forcePayMut = useMutation({
+    mutationFn: () => adminTicketEventsApi.forcePay(eventId, orderId),
+    onSuccess: (res) => {
+      toast.success(res.data.message)
+      void refetch()
+      void queryClient.invalidateQueries({ queryKey: ['ticket-event-orders', eventId] })
+      void queryClient.invalidateQueries({ queryKey: ['ticket-event-stats', eventId] })
+    },
+    onError: (err) => toast.error(extractApiError(err)),
+  })
+
+  const [sendingEmail, setSendingEmail] = useState(false)
+
+  const handleSendEmail = async () => {
+    if (!data) return
+    try {
+      setSendingEmail(true)
+      const summary = toOrderSummary(data)
+      const pdfBase64 = await generateTicketPdfBase64(summary)
+      await api.post('/public/ticket-orders/send-ticket-email', {
+        email: data.buyerEmail,
+        buyerName: data.buyerName,
+        eventName: data.eventName,
+        eventDate: formatDate(data.eventStartDate),
+        pdfBase64,
+        fileName: getTicketPdfFileName(summary),
+      })
+      toast.success(`Ingresso enviado para ${data.buyerEmail}`)
+    } catch (err) {
+      toast.error(extractApiError(err))
+    } finally {
+      setSendingEmail(false)
+    }
+  }
+
+  const handleDownloadPdf = async () => {
+    if (!data) return
+    try {
+      await downloadTicketPdf(toOrderSummary(data))
+      toast.success('PDF baixado!')
+    } catch (err) {
+      toast.error(extractApiError(err))
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
+      <div className="relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-background p-6 shadow-xl" onClick={e => e.stopPropagation()}>
+        <button onClick={onClose} className="absolute right-4 top-4 text-muted-foreground hover:text-foreground"><X className="h-5 w-5" /></button>
+
+        {isLoading && <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>}
+
+        {data && (
+          <div className="space-y-5">
+            <h2 className="text-lg font-bold">Detalhe do pedido</h2>
+
+            {/* Status */}
+            <div className="flex items-center gap-2">
+              <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                data.status === 'Paid' ? 'bg-emerald-500/10 text-emerald-500'
+                : data.expired ? 'bg-red-500/10 text-red-500'
+                : 'bg-amber-500/10 text-amber-500'
+              }`}>
+                {data.status === 'Paid' ? 'Pago' : data.expired ? 'Expirado' : 'Aguardando pagamento'}
+              </span>
+              {data.paidAt && <span className="text-xs text-muted-foreground">Pago em {formatDateTime(data.paidAt)}</span>}
+            </div>
+
+            {/* Dados do cliente */}
+            <div className="space-y-2 rounded-xl border p-4">
+              <h3 className="text-sm font-semibold text-primary">Dados do cliente</h3>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                <div><span className="text-muted-foreground">Nome:</span> <span className="font-medium">{data.buyerName}</span></div>
+                <div><span className="text-muted-foreground">CPF:</span> <span className="font-medium">{fmtCpf(data.buyerCpf)}</span></div>
+                <div><span className="text-muted-foreground">E-mail:</span> <span className="font-medium">{data.buyerEmail}</span></div>
+                <div><span className="text-muted-foreground">Telefone:</span> <span className="font-medium">{fmtPhone(data.buyerPhone)}</span></div>
+              </div>
+            </div>
+
+            {/* Info do ingresso */}
+            <div className="space-y-2 rounded-xl border p-4">
+              <h3 className="text-sm font-semibold text-primary">Ingresso</h3>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                <div><span className="text-muted-foreground">Tipo:</span> <span className="font-medium">{data.ticketTitle}</span></div>
+                <div><span className="text-muted-foreground">Qtd:</span> <span className="font-medium">{data.quantity}</span></div>
+                <div><span className="text-muted-foreground">Valor unit.:</span> <span className="font-medium">{data.unitPrice === 0 ? 'Gratuito' : formatMoney(data.unitPrice)}</span></div>
+                <div><span className="text-muted-foreground">Total:</span> <span className="font-bold">{data.totalAmount === 0 ? 'Gratuito' : formatMoney(data.totalAmount)}</span></div>
+              </div>
+              <p className="text-xs text-muted-foreground">Pedido em {formatDateTime(data.createdAt)}</p>
+            </div>
+
+            {/* Ingressos emitidos (códigos) */}
+            {data.tickets.length > 0 && (
+              <div className="space-y-2 rounded-xl border p-4">
+                <h3 className="text-sm font-semibold text-primary">Ingressos emitidos ({data.tickets.length})</h3>
+                <ul className="space-y-2">
+                  {data.tickets.map(t => (
+                    <li key={t.id} className="flex items-center justify-between rounded-lg bg-muted/50 px-3 py-2 text-sm">
+                      <div className="flex items-center gap-2">
+                        <span className="text-muted-foreground">#{t.sequence}</span>
+                        <code className="font-mono text-xs">{formatTicketCode(t.code)}</code>
+                        <button
+                          onClick={() => { void navigator.clipboard.writeText(t.code); toast.success('Código copiado!') }}
+                          className="text-muted-foreground hover:text-foreground"
+                        >
+                          <Copy className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                      {t.checkedInAt ? (
+                        <span className="text-xs text-emerald-500">Entrada: {formatDateTime(t.checkedInAt)}</span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">Não utilizado</span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {data.tickets.length === 0 && data.status !== 'Paid' && (
+              <p className="text-sm text-muted-foreground">Nenhum ingresso emitido (pedido não pago).</p>
+            )}
+
+            {/* Ações admin */}
+            <div className="flex flex-wrap gap-2 border-t pt-4">
+              {/* Contabilizar pedido expirado */}
+              {(data.expired || (data.status === 'AwaitingPayment' && !data.expired)) && (
+                <Button
+                  size="sm"
+                  variant="default"
+                  className="gap-1.5"
+                  onClick={() => forcePayMut.mutate()}
+                  disabled={forcePayMut.isPending}
+                >
+                  {forcePayMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
+                  Contabilizar
+                </Button>
+              )}
+
+              {/* Ver/Baixar ingresso PDF */}
+              {data.tickets.length > 0 && (
+                <Button size="sm" variant="outline" className="gap-1.5" onClick={handleDownloadPdf}>
+                  <Download className="h-4 w-4" /> Ver ingresso (PDF)
+                </Button>
+              )}
+
+              {/* Enviar por email */}
+              {data.tickets.length > 0 && (
+                <Button size="sm" variant="outline" className="gap-1.5" onClick={handleSendEmail} disabled={sendingEmail}>
+                  {sendingEmail ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+                  Enviar por e-mail
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function OrdersTab({ eventId, eventName, isAdmin = false }: { eventId: string; eventName: string; isAdmin?: boolean }) {
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState<'all' | 'Paid' | 'pending'>('all')
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null)
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ['ticket-event-orders', eventId],
     queryFn: async () => (await (isAdmin ? adminTicketEventsApi.orders(eventId) : ticketManagementApi.orders(eventId))).data,
@@ -246,12 +459,27 @@ function OrdersTab({ eventId, eventName, isAdmin = false }: { eventId: string; e
                 </span>
                 <span className="font-bold">{o.totalAmount === 0 ? 'Gratuito' : formatMoney(o.totalAmount)}</span>
               </div>
-              <p className="mt-1 text-xs text-muted-foreground">
-                {o.paidAt ? `Pago em ${formatDateTime(o.paidAt)}` : `Pedido em ${formatDateTime(o.createdAt)}`}
-              </p>
+              <div className="mt-2 flex items-center justify-between">
+                <p className="text-xs text-muted-foreground">
+                  {o.paidAt ? `Pago em ${formatDateTime(o.paidAt)}` : `Pedido em ${formatDateTime(o.createdAt)}`}
+                </p>
+                {isAdmin && (
+                  <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs" onClick={() => setSelectedOrderId(o.id)}>
+                    <Eye className="h-3.5 w-3.5" /> Detalhes
+                  </Button>
+                )}
+              </div>
             </li>
           ))}
         </ul>
+      )}
+
+      {isAdmin && selectedOrderId && (
+        <AdminOrderDetailModal
+          eventId={eventId}
+          orderId={selectedOrderId}
+          onClose={() => setSelectedOrderId(null)}
+        />
       )}
     </div>
   )

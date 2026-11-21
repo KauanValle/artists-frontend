@@ -679,6 +679,46 @@ export interface AdminTestTicket {
   buyerName: string
 }
 
+export interface AdminOrderDetail {
+  id: string
+  buyerName: string
+  buyerEmail: string
+  buyerPhone: string
+  buyerCpf: string
+  ticketTitle: string
+  quantity: number
+  unitPrice: number
+  totalAmount: number
+  status: string
+  expired: boolean
+  createdAt: string
+  paidAt: string | null
+  eventName: string
+  eventImageUrl: string
+  eventStartDate: string
+  eventStartTime: string
+  eventEndDate: string
+  eventEndTime: string
+  venue: string
+  city: string
+  state: string
+  street: string
+  number: string
+  complement: string
+  neighborhood: string
+  cep: string
+  producerName: string
+  tickets: AdminIssuedTicket[]
+}
+
+export interface AdminIssuedTicket {
+  id: string
+  sequence: number
+  code: string
+  checkedInAt: string | null
+  checkedInBy: string | null
+}
+
 export const adminTicketEventsApi = {
   list: () => api.get<AdminTicketEvent[]>('/admin/ticket-events'),
   get: (id: string) => api.get<TicketEvent>(`/admin/ticket-events/${id}`),
@@ -688,4 +728,8 @@ export const adminTicketEventsApi = {
   gates: (id: string) => api.get<GateAccess[]>(`/admin/ticket-events/${id}/gates`),
   createTestTicket: (eventId: string, eventTicketId: string) =>
     api.post<AdminTestTicket>(`/admin/ticket-events/${eventId}/test-ticket`, { eventTicketId }),
+  orderDetail: (eventId: string, orderId: string) =>
+    api.get<AdminOrderDetail>(`/admin/ticket-events/${eventId}/orders/${orderId}/detail`),
+  forcePay: (eventId: string, orderId: string) =>
+    api.post<{ message: string; ticketsIssued: number }>(`/admin/ticket-events/${eventId}/orders/${orderId}/force-pay`),
 }
