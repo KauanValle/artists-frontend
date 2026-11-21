@@ -809,6 +809,17 @@ export function Manager({ id, isAdmin = false }: { id: string; isAdmin?: boolean
     retry: false,
   })
 
+  const queryClient = useQueryClient()
+  const syncSoldMut = useMutation({
+    mutationFn: () => adminTicketEventsApi.syncSold(id),
+    onSuccess: (res) => {
+      toast.success(res.data.message)
+      void statsQuery.refetch()
+      void queryClient.invalidateQueries({ queryKey: ['ticket-event-orders', id] })
+    },
+    onError: (err: unknown) => toast.error(extractApiError(err)),
+  })
+
   if (evQuery.isLoading || statsQuery.isLoading) {
     return <div className="flex flex-1 items-center justify-center py-24"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
   }
@@ -824,17 +835,6 @@ export function Manager({ id, isAdmin = false }: { id: string; isAdmin?: boolean
 
   const ev = evQuery.data
   const stats = statsQuery.data
-
-  const queryClient = useQueryClient()
-  const syncSoldMut = useMutation({
-    mutationFn: () => adminTicketEventsApi.syncSold(id),
-    onSuccess: (res) => {
-      toast.success(res.data.message)
-      void statsQuery.refetch()
-      void queryClient.invalidateQueries({ queryKey: ['ticket-event-orders', id] })
-    },
-    onError: (err: unknown) => toast.error(extractApiError(err)),
-  })
 
   return (
     <main className="mx-auto w-full max-w-5xl space-y-6 px-4 py-8">
