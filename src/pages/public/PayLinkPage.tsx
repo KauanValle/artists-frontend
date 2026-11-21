@@ -96,6 +96,12 @@ export function PayLinkPage() {
               <dt className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">O que está sendo cobrado</dt>
               <dd className="mt-1 text-base font-medium">{link.description}</dd>
             </div>
+            {link.note && (
+              <div>
+                <dt className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Observações</dt>
+                <dd className="mt-1 whitespace-pre-line">{link.note}</dd>
+              </div>
+            )}
             {link.customerName && (
               <div>
                 <dt className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Cobrança para</dt>

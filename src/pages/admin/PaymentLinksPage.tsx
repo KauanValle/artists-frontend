@@ -141,7 +141,7 @@ export function PaymentLinksPage() {
                 onChange={(e) => setCustomerName(e.target.value)} />
             </div>
             <div className="space-y-1.5 sm:col-span-2">
-              <Label htmlFor="pl-note">Observação interna (opcional)</Label>
+              <Label htmlFor="pl-note">Observação (opcional — aparece na página de pagamento)</Label>
               <Textarea id="pl-note" rows={2} value={note} maxLength={500}
                 onChange={(e) => setNote(e.target.value)} />
             </div>

@@ -761,6 +761,7 @@ export interface PublicPaymentLink {
   description: string
   amount: number
   customerName?: string
+  note?: string
   status: AdminPaymentLink['status']
   checkoutUrl?: string
   createdAt: string
