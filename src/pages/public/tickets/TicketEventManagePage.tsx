@@ -18,6 +18,7 @@ import {
   Search,
   Trash2,
   Pencil,
+  RefreshCw,
   Undo2,
   Users,
   X,
@@ -824,18 +825,43 @@ export function Manager({ id, isAdmin = false }: { id: string; isAdmin?: boolean
   const ev = evQuery.data
   const stats = statsQuery.data
 
+  const queryClient = useQueryClient()
+  const syncSoldMut = useMutation({
+    mutationFn: () => adminTicketEventsApi.syncSold(id),
+    onSuccess: (res) => {
+      toast.success(res.data.message)
+      void statsQuery.refetch()
+      void queryClient.invalidateQueries({ queryKey: ['ticket-event-orders', id] })
+    },
+    onError: (err: unknown) => toast.error(extractApiError(err)),
+  })
+
   return (
     <main className="mx-auto w-full max-w-5xl space-y-6 px-4 py-8">
       <Link to={isAdmin ? "/admin/ingressos" : "/eventos"} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
         <ArrowLeft className="h-4 w-4" /> {isAdmin ? 'Todos os eventos' : 'Meus eventos'}
       </Link>
 
-      <div className="space-y-1">
-        <span className="inline-block rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary">{ev.category}</span>
-        <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">{ev.name}</h1>
-        <p className="text-sm text-muted-foreground">
-          {formatDate(ev.startDate)} às {formatTime(ev.startTime)} · {ev.venue} · {ev.city}/{ev.state}
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div className="space-y-1">
+          <span className="inline-block rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary">{ev.category}</span>
+          <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">{ev.name}</h1>
+          <p className="text-sm text-muted-foreground">
+            {formatDate(ev.startDate)} às {formatTime(ev.startTime)} · {ev.venue} · {ev.city}/{ev.state}
+          </p>
+        </div>
+        {isAdmin && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="gap-1.5 shrink-0"
+            onClick={() => syncSoldMut.mutate()}
+            disabled={syncSoldMut.isPending}
+          >
+            {syncSoldMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+            Sincronizar vendas
+          </Button>
+        )}
       </div>
 
       <div className="flex gap-1 overflow-x-auto rounded-xl border border-border/50 bg-card/40 p-1">

@@ -736,4 +736,6 @@ export const adminTicketEventsApi = {
     api.post<{ message: string; ticketsRemoved: number }>(`/admin/ticket-events/${eventId}/orders/${orderId}/undo-pay`),
   deleteOrder: (eventId: string, orderId: string) =>
     api.delete<{ message: string }>(`/admin/ticket-events/${eventId}/orders/${orderId}`),
+  syncSold: (eventId: string) =>
+    api.post<{ message: string; fixes: Array<{ ticketId: string; title: string; old: number; new: number }> }>(`/admin/ticket-events/${eventId}/sync-sold`),
 }
