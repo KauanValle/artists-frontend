@@ -212,6 +212,17 @@ function AdminOrderDetailModal({ eventId, orderId, onClose }: { eventId: string;
     onError: (err) => toast.error(extractApiError(err)),
   })
 
+  const deleteOrderMut = useMutation({
+    mutationFn: () => adminTicketEventsApi.deleteOrder(eventId, orderId),
+    onSuccess: (res) => {
+      toast.success(res.data.message)
+      onClose()
+      void queryClient.invalidateQueries({ queryKey: ['ticket-event-orders', eventId] })
+      void queryClient.invalidateQueries({ queryKey: ['ticket-event-stats', eventId] })
+    },
+    onError: (err) => toast.error(extractApiError(err)),
+  })
+
   const [sendingEmail, setSendingEmail] = useState(false)
 
   const handleSendEmail = async () => {
@@ -368,6 +379,18 @@ function AdminOrderDetailModal({ eventId, orderId, onClose }: { eventId: string;
                   Enviar por e-mail
                 </Button>
               )}
+
+              {/* Excluir pedido */}
+              <Button
+                size="sm"
+                variant="ghost"
+                className="gap-1.5 text-red-500 hover:bg-red-500/10 hover:text-red-600"
+                onClick={() => { if (confirm('Tem certeza que deseja excluir este pedido? Esta ação não pode ser desfeita.')) deleteOrderMut.mutate() }}
+                disabled={deleteOrderMut.isPending}
+              >
+                {deleteOrderMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                Excluir pedido
+              </Button>
             </div>
           </div>
         )}
