@@ -1,109 +1,22 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, Outlet, useNavigate } from 'react-router-dom'
-import {
-  CalendarPlus,
-  ChevronDown,
-  Compass,
-  LayoutGrid,
-  LogOut,
-  Menu,
-  Mic2,
-  PackageSearch,
-  Search,
-  Megaphone,
-  Sparkles,
-  Ticket,
-  X,
-  type LucideIcon,
-} from 'lucide-react'
+import { LogOut, Menu, X } from 'lucide-react'
 import { BrandMark } from '@/components/ui/brand-logo'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/hooks/useAuth'
 import { homePathFor } from '@/lib/utils'
 import { SiteFooter } from '@/components/SiteFooter'
+import { SubHeaderNav } from '@/components/SubHeaderNav'
 
 const menuItemClass =
   'flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-medium text-foreground hover:bg-accent'
-
-/** Links que rolam até uma seção da página inicial. */
-const ANCHORS: { to: string; label: string }[] = []
-
-interface NavDropdownItem {
-  to: string
-  label: string
-  icon: LucideIcon
-}
-
-/** Item de menu da navegação central com dropdown: abre ao passar o mouse/clicar; fecha ao clicar fora ou com Esc. */
-function NavDropdown({ label, items }: { label: string; items: NavDropdownItem[] }) {
-  const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  // Fecha com pequeno atraso: dá tempo de o mouse atravessar o vão até o painel.
-  const show = () => {
-    if (timer.current) clearTimeout(timer.current)
-    setOpen(true)
-  }
-  const hideSoon = () => {
-    if (timer.current) clearTimeout(timer.current)
-    timer.current = setTimeout(() => setOpen(false), 250)
-  }
-  useEffect(() => () => { if (timer.current) clearTimeout(timer.current) }, [])
-
-  useEffect(() => {
-    if (!open) return
-    const onClick = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
-    }
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false)
-    }
-    document.addEventListener('mousedown', onClick)
-    document.addEventListener('keydown', onKey)
-    return () => {
-      document.removeEventListener('mousedown', onClick)
-      document.removeEventListener('keydown', onKey)
-    }
-  }, [open])
-
-  return (
-    <div ref={ref} className="relative" onMouseEnter={show} onMouseLeave={hideSoon} onFocus={show} onBlur={hideSoon}>
-      <button
-        type="button"
-        aria-haspopup="menu"
-        aria-expanded={open}
-        onClick={show}
-        className="inline-flex items-center gap-1 whitespace-nowrap text-sm font-medium text-muted-foreground hover:text-foreground"
-      >
-        {label}
-        <ChevronDown className={`h-3.5 w-3.5 transition-transform ${open ? 'rotate-180' : ''}`} />
-      </button>
-      {open && (
-        // pt-2 cria uma ponte invisível entre o botão e o painel para o hover não "cair" no vão
-        <div className="absolute left-1/2 top-full z-50 -translate-x-1/2 pt-3">
-          <div role="menu" className="w-72 rounded-lg border bg-card p-1 shadow-lg">
-            {items.map(({ to, label: itemLabel, icon: Icon }) => (
-              <Link key={itemLabel} to={to} role="menuitem" onClick={() => setOpen(false)} className={menuItemClass}>
-                <Icon className="h-4 w-4 shrink-0 text-primary" /> {itemLabel}
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
 
 export function PublicLayout() {
   const { user, isAuthenticated, isLoading, logout } = useAuth()
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
-  // Destino de "Gestão de carreira": logado vai ao próprio painel; visitante vai criar a conta.
-  const careerPath = isAuthenticated && user ? homePathFor(user.role) : '/register'
-
   // fecha o menu mobile ao clicar fora ou apertar Esc
   useEffect(() => {
     if (!open) return
@@ -130,28 +43,6 @@ export function PublicLayout() {
           <Link to="/" className="flex items-center gap-2">
             <BrandMark />
           </Link>
-
-          {/* Desktop: links centralizados */}
-          <nav className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-6 xl:flex">
-            <NavDropdown
-              label="Produtos"
-              items={[
-                { to: '/eventos', label: 'Eventos', icon: Ticket },
-                { to: '/eventos/painel', label: 'Criador de evento', icon: CalendarPlus },
-                { to: careerPath, label: 'Gestão de carreira para artistas', icon: Mic2 },
-              ]}
-            />
-            <NavDropdown
-              label="Funcionalidades"
-              items={[
-                { to: '/artistas', label: 'Buscar artistas', icon: Search },
-                { to: '/acompanhar-pedidos', label: 'Acompanhar pedidos', icon: PackageSearch },
-              ]}
-            />
-            <Link to="/campanhas" className="whitespace-nowrap text-sm font-medium text-muted-foreground hover:text-foreground">
-              Campanhas
-            </Link>
-          </nav>
 
           <div className="flex items-center gap-1 sm:gap-2">
             <ThemeToggle />
@@ -214,36 +105,6 @@ export function PublicLayout() {
                   role="menu"
                   className="absolute right-0 z-50 mt-2 w-72 rounded-lg border bg-card p-1 shadow-lg"
                 >
-                  <p className="flex items-center gap-2 px-3 pb-1 pt-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    <LayoutGrid className="h-3.5 w-3.5" /> Produtos
-                  </p>
-                  <Link to="/eventos" role="menuitem" onClick={close} className={`${menuItemClass} pl-8`}>
-                    <Ticket className="h-4 w-4 shrink-0 text-primary" /> Eventos
-                  </Link>
-                  <Link to="/eventos/painel" role="menuitem" onClick={close} className={`${menuItemClass} pl-8`}>
-                    <CalendarPlus className="h-4 w-4 shrink-0 text-primary" /> Criador de evento
-                  </Link>
-                  <Link to={careerPath} role="menuitem" onClick={close} className={`${menuItemClass} pl-8`}>
-                    <Mic2 className="h-4 w-4 shrink-0 text-primary" /> Gestão de carreira para artistas
-                  </Link>
-                  <div className="my-1 border-t" />
-                  <p className="flex items-center gap-2 px-3 pb-1 pt-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    <Sparkles className="h-3.5 w-3.5" /> Funcionalidades
-                  </p>
-                  <Link to="/artistas" role="menuitem" onClick={close} className={`${menuItemClass} pl-8`}>
-                    <Search className="h-4 w-4 shrink-0 text-primary" /> Buscar artistas
-                  </Link>
-                  <Link to="/acompanhar-pedidos" role="menuitem" onClick={close} className={`${menuItemClass} pl-8`}>
-                    <PackageSearch className="h-4 w-4 shrink-0 text-primary" /> Acompanhar pedidos
-                  </Link>
-
-                  <div className="my-1 border-t" />
-                  <Link to="/campanhas" role="menuitem" onClick={close} className={menuItemClass}>
-                    <Megaphone className="h-4 w-4 shrink-0 text-primary" /> Campanhas
-                  </Link>
-
-                  <div className="my-1 border-t" />
-
                   {isLoading ? null : isAuthenticated && user ? (
                     <>
                       <button
@@ -292,6 +153,7 @@ export function PublicLayout() {
           </div>
         </div>
       </header>
+      <SubHeaderNav />
       <Outlet />
       <SiteFooter />
     </div>
