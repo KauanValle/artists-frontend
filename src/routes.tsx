@@ -59,6 +59,8 @@ import {UsersPage} from "@/pages/admin/UsersPage.tsx";
 import {AdminWithdrawalsPage} from '@/pages/admin/AdminWithdrawalsPage'
 import {CampaignsPage} from '@/pages/admin/CampaignsPage'
 import {AdminTicketEventsPage} from '@/pages/admin/AdminTicketEventsPage'
+import {PaymentLinksPage} from '@/pages/admin/PaymentLinksPage'
+import {PayLinkPage} from '@/pages/public/PayLinkPage'
 import {CampaignPage} from '@/pages/public/CampaignPage'
 import {CampaignsListPage} from '@/pages/public/CampaignsListPage'
 
@@ -110,6 +112,7 @@ export const router = createBrowserRouter([
       { path: '/contrato/:token', element: <ContractorSigningPage /> },
       { path: '/confirmar-conclusao/:token', element: <CompletionConfirmPage /> },
       { path: '/pagamento-concluido', element: <PaymentCallbackPage /> },
+      { path: '/pagar/:id', element: <PayLinkPage /> },
       { path: '/', element: <HomeOrRedirect /> },
     ],
   },
@@ -186,6 +189,7 @@ export const router = createBrowserRouter([
           { path: '/admin/saques', element: <AdminWithdrawalsPage /> },
           { path: '/admin/ingressos', element: <AdminTicketEventsPage /> },
           { path: '/admin/campanhas', element: <CampaignsPage /> },
+          { path: '/admin/links-pagamento', element: <PaymentLinksPage /> },
         ],
       },
     ],

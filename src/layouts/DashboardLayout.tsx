@@ -9,6 +9,7 @@ import {
     CreditCard, DollarSignIcon, Ellipsis, GlassesIcon, Guitar,
     Heart,
     LayoutDashboard,
+    Link2,
     LogOut,
     Megaphone,
     MessageSquare, MicIcon,
@@ -160,6 +161,7 @@ const adminNav = [
     { to: '/usuarios', label: 'Usuarios', icon: PersonStandingIcon},
     { to: '/admin/saques', label: 'Solicitações de Saque', icon: Wallet },
     { to: '/admin/campanhas', label: 'Campanhas', icon: Megaphone },
+    { to: '/admin/links-pagamento', label: 'Links de pagamento', icon: Link2 },
 ]
 
 function SidebarContent({

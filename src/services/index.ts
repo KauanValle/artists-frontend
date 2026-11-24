@@ -739,3 +739,43 @@ export const adminTicketEventsApi = {
   syncSold: (eventId: string) =>
     api.post<{ message: string; fixes: Array<{ ticketId: string; title: string; old: number; new: number }> }>(`/admin/ticket-events/${eventId}/sync-sold`),
 }
+
+// ── Links de pagamento avulsos (admin, InfinityPay) ──
+export interface AdminPaymentLink {
+  id: string
+  description: string
+  amount: number
+  customerName?: string
+  note?: string
+  status: 'AwaitingPayment' | 'Paid' | 'Cancelled'
+  checkoutUrl: string
+  createdAt: string
+  paidAt?: string
+  paidVia?: string
+  paymentMethod?: string
+  receiptUrl?: string
+}
+
+export interface PublicPaymentLink {
+  id: string
+  description: string
+  amount: number
+  customerName?: string
+  note?: string
+  status: AdminPaymentLink['status']
+  checkoutUrl?: string
+  createdAt: string
+  paidAt?: string
+}
+
+export const publicPaymentLinksApi = {
+  get: (id: string) => api.get<PublicPaymentLink>(`/public/payment-links/${id}`),
+}
+
+export const adminPaymentLinksApi = {
+  list: () => api.get<AdminPaymentLink[]>('/admin/payment-links'),
+  create: (data: { description: string; amount: number; customerName?: string; note?: string }) =>
+    api.post<AdminPaymentLink>('/admin/payment-links', data),
+  refresh: (id: string) => api.post<AdminPaymentLink>(`/admin/payment-links/${id}/refresh`),
+  cancel: (id: string) => api.post<AdminPaymentLink>(`/admin/payment-links/${id}/cancel`),
+}

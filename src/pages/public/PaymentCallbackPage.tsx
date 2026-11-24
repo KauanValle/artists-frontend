@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useMutation } from '@tanstack/react-query'
 import { CheckCircle2, Clock, Loader2, Mail, PackageSearch } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { ticketOrdersApi } from '@/services'
+import { publicPaymentLinksApi, ticketOrdersApi } from '@/services'
 import { api } from '@/services/api'
 import { generateTicketPdfBase64, getTicketPdfFileName } from '@/lib/ticket-pdf'
 
@@ -16,6 +16,9 @@ import { generateTicketPdfBase64, getTicketPdfFileName } from '@/lib/ticket-pdf'
 export function PaymentCallbackPage() {
   const [params] = useSearchParams()
   const orderNsu = params.get('order_nsu')
+  const navigate = useNavigate()
+  // true enquanto conferimos se o retorno é de um link de pagamento avulso (/pagar/:id).
+  const [checkingLink, setCheckingLink] = useState(false)
   const emailSentRef = useRef(false)
   const [emailStatus, setEmailStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle')
 
@@ -32,7 +35,19 @@ export function PaymentCallbackPage() {
   })
 
   useEffect(() => {
-    if (orderNsu) verify.mutate()
+    if (!orderNsu) return
+    verify.mutate(undefined, {
+      onSuccess: async (data) => {
+        if (data.found) return
+        setCheckingLink(true)
+        try {
+          await publicPaymentLinksApi.get(orderNsu)
+          navigate(`/pagar/${orderNsu}`, { replace: true })
+        } catch {
+          setCheckingLink(false) // não é link avulso: segue para a tela genérica
+        }
+      },
+    })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderNsu])
 
@@ -64,7 +79,7 @@ export function PaymentCallbackPage() {
     sendEmail()
   }, [verify.data])
 
-  if (orderNsu && (verify.isIdle || verify.isPending)) {
+  if (orderNsu && (verify.isIdle || verify.isPending || checkingLink)) {
     return (
       <div className="flex items-center justify-center gap-2 py-24 text-sm text-muted-foreground">
         <Loader2 className="h-4 w-4 animate-spin" /> Confirmando o seu pagamento...
