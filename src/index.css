@@ -36,24 +36,24 @@
     font-family: 'Montserrat', system-ui, -apple-system, sans-serif;
   }
 
-  /* Tema escuro — identidade reprissa (preto profundo + roxo) */
+  /* Tema escuro — identidade reprissa (roxo profundo, conteúdo legível) */
   .dark {
-    --background: 240 14% 4%;
-    --foreground: 0 0% 98%;
-    --card: 240 12% 7%;
-    --card-foreground: 0 0% 98%;
+    --background: 252 30% 6%;
+    --foreground: 0 0% 95%;
+    --card: 252 20% 12%;
+    --card-foreground: 0 0% 95%;
     --primary: 252 95% 68%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 240 6% 13%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 6% 13%;
-    --muted-foreground: 240 6% 75%;
-    --accent: 255 35% 17%;
+    --secondary: 252 15% 14%;
+    --secondary-foreground: 0 0% 95%;
+    --muted: 252 15% 14%;
+    --muted-foreground: 240 6% 65%;
+    --accent: 255 25% 20%;
     --accent-foreground: 255 60% 88%;
     --destructive: 0 72% 55%;
     --destructive-foreground: 0 0% 100%;
-    --border: 240 8% 15%;
-    --input: 240 8% 15%;
+    --border: 252 15% 18%;
+    --input: 252 15% 16%;
     --ring: 252 95% 68%;
     --brand-blue: 223 100% 62%;
   }

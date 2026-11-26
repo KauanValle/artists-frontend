@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { endOfMonth, endOfYear, startOfMonth, startOfYear } from 'date-fns'
-import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Plus, Wallet } from 'lucide-react'
+import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Plus, TrendingUp, Wallet } from 'lucide-react'
 import { toast } from 'sonner'
 import { eventsApi, financialApi } from '@/services'
 import { Button } from '@/components/ui/button'
@@ -12,7 +12,8 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { EmptyState, TransactionStatusBadge } from '@/components/badges'
-import { StatCard } from '@/pages/artist/ArtistDashboardPage'
+import { StatCard } from '@/components/StatCard'
+import { PageHeader } from '@/components/PageHeader'
 import { formatDate, formatMoney, toDateInput } from '@/lib/utils'
 import { extractApiError } from '@/services/api'
 import type { TransactionStatus, TransactionType } from '@/types'
@@ -85,25 +86,27 @@ export function FinancialPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold">Financeiro</h1>
-          <p className="text-sm text-muted-foreground">Receitas, despesas, resultado e contas a receber</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Tabs value={period} onValueChange={(v) => setPeriod(v as Period)}>
-            <TabsList>
-              <TabsTrigger value="month">Mês</TabsTrigger>
-              <TabsTrigger value="year">Ano</TabsTrigger>
-              <TabsTrigger value="all">Tudo</TabsTrigger>
-              <TabsTrigger value="custom">Período</TabsTrigger>
-            </TabsList>
-          </Tabs>
-          <Button onClick={() => setCreateOpen(true)}>
-            <Plus /> Nova transação
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        icon={<Wallet />}
+        title="Financeiro"
+        subtitle="Receitas, despesas, resultado e contas a receber"
+        gradient="from-emerald-500 to-teal-500"
+        action={
+          <div className="flex flex-wrap items-center gap-2">
+            <Tabs value={period} onValueChange={(v) => setPeriod(v as Period)}>
+              <TabsList className="bg-white/10">
+                <TabsTrigger value="month" className="data-[state=active]:bg-white/20 text-white/70 data-[state=active]:text-white">Mês</TabsTrigger>
+                <TabsTrigger value="year" className="data-[state=active]:bg-white/20 text-white/70 data-[state=active]:text-white">Ano</TabsTrigger>
+                <TabsTrigger value="all" className="data-[state=active]:bg-white/20 text-white/70 data-[state=active]:text-white">Tudo</TabsTrigger>
+                <TabsTrigger value="custom" className="data-[state=active]:bg-white/20 text-white/70 data-[state=active]:text-white">Período</TabsTrigger>
+              </TabsList>
+            </Tabs>
+            <Button className="bg-white/15 text-white hover:bg-white/25 backdrop-blur-sm" onClick={() => setCreateOpen(true)}>
+              <Plus /> Nova transação
+            </Button>
+          </div>
+        }
+      />
 
       {period === 'custom' && (
         <div className="flex gap-3">
@@ -162,12 +165,12 @@ export function FinancialPage() {
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-6">
-        <StatCard title="Receita prevista" value={formatMoney(summary?.incomeExpected)} hint="Inclui pendentes" />
-        <StatCard title="Cache" value={formatMoney(summary?.incomeReceived)} />
-        <StatCard title="Recebido" value={formatMoney(summary?.incomeReceived)} />
-        <StatCard title="Despesas" value={formatMoney(summary?.expenseTotal)} hint={`Pagas: ${formatMoney(summary?.expensePaid)}`} />
-        <StatCard title="Contas a receber" value={formatMoney(summary?.accountsReceivable)} hint="Pendentes + atrasadas" />
-        <StatCard title="Resultado" value={formatMoney(summary?.result)} hint="Recebido − pago" />
+        <StatCard title="Receita prevista" value={formatMoney(summary?.incomeExpected)} hint="Inclui pendentes" icon={<TrendingUp />} iconBg="bg-emerald-500/10" iconColor="text-emerald-500" />
+        <StatCard title="Cache" value={formatMoney(summary?.incomeReceived)} icon={<Wallet />} iconBg="bg-blue-500/10" iconColor="text-blue-500" />
+        <StatCard title="Recebido" value={formatMoney(summary?.incomeReceived)} icon={<Wallet />} iconBg="bg-green-500/10" iconColor="text-green-500" />
+        <StatCard title="Despesas" value={formatMoney(summary?.expenseTotal)} hint={`Pagas: ${formatMoney(summary?.expensePaid)}`} icon={<ArrowDown />} iconBg="bg-red-500/10" iconColor="text-red-500" />
+        <StatCard title="Contas a receber" value={formatMoney(summary?.accountsReceivable)} hint="Pendentes + atrasadas" icon={<ArrowUp />} iconBg="bg-amber-500/10" iconColor="text-amber-500" />
+        <StatCard title="Resultado" value={formatMoney(summary?.result)} hint="Recebido − pago" icon={<Wallet />} iconBg="bg-primary/10" iconColor="text-primary" />
       </div>
 
       <Card>

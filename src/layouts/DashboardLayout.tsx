@@ -1,15 +1,14 @@
 import { useMemo, useState } from 'react'
-import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
     BadgeCheck,
-    Ban,
     CalendarDays,
     CalendarRange,
     ClipboardList,
+    ChevronDown,
     CreditCard, DollarSignIcon, Ellipsis, GlassesIcon, Guitar,
     Heart,
     LayoutDashboard,
-    Link2,
     LogOut,
     Megaphone,
     MessageSquare, MicIcon,
@@ -21,9 +20,10 @@ import {
     Star,
     TriangleAlert,
     Users,
-    Wallet,
     UserPlus,
+    Wallet,
     Ticket,
+    Link2,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useQuery } from '@tanstack/react-query'
@@ -38,30 +38,47 @@ import { cn } from '@/lib/utils'
 import { SiteFooter } from '@/components/SiteFooter'
 import { TutorialBox, useTutorialProgress, type TutorialStep } from '@/components/onboarding/TutorialBox'
 
-const artistNav = [
+type NavItem = { to: string; label: string; icon: typeof LayoutDashboard }
+type NavGroup = { label: string; icon: typeof LayoutDashboard; children: NavItem[] }
+type NavEntry = NavItem | NavGroup
+function isNavGroup(entry: NavEntry): entry is NavGroup { return 'children' in entry }
+
+const artistNav: NavEntry[] = [
   { to: '/artist/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/artist/agenda', label: 'Agenda', icon: CalendarDays },
-  { to: '/artist/shows', label: 'Shows', icon: Megaphone },
-  { to: '/avaliacoes', label: 'Avaliações', icon: Star },
-  { to: '/artist/financeiro', label: 'Financeiro', icon: CreditCard },
-  { to: '/artist/saque', label: 'Saque', icon: Wallet },
+  {
+    label: 'Eventos',
+    icon: Megaphone,
+    children: [
+      { to: '/artist/shows', label: 'Shows', icon: Megaphone },
+      { to: '/artist/agenda', label: 'Agenda', icon: CalendarDays },
+      { to: '/avaliacoes', label: 'Avaliações', icon: Star },
+      { to: '/artist/conversas', label: 'Conversas', icon: MessageSquare },
+    ],
+  },
+  {
+    label: 'Financeiro',
+    icon: CreditCard,
+    children: [
+      { to: '/artist/financeiro', label: 'Financeiro', icon: CreditCard },
+      { to: '/artist/saque', label: 'Saque', icon: Wallet },
+    ],
+  },
   { to: '/artist/indicacoes', label: 'Indicações', icon: UserPlus },
   { to: '/artist/equipe', label: 'Equipe', icon: Users },
   { to: '/artist/equipamentos', label: 'Equipamentos', icon: Guitar },
   { to: '/artist/perfil', label: 'Meu Perfil', icon: Music },
-  { to: '/artist/conversas', label: 'Conversas', icon: MessageSquare },
   { to: '/artist/epk', label: 'Meu EPK', icon: Newspaper },
   { to: '/artist/configuracoes', label: 'Configurações', icon: Settings },
   // { to: '/artist/assinatura', label: 'Assinatura', icon: BadgeCheck },
 ]
 
 // Conta gratuita: só dashboard e assinatura até o pagamento ser confirmado.
-const freeArtistNav = [
+const freeArtistNav: NavEntry[] = [
   { to: '/artist/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/artist/assinatura', label: 'Assinatura', icon: CreditCard },
 ]
 
-const contractorNav = [
+const contractorNav: NavEntry[] = [
   { to: '/contractor/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/contractor/buscar', label: 'Buscar artistas', icon: Search },
   { to: '/contractor/solicitacoes', label: 'Solicitações', icon: ClipboardList },
@@ -152,23 +169,131 @@ const artistTutorialSteps: TutorialStep[] = [
   },
 ]
 
-const adminNav = [
+const adminNav: NavEntry[] = [
     { to: '/admin', label: 'Painel', icon: LayoutDashboard },
-    { to: '/solicitacoes-anonimas', label: 'Solicitações Anonimas', icon: GlassesIcon },
-    { to: '/admin/eventos', label: 'Eventos', icon: MicIcon},
-    { to: '/admin/ingressos', label: 'Ingressos', icon: Ticket},
-    { to: '/financeiro', label: 'Financeiro', icon: DollarSignIcon},
-    { to: '/usuarios', label: 'Usuarios', icon: PersonStandingIcon},
-    { to: '/admin/saques', label: 'Solicitações de Saque', icon: Wallet },
+    { to: '/eventos', label: 'Eventos', icon: MicIcon },
+    { to: '/admin/ingressos', label: 'Ingressos', icon: Ticket },
+    { to: '/financeiro', label: 'Financeiro', icon: DollarSignIcon },
+    { to: '/admin/saques', label: 'Solicitação de Saque', icon: Wallet },
     { to: '/admin/campanhas', label: 'Campanhas', icon: Megaphone },
-    { to: '/admin/links-pagamento', label: 'Links de pagamento', icon: Link2 },
+    { to: '/admin/links-pagamento', label: 'Link de Pagamento', icon: Link2 },
+    { to: '/usuarios', label: 'Usuarios', icon: PersonStandingIcon },
 ]
+
+function SidebarNavItem({
+  item,
+  onNavigate,
+  pendentes,
+  isContractor,
+  missingProfileFields,
+}: {
+  item: NavItem
+  onNavigate?: () => void
+  pendentes: unknown[]
+  isContractor: boolean
+  missingProfileFields: { label: string }[]
+}) {
+  return (
+    <NavLink
+      key={item.to}
+      to={item.to}
+      end={item.to === '/admin'}
+      onClick={onNavigate}
+      className={({ isActive }) =>
+        cn(
+          'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-zinc-400 transition-colors hover:bg-white/10 hover:text-white',
+          isActive && 'bg-primary/20 text-white'
+        )
+      }
+    >
+      <item.icon className="h-4 w-4 shrink-0" />
+      <span className="min-w-0 flex-1 truncate">{item.label}</span>
+      {item.to === '/avaliacoes' && isContractor && pendentes.length > 0 && (
+        <span
+          className="ml-auto flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-amber-500/90 px-1.5 text-[11px] font-bold text-amber-950"
+          aria-label={`${pendentes.length} show${pendentes.length > 1 ? 's' : ''} aguardando avaliação`}
+          title={`${pendentes.length} show${pendentes.length > 1 ? 's' : ''} aguardando avaliação`}
+        >
+          {pendentes.length > 9 ? '9+' : pendentes.length}
+        </span>
+      )}
+      {item.to === '/artist/perfil' && missingProfileFields.length > 0 && (
+        <span
+          className="shrink-0"
+          aria-label={`${missingProfileFields.length} campo${missingProfileFields.length > 1 ? 's' : ''} obrigatório${missingProfileFields.length > 1 ? 's' : ''} pendente${missingProfileFields.length > 1 ? 's' : ''}`}
+          title={`Campos obrigatórios pendentes: ${missingProfileFields.map((f) => f.label).join(', ')}`}
+        >
+          <TriangleAlert className="h-4 w-4 text-amber-400" />
+        </span>
+      )}
+    </NavLink>
+  )
+}
+
+function SidebarNavGroup({
+  group,
+  onNavigate,
+  pendentes,
+  isContractor,
+  missingProfileFields,
+}: {
+  group: NavGroup
+  onNavigate?: () => void
+  pendentes: unknown[]
+  isContractor: boolean
+  missingProfileFields: { label: string }[]
+}) {
+  const location = useLocation()
+  const isChildActive = group.children.some((child) => location.pathname.startsWith(child.to))
+  const [open, setOpen] = useState(isChildActive)
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className={cn(
+          'flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-zinc-400 transition-colors hover:bg-white/10 hover:text-white',
+          isChildActive && 'text-white'
+        )}
+      >
+        <group.icon className="h-4 w-4 shrink-0" />
+        <span className="min-w-0 flex-1 truncate text-left">{group.label}</span>
+        <ChevronDown
+          className={cn(
+            'h-4 w-4 shrink-0 transition-transform duration-200',
+            open && 'rotate-180'
+          )}
+        />
+      </button>
+      <div
+        className={cn(
+          'overflow-hidden transition-all duration-200',
+          open ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'
+        )}
+      >
+        <div className="ml-4 space-y-0.5 border-l border-white/10 pl-2 pt-1">
+          {group.children.map((child) => (
+            <SidebarNavItem
+              key={child.to}
+              item={child}
+              onNavigate={onNavigate}
+              pendentes={pendentes}
+              isContractor={isContractor}
+              missingProfileFields={missingProfileFields}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
 
 function SidebarContent({
   nav,
   onNavigate,
 }: {
-  nav: { to: string; label: string; icon: typeof LayoutDashboard }[]
+  nav: NavEntry[]
   onNavigate?: () => void
 }) {
   const { user, logout } = useAuth()
@@ -195,44 +320,30 @@ function SidebarContent({
   return (
     <>
       <div className="flex h-16 items-center gap-2 border-b px-5">
-        <Link to="/#home"><BrandMark /></Link>
+        <BrandMark />
       </div>
       <nav className="flex-1 space-y-1 overflow-y-auto p-3">
-        {nav.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            end={item.to === '/admin'}
-            onClick={onNavigate}
-            className={({ isActive }) =>
-              cn(
-                'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground',
-                isActive && 'bg-accent text-accent-foreground'
-              )
-            }
-          >
-            <item.icon className="h-4 w-4 shrink-0" />
-            <span className="min-w-0 flex-1 truncate">{item.label}</span>
-            {item.to === '/avaliacoes' && isContractor && pendentes.length > 0 && (
-              <span
-                className="ml-auto flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-amber-500 px-1.5 text-[11px] font-bold text-amber-950"
-                aria-label={`${pendentes.length} show${pendentes.length > 1 ? 's' : ''} aguardando avaliação`}
-                title={`${pendentes.length} show${pendentes.length > 1 ? 's' : ''} aguardando avaliação`}
-              >
-                {pendentes.length > 9 ? '9+' : pendentes.length}
-              </span>
-            )}
-            {item.to === '/artist/perfil' && missingProfileFields.length > 0 && (
-              <span
-                className="shrink-0"
-                aria-label={`${missingProfileFields.length} campo${missingProfileFields.length > 1 ? 's' : ''} obrigatório${missingProfileFields.length > 1 ? 's' : ''} pendente${missingProfileFields.length > 1 ? 's' : ''}`}
-                title={`Campos obrigatórios pendentes: ${missingProfileFields.map((f) => f.label).join(', ')}`}
-              >
-                <TriangleAlert className="h-4 w-4 text-amber-500" />
-              </span>
-            )}
-          </NavLink>
-        ))}
+        {nav.map((entry, i) =>
+          isNavGroup(entry) ? (
+            <SidebarNavGroup
+              key={entry.label}
+              group={entry}
+              onNavigate={onNavigate}
+              pendentes={pendentes}
+              isContractor={isContractor}
+              missingProfileFields={missingProfileFields}
+            />
+          ) : (
+            <SidebarNavItem
+              key={entry.to}
+              item={entry}
+              onNavigate={onNavigate}
+              pendentes={pendentes}
+              isContractor={isContractor}
+              missingProfileFields={missingProfileFields}
+            />
+          )
+        )}
       </nav>
       <div className="border-t p-3">
         <div className="flex items-center gap-2 px-1 py-2">
@@ -258,7 +369,6 @@ const artistBottomTabs = [
   { to: '/artist/shows', label: 'Shows', icon: Megaphone },
   { to: '/artist/agenda', label: 'Agenda', icon: CalendarDays },
   { to: '/artist/financeiro', label: 'Financeiro', icon: CreditCard },
-  { to: '/artist/saque', label: 'Saque', icon: Wallet },
 ]
 
 const contractorBottomTabs = [
@@ -271,8 +381,7 @@ const contractorBottomTabs = [
 const adminBottomTabs = [
   { to: '/admin', label: 'Painel', icon: LayoutDashboard },
   { to: '/solicitacoes-anonimas', label: 'Solicitações', icon: GlassesIcon },
-  { to: '/admin/eventos', label: 'Eventos', icon: MicIcon },
-  { to: '/admin/ingressos', label: 'Ingressos', icon: Ticket },
+  { to: '/eventos', label: 'Eventos', icon: MicIcon },
   { to: '/financeiro', label: 'Financeiro', icon: DollarSignIcon },
 ]
 
@@ -284,15 +393,13 @@ function BottomTabBar({
   onMoreClick: () => void
 }) {
   const location = useLocation()
-  // '/admin' só é a aba ativa na própria raiz (senão ficaria ativa em /admin/eventos, /admin/saques...)
-  const matches = (to: string) => (to === '/admin' ? location.pathname === '/admin' : location.pathname.startsWith(to))
-  const moreActive = !tabs.some((t) => matches(t.to))
+  const moreActive = !tabs.some((t) => location.pathname.startsWith(t.to))
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 border-t bg-background pb-[env(safe-area-inset-bottom)] lg:hidden">
+    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-[#0d0a1a]/90 backdrop-blur-md pb-[env(safe-area-inset-bottom)] lg:hidden">
       <div className="flex h-14 items-stretch">
         {tabs.map((item) => {
-          const active = matches(item.to)
+          const active = location.pathname.startsWith(item.to)
           return (
             <NavLink
               key={item.to}
@@ -322,8 +429,7 @@ function BottomTabBar({
 }
 
 export function DashboardLayout() {
-  const { user, logout } = useAuth()
-  const navigate = useNavigate()
+  const { user } = useAuth()
   const [menuOpen, setMenuOpen] = useState(false)
   const tutorialArtista = useTutorialProgress('reprissa.tutorial.artista', artistTutorialSteps)
   // Feature flag (AppSettings → /api/branding): assinatura desligada = acesso livre.
@@ -351,7 +457,17 @@ export function DashboardLayout() {
     const liberados = new Set(
       artistTutorialSteps.filter((s, i) => i <= atualIdx && s.href).map((s) => s.href as string)
     )
-    return navBase.filter((item) => liberados.has(item.to))
+    return navBase.reduce<NavEntry[]>((acc, entry) => {
+      if (isNavGroup(entry)) {
+        const filteredChildren = entry.children.filter((child) => liberados.has(child.to))
+        if (filteredChildren.length > 0) {
+          acc.push({ ...entry, children: filteredChildren })
+        }
+      } else if (liberados.has(entry.to)) {
+        acc.push(entry)
+      }
+      return acc
+    }, [])
   }, [navBase, tutorialArtista])
 
   const bottomTabs = !user
@@ -362,41 +478,16 @@ export function DashboardLayout() {
         ? contractorBottomTabs
         : artistBottomTabs
 
-  // ── Tela de bloqueio para contas desativadas (não-admin) ──
-  if (user?.isDeactivated && user.role !== 'Admin') {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-secondary/40 p-4">
-        <div className="w-full max-w-md space-y-6 text-center">
-          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30">
-            <Ban className="h-10 w-10 text-red-500" />
-          </div>
-          <div className="space-y-2">
-            <h1 className="text-2xl font-bold text-red-700 dark:text-red-400">Conta desativada</h1>
-            <p className="text-muted-foreground">
-              Sua conta foi desativada pelo administrador da plataforma.
-            </p>
-          </div>
-          {user.deactivationMessage && (
-            <div className="rounded-lg border border-red-500/40 bg-red-500/10 px-5 py-4 text-left text-sm">
-              <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-red-600 dark:text-red-400">Motivo</p>
-              <p className="text-red-700 dark:text-red-300">{user.deactivationMessage}</p>
-            </div>
-          )}
-          <p className="text-xs text-muted-foreground">
-            Se você acredita que isso é um engano, entre em contato com o suporte.
-          </p>
-          <Button variant="outline" onClick={() => { logout(); navigate('/login') }}>
-            <LogOut className="mr-2 h-4 w-4" /> Sair
-          </Button>
-        </div>
-      </div>
-    )
-  }
-
   return (
-    <div className="min-h-screen bg-secondary/40">
+    <div className="min-h-screen bg-[#0d0a1a] relative overflow-hidden">
+      {/* ── Decorative background glows ── */}
+      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden lg:left-60">
+        <div className="absolute -top-24 left-1/4 h-[600px] w-[600px] rounded-full bg-[#7c3aed]/20 blur-[150px]" />
+        <div className="absolute top-1/3 -right-10 h-[500px] w-[500px] rounded-full bg-[#6d28d9]/15 blur-[130px]" />
+        <div className="absolute bottom-10 left-1/3 h-[400px] w-[400px] rounded-full bg-[#4f46e5]/15 blur-[120px]" />
+      </div>
       {/* Sidebar fixa apenas em telas grandes */}
-      <aside className="fixed inset-y-0 left-0 z-40 hidden w-60 flex-col border-r bg-background lg:flex">
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-60 flex-col border-r border-white/10 bg-[#0f0a1e] lg:flex">
         <SidebarContent nav={nav} />
       </aside>
 
@@ -404,16 +495,16 @@ export function DashboardLayout() {
       {menuOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
           <div className="absolute inset-0 bg-black/50" onClick={() => setMenuOpen(false)} aria-hidden />
-          <aside className="absolute inset-y-0 left-0 flex w-64 max-w-[85vw] flex-col border-r bg-background shadow-xl">
+          <aside className="absolute inset-y-0 left-0 flex w-64 max-w-[85vw] flex-col border-r border-white/10 bg-[#0f0a1e] shadow-xl">
             <SidebarContent nav={nav} onNavigate={() => setMenuOpen(false)} />
           </aside>
         </div>
       )}
 
-      <div className="flex min-h-screen flex-col lg:pl-60">
-        <header className="sticky top-0 z-30 flex h-14 lg:h-16 items-center justify-between gap-2 border-b bg-background/95 px-4 backdrop-blur lg:justify-end lg:px-6">
+      <div className="relative z-10 flex min-h-screen flex-col lg:pl-60">
+        <header className="sticky top-0 z-30 flex h-14 lg:h-16 items-center justify-between gap-2 border-b border-white/10 bg-[#0d0a1a]/80 px-4 backdrop-blur-md lg:justify-end lg:px-6">
           <div className="flex items-center gap-2 lg:hidden">
-            <Link to="/#home"><BrandMark /></Link>
+            <BrandMark />
           </div>
           <div className="flex items-center gap-1">
             <ThemeToggle />

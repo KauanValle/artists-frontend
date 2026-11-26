@@ -3,6 +3,8 @@ import { api } from '@/services/api'
 import { Wallet, TrendingUp, Percent, ArrowDownRight, CalendarDays, MapPin, Music, Loader2, CheckCircle2, Clock, XCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useState } from 'react'
+import { PageHeader } from '@/components/PageHeader'
+import { StatCard } from '@/components/StatCard'
 
 interface WithdrawalShow {
   bookingId: string
@@ -81,52 +83,36 @@ export function SaquePage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Saque</h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            Valores dos shows concluídos disponíveis para saque, já com o desconto da taxa administrativa.
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        icon={<Wallet />}
+        title="Saque"
+        subtitle="Valores dos shows concluídos disponíveis para saque"
+        gradient="from-green-500 to-emerald-500"
+      />
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div className="rounded-xl border bg-card p-5 shadow-sm">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-500/10">
-              <Wallet className="h-5 w-5 text-green-600 dark:text-green-400" />
-            </div>
-            <span className="text-sm font-medium text-muted-foreground">Disponível para saque</span>
-          </div>
-          <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-            {isLoading ? '...' : currency(data?.totalLiquido ?? 0)}
-          </p>
-        </div>
-
-        <div className="rounded-xl border bg-card p-5 shadow-sm">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-500/10">
-              <TrendingUp className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-            </div>
-            <span className="text-sm font-medium text-muted-foreground">Total bruto</span>
-          </div>
-          <p className="text-2xl font-bold">
-            {isLoading ? '...' : currency(data?.totalBruto ?? 0)}
-          </p>
-        </div>
-
-        <div className="rounded-xl border bg-card p-5 shadow-sm">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-500/10">
-              <Percent className="h-5 w-5 text-orange-600 dark:text-orange-400" />
-            </div>
-            <span className="text-sm font-medium text-muted-foreground">Taxa administrativa ({data?.taxaPercentual ?? 0}%)</span>
-          </div>
-          <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">
-            {isLoading ? '...' : `- ${currency(data?.totalTaxa ?? 0)}`}
-          </p>
-        </div>
+        <StatCard
+          title="Disponível para saque"
+          value={isLoading ? '...' : currency(data?.totalLiquido ?? 0)}
+          icon={<Wallet />}
+          iconBg="bg-green-500/10"
+          iconColor="text-green-500"
+        />
+        <StatCard
+          title="Total bruto"
+          value={isLoading ? '...' : currency(data?.totalBruto ?? 0)}
+          icon={<TrendingUp />}
+          iconBg="bg-blue-500/10"
+          iconColor="text-blue-500"
+        />
+        <StatCard
+          title={`Taxa administrativa (${data?.taxaPercentual ?? 0}%)`}
+          value={isLoading ? '...' : `- ${currency(data?.totalTaxa ?? 0)}`}
+          icon={<Percent />}
+          iconBg="bg-orange-500/10"
+          iconColor="text-orange-500"
+        />
       </div>
 
       {/* Withdrawal Button */}

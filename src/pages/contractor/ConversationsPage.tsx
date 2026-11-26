@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { EmptyState } from '@/components/badges'
 import { cn, formatDateTime } from '@/lib/utils'
+import { PageHeader } from '@/components/PageHeader'
 import { extractApiError } from '@/services/api'
 
 const PER_PAGE = 9
@@ -43,17 +44,17 @@ export function ConversationsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        {id && (
-          <Button variant="ghost" size="icon" onClick={() => navigate('/contractor/conversas')}>
+      <PageHeader
+        icon={<MessageSquare />}
+        title="Conversas"
+        subtitle="Uma conversa por contratação"
+        gradient="from-indigo-500 to-violet-500"
+        action={id ? (
+          <Button variant="outline" className="border-white/20 bg-white/10 text-white hover:bg-white/20" size="icon" onClick={() => navigate('/contractor/conversas')}>
             <ArrowLeft />
           </Button>
-        )}
-        <div>
-          <h1 className="text-2xl font-bold">Conversas</h1>
-          <p className="text-sm text-muted-foreground">Uma conversa por contratação</p>
-        </div>
-      </div>
+        ) : undefined}
+      />
 
       {isLoading ? (
         <p className="py-10 text-center text-sm text-muted-foreground">Carregando...</p>

@@ -10,6 +10,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { BookingStatusBadge, EmptyState } from '@/components/badges'
 import { formatDate, formatMoney, formatTime } from '@/lib/utils'
+import { PageHeader } from '@/components/PageHeader'
 import type { BookingStatus } from '@/types'
 
 const tabs: { value: string; label: string; status?: BookingStatus }[] = [
@@ -64,10 +65,12 @@ export function ContractorBookingsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Solicitações</h1>
-        <p className="text-sm text-muted-foreground">Acompanhe o ciclo de cada contratação</p>
-      </div>
+      <PageHeader
+        icon={<ClipboardList />}
+        title="Solicitações"
+        subtitle="Acompanhe o ciclo de cada contratação"
+        gradient="from-amber-500 to-orange-500"
+      />
 
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList className="w-full justify-start overflow-x-auto scrollbar-none flex-nowrap">

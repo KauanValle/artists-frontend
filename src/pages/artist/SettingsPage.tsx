@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Instagram } from 'lucide-react'
+import { Instagram, Settings } from 'lucide-react'
+import { PageHeader } from '@/components/PageHeader'
 import { toast } from 'sonner'
 import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/button'
@@ -47,10 +48,12 @@ export function SettingsPage() {
 
   return (
     <div className="max-w-2xl space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Configurações</h1>
-        <p className="text-sm text-muted-foreground">Conta e sessão</p>
-      </div>
+      <PageHeader
+        icon={<Settings />}
+        title="Configurações"
+        subtitle="Conta e sessão"
+        gradient="from-zinc-500 to-zinc-600"
+      />
 
       <Card>
         <CardHeader>

@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Copy, Check, Users, Link2, Share2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { api } from '@/services/api'
+import { PageHeader } from '@/components/PageHeader'
 
 interface ReferralItem {
   id: string
@@ -64,12 +65,12 @@ export function IndicacoesPage() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Indicações</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Compartilhe seu link e acompanhe quem se cadastrou pela sua indicação.
-        </p>
-      </div>
+      <PageHeader
+        icon={<Share2 />}
+        title="Indicações"
+        subtitle="Compartilhe seu link e acompanhe quem se cadastrou pela sua indicação."
+        gradient="from-pink-500 to-rose-500"
+      />
 
       {/* Card do link de indicação */}
       <div className="rounded-xl border bg-card p-6 space-y-4">

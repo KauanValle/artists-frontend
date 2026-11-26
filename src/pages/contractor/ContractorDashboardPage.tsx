@@ -17,6 +17,7 @@ import {
   ChevronRight,
   ClipboardList,
   Heart,
+  LayoutDashboard,
   Search,
 } from 'lucide-react'
 import { bookingsApi, favoritesApi } from '@/services'
@@ -30,7 +31,8 @@ import {
   EmptyState,
   eventTypeLabel,
 } from '@/components/badges'
-import { StatCard } from '@/pages/artist/ArtistDashboardPage'
+import { StatCard } from '@/components/StatCard'
+import { PageHeader } from '@/components/PageHeader'
 import { cn, formatDate, formatTime } from '@/lib/utils'
 import type { Booking } from '@/types'
 
@@ -55,26 +57,27 @@ export function ContractorDashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Olá, {user?.displayName} 👋</h1>
-        <p className="text-sm text-muted-foreground">Acompanhe suas contratações</p>
-      </div>
+      <PageHeader
+        icon={<LayoutDashboard />}
+        title={`Olá, ${user?.displayName ?? 'contratante'} 👋`}
+        subtitle="Acompanhe suas contratações"
+      />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard title="Solicitações em aberto" value={String(pending.length)} icon={<ClipboardList className="h-4 w-4 text-muted-foreground" />} />
-        <StatCard title="Eventos confirmados" value={String(confirmed.length)} icon={<CalendarRange className="h-4 w-4 text-muted-foreground" />} />
-        <StatCard title="Favoritos" value={String(favorites.length)} icon={<Heart className="h-4 w-4 text-muted-foreground" />} />
-        <StatCard title="Total de contratações" value={String(items.length)} icon={<Search className="h-4 w-4 text-muted-foreground" />} />
+        <StatCard title="Solicitações em aberto" value={String(pending.length)} icon={<ClipboardList />} iconBg="bg-amber-500/10" iconColor="text-amber-500" />
+        <StatCard title="Eventos confirmados" value={String(confirmed.length)} icon={<CalendarRange />} iconBg="bg-emerald-500/10" iconColor="text-emerald-500" />
+        <StatCard title="Favoritos" value={String(favorites.length)} icon={<Heart />} iconBg="bg-pink-500/10" iconColor="text-pink-500" />
+        <StatCard title="Total de contratações" value={String(items.length)} icon={<Search />} iconBg="bg-primary/10" iconColor="text-primary" />
       </div>
 
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-base">Atividade recente</CardTitle>
-          <Link to="/contractor/solicitacoes" className="text-sm text-primary hover:underline">
-            Ver todas
+      <Card className="border-0 shadow-md">
+        <CardHeader className="flex flex-row items-center justify-between border-b bg-muted/30 px-5 py-4">
+          <CardTitle className="text-base font-semibold">Atividade recente</CardTitle>
+          <Link to="/contractor/solicitacoes" className="flex items-center gap-1 text-sm font-medium text-primary hover:underline">
+            Ver todas <ChevronRight className="h-3.5 w-3.5" />
           </Link>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="divide-y p-0">
           {items.length === 0 && (
             <EmptyState
               title="Nenhuma contratação ainda"
@@ -183,10 +186,12 @@ export function ContractorEventsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold">Eventos</h1>
-        <p className="text-sm text-muted-foreground">Shows confirmados e realizados</p>
-      </div>
+      <PageHeader
+        icon={<CalendarRange />}
+        title="Eventos"
+        subtitle="Shows confirmados e realizados"
+        gradient="from-cyan-500 to-blue-500"
+      />
 
       {/* ════════ Agenda / Calendário ════════ */}
       <Card>

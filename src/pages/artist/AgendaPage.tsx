@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { EventStatusBadge, EmptyState, eventTypeLabel } from '@/components/badges'
 import { cn } from '@/lib/utils'
+import { PageHeader } from '@/components/PageHeader'
 import { extractApiError } from '@/services/api'
 import type { EventItem, EventType } from '@/types'
 
@@ -59,33 +60,35 @@ export function AgendaPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold">Agenda</h1>
-          <p className="text-sm text-muted-foreground">Shows, ensaios, reuniões, viagens e gravações — com detecção de conflitos</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Select value={view} onValueChange={(v) => setView(v as View)}>
-            <SelectTrigger className="w-32">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="month">Mês</SelectItem>
-              <SelectItem value="week">Semana</SelectItem>
-              <SelectItem value="day">Dia</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button variant="outline" size="icon" onClick={() => setCursor(view === 'month' ? addMonths(cursor, -1) : addDays(cursor, view === 'week' ? -7 : -1))}>
-            <ChevronLeft />
-          </Button>
-          <Button variant="outline" size="icon" onClick={() => setCursor(view === 'month' ? addMonths(cursor, 1) : addDays(cursor, view === 'week' ? 7 : 1))}>
-            <ChevronRight />
-          </Button>
-          <Button onClick={() => setCreateOpen(true)}>
-            <Plus /> Novo evento
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        icon={<CalendarDays />}
+        title="Agenda"
+        subtitle="Shows, ensaios, reuniões, viagens e gravações — com detecção de conflitos"
+        gradient="from-cyan-500 to-blue-500"
+        action={
+          <div className="flex flex-wrap items-center gap-2">
+            <Select value={view} onValueChange={(v) => setView(v as View)}>
+              <SelectTrigger className="w-32 bg-white/10 border-white/20 text-white">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="month">Mês</SelectItem>
+                <SelectItem value="week">Semana</SelectItem>
+                <SelectItem value="day">Dia</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button variant="outline" size="icon" className="border-white/20 bg-white/10 text-white hover:bg-white/20" onClick={() => setCursor(view === 'month' ? addMonths(cursor, -1) : addDays(cursor, view === 'week' ? -7 : -1))}>
+              <ChevronLeft />
+            </Button>
+            <Button variant="outline" size="icon" className="border-white/20 bg-white/10 text-white hover:bg-white/20" onClick={() => setCursor(view === 'month' ? addMonths(cursor, 1) : addDays(cursor, view === 'week' ? 7 : 1))}>
+              <ChevronRight />
+            </Button>
+            <Button className="bg-white/15 text-white hover:bg-white/25 backdrop-blur-sm" onClick={() => setCreateOpen(true)}>
+              <Plus /> Novo evento
+            </Button>
+          </div>
+        }
+      />
 
       <p className="text-sm font-medium capitalize">
         {view === 'month'

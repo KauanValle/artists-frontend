@@ -13,6 +13,7 @@ import {
   Play,
   RotateCcw,
   Trash2,
+  Newspaper,
   Video,
 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -24,6 +25,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { artistsApi, epkApi, uploadsApi } from '@/services'
 import { extractApiError } from '@/services/api'
 import { formatMoney } from '@/lib/utils'
+import { PageHeader } from '@/components/PageHeader'
 
 const BIO_MAX = 300
 const PHOTOS_MAX = 12
@@ -187,12 +189,12 @@ export function EpkPage() {
     <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
       {/* ─────────── Coluna esquerda: edição ─────────── */}
       <div className="space-y-6 min-w-0">
-        <div>
-          <h1 className="text-2xl font-bold">Meu EPK</h1>
-          <p className="text-sm text-muted-foreground">
-            Electronic Press Kit — o seu kit de imprensa digital
-          </p>
-        </div>
+        <PageHeader
+          icon={<Newspaper />}
+          title="Meu EPK"
+          subtitle="Electronic Press Kit — o seu kit de imprensa digital"
+          gradient="from-teal-500 to-cyan-500"
+        />
 
         <Card>
           <CardHeader>

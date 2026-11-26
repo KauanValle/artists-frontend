@@ -21,6 +21,7 @@ import { BookingStatusBadge, EmptyState, eventTypeLabel } from '@/components/bad
 import type { BookingStatus } from '@/types'
 import { useDebounce } from '@/hooks/useDebounce'
 import { cn, formatMoney } from '@/lib/utils'
+import { PageHeader } from '@/components/PageHeader'
 
 const tabs: { value: string; label: string; status?: BookingStatus }[] = [
   { value: 'all', label: 'Todos' },
@@ -91,12 +92,12 @@ export function ShowsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Shows</h1>
-        <p className="text-sm text-muted-foreground">
-          {ehArtista ? 'Solicitações recebidas e negociações em andamento' : 'Suas solicitações de contratação'}
-        </p>
-      </div>
+      <PageHeader
+        icon={<Megaphone />}
+        title="Meus Shows"
+        subtitle={ehArtista ? 'Solicitações recebidas e negociações em andamento' : 'Suas solicitações de contratação'}
+        gradient="from-primary to-primary/60"
+      />
 
       <div className="space-y-3">
         <Tabs value={tab} onValueChange={setTab}>
@@ -113,7 +114,7 @@ export function ShowsPage() {
           </TabsList>
         </Tabs>
         <input
-          className="h-9 w-full sm:w-56 rounded-md border border-input bg-transparent px-3 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="h-9 w-full sm:w-72 rounded-lg border border-input bg-card px-3 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           placeholder="Buscar por contratante/local..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -161,7 +162,7 @@ export function ShowsPage() {
           icon={<Megaphone />}
         />
       ) : (
-        <Card>
+        <Card className="border-0 shadow-md overflow-hidden">
           <CardContent className="p-0">
             {/* Mobile card list */}
             <div className={cn('sm:hidden divide-y transition-opacity', isFetching && 'opacity-60')}>
@@ -209,7 +210,7 @@ export function ShowsPage() {
             <div className={cn('hidden sm:block overflow-x-auto transition-opacity', isFetching && 'opacity-60')}>
               <table className="w-full min-w-[52rem] text-sm">
                 <thead>
-                  <tr className="border-b text-left text-muted-foreground bg-muted/50">
+                  <tr className="border-b text-left text-muted-foreground bg-muted/40">
                     <th className="p-4 py-6 font-medium">Data e Horário</th>
                     <th className="p-4 font-medium">{ehArtista ? 'Contratante' : 'Artista'}</th>
                     <th className="p-4 font-medium">Local</th>

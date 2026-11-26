@@ -8,6 +8,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { extractApiError } from '@/services/api'
+import { PageHeader } from '@/components/PageHeader'
+import { Settings } from 'lucide-react'
 import type { ContractorType } from '@/types'
 
 export function ContractorProfilePage() {
@@ -54,10 +56,12 @@ export function ContractorProfilePage() {
 
   return (
     <div className="max-w-2xl space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Meu perfil</h1>
-        <p className="text-sm text-muted-foreground">Dados do contratante</p>
-      </div>
+      <PageHeader
+        icon={<Settings />}
+        title="Meu perfil"
+        subtitle="Dados do contratante"
+        gradient="from-zinc-500 to-zinc-600"
+      />
 
       <Card>
         <CardHeader>

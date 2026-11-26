@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { EmptyState, equipmentStatusLabel } from '@/components/badges'
 import { formatMoney } from '@/lib/utils'
+import { PageHeader } from '@/components/PageHeader'
 import { extractApiError } from '@/services/api'
 import { InfoTooltip } from '@/components/ui/info-tooltip'
 import type { AllocationType, Equipment, EquipmentStatus, ShareType } from '@/types'
@@ -45,35 +46,32 @@ export function EquipmentPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold">Equipamentos</h1>
-          <p className="text-sm text-muted-foreground">Inventário com checklist por evento</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-44">
-              <SelectValue placeholder="Todos os status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">Todos os status</SelectItem>
-              {Object.entries(equipmentStatusLabel).map(([value, label]) => (
-                <SelectItem key={value} value={value}>
-                  {label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button
-            onClick={() => {
-              setEditing(null)
-              setOpen(true)
-            }}
-          >
-            <Plus /> Novo equipamento
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        icon={<Package />}
+        title="Equipamentos"
+        subtitle="Inventário com checklist por evento"
+        gradient="from-violet-500 to-purple-500"
+        action={
+          <div className="flex items-center gap-2">
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-44 bg-white/10 border-white/20 text-white">
+                <SelectValue placeholder="Todos os status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Todos os status</SelectItem>
+                {Object.entries(equipmentStatusLabel).map(([value, label]) => (
+                  <SelectItem key={value} value={value}>
+                    {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button className="bg-white/15 text-white hover:bg-white/25 backdrop-blur-sm" onClick={() => { setEditing(null); setOpen(true) }}>
+              <Plus /> Novo equipamento
+            </Button>
+          </div>
+        }
+      />
 
       {isLoading ? (
         <p className="py-10 text-center text-sm text-muted-foreground">Carregando...</p>

@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { reviewsApi, uploadsApi } from '@/services'
 import { extractApiError } from '@/services/api'
 import { useAuth } from '@/hooks/useAuth'
+import { PageHeader } from '@/components/PageHeader'
 import { formatDate, formatDateTime } from '@/lib/utils'
 import { Avatar } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -95,7 +96,7 @@ function PaginacaoRodape({
 
 function ReviewCard({ review }: { review: Review }) {
   return (
-    <Card>
+    <Card className="border-0 shadow-md">
       <CardContent className="p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex items-center gap-3">
@@ -294,7 +295,7 @@ function PendentesContratante() {
     <>
       <div className="space-y-3">
         {daPagina.map((p) => (
-          <Card key={p.eventId}>
+          <Card key={p.eventId} className="border-0 shadow-md">
             <CardContent className="flex flex-wrap items-center gap-4 p-5">
               <Avatar alt={p.artistName} className="h-12 w-12" />
               <div className="min-w-0 flex-1">
@@ -364,7 +365,7 @@ function RecebidasArtista() {
   const daPagina = reviews.slice((page - 1) * POR_PAGINA, page * POR_PAGINA)
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2 rounded-lg border bg-background p-4">
+      <div className="flex items-center gap-2 rounded-xl border-0 bg-card p-4 shadow-md">
         <Camera className="h-4 w-4 text-muted-foreground" />
         <span className="text-sm text-muted-foreground">
           Média de <strong className="text-foreground">{media.toFixed(1)}</strong> estrelas em {reviews.length}{' '}
@@ -392,14 +393,14 @@ export function ReviewsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Avaliações</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {ehArtista
-            ? 'Veja as avaliações que os contratantes deixaram sobre os seus shows.'
-            : 'Avalie os shows concluídos — sua nota ajuda outros contratantes e o artista a melhorar.'}
-        </p>
-      </div>
+      <PageHeader
+        icon={<Star />}
+        title="Avaliações"
+        subtitle={ehArtista
+          ? 'Veja as avaliações que os contratantes deixaram sobre os seus shows.'
+          : 'Avalie os shows concluídos — sua nota ajuda outros contratantes e o artista a melhorar.'}
+        gradient="from-amber-500 to-yellow-500"
+      />
       {ehArtista ? <RecebidasArtista /> : <PendentesContratante />}
     </div>
   )

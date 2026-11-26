@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { EmptyState } from '@/components/badges'
 import { formatMoney } from '@/lib/utils'
+import { PageHeader } from '@/components/PageHeader'
 import { extractApiError } from '@/services/api'
 import { InfoTooltip } from '@/components/ui/info-tooltip'
 import type { AllocationType, ShareType } from '@/types'
@@ -36,22 +37,17 @@ export function TeamPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold">Equipe</h1>
-          <p className="text-sm text-muted-foreground">
-            Integrantes da banda/grupo e divisão de cachê (percentual ou fixa)
-          </p>
-        </div>
-        <Button
-          onClick={() => {
-            setEditing(null)
-            setOpen(true)
-          }}
-        >
-          <Plus /> Novo membro
-        </Button>
-      </div>
+      <PageHeader
+        icon={<Users />}
+        title="Equipe"
+        subtitle="Integrantes da banda/grupo e divisão de cachê (percentual ou fixa)"
+        gradient="from-blue-500 to-indigo-500"
+        action={
+          <Button className="bg-white/15 text-white hover:bg-white/25 backdrop-blur-sm" onClick={() => { setEditing(null); setOpen(true) }}>
+            <Plus /> Novo membro
+          </Button>
+        }
+      />
 
       {isLoading ? (
         <p className="py-10 text-center text-sm text-muted-foreground">Carregando...</p>

@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatDateTime, formatMoney } from '@/lib/utils'
+import { PageHeader } from '@/components/PageHeader'
 import { extractApiError } from '@/services/api'
 
 const PLAN_BENEFITS = [
@@ -41,8 +42,12 @@ export function SubscriptionPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
+      <PageHeader
+        icon={<BadgeCheck />}
+        title="Assinatura"
+        gradient="from-primary to-primary/60"
+      />
       <div>
-        <h1 className="text-2xl font-bold">Assinatura</h1>
         <p className="text-sm text-muted-foreground">
           Sua conta é <strong>{isSubscriber ? 'Assinante' : 'Gratuita'}</strong>
           {isSubscriber

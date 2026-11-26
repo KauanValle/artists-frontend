@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { EmptyState } from '@/components/badges'
 import { extractApiError } from '@/services/api'
+import { PageHeader } from '@/components/PageHeader'
 
 export function FavoritesPage() {
   const queryClient = useQueryClient()
@@ -29,10 +30,12 @@ export function FavoritesPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Favoritos</h1>
-        <p className="text-sm text-muted-foreground">Artistas salvos para contratações futuras</p>
-      </div>
+      <PageHeader
+        icon={<Heart />}
+        title="Favoritos"
+        subtitle="Artistas salvos para contratações futuras"
+        gradient="from-red-500 to-pink-500"
+      />
 
       {isLoading ? (
         <p className="py-10 text-center text-sm text-muted-foreground">Carregando...</p>

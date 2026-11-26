@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { PageHeader } from '@/components/PageHeader'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { addDays, addWeeks, format, getDay } from 'date-fns'
@@ -35,7 +36,7 @@ import { availabilityStatusLabel } from '@/components/badges'
 import { cn, formatDate, formatMoney, minutesToLabel, toDateInput } from '@/lib/utils'
 import { extractApiError } from '@/services/api'
 import type {AvailabilityStatus, Fee} from '@/types'
-import {StatCard} from "@/pages/artist/ArtistDashboardPage.tsx";
+import { StatCard } from '@/components/StatCard'
 
 const STEPS = [
   { title: 'Dados básicos', icon: User },
@@ -188,30 +189,32 @@ export function ArtistProfilePage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold">Meu Perfil</h1>
-          <p className="text-sm text-muted-foreground">Dados do perfil público em /artistas/{artist.slug || '<slug>'}</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Badge variant={artist.isPublished ? 'success' : 'secondary'}>
-            {artist.isPublished ? 'Publicado' : 'Rascunho'}
-          </Badge>
-          {missingFields.length > 0 && (
-            <Badge variant="warning" className="gap-1">
-              <TriangleAlert className="h-3 w-3" />
-              {missingFields.length} {missingFields.length > 1 ? 'campos pendentes' : 'campo pendente'}
+      <PageHeader
+        icon={<Music2 />}
+        title="Meu Perfil"
+        subtitle={`Dados do perfil público em /artistas/${artist.slug || '<slug>'}`}
+        gradient="from-fuchsia-500 to-pink-500"
+        action={
+          <div className="flex items-center gap-2">
+            <Badge variant={artist.isPublished ? 'success' : 'secondary'} className="border-white/20 bg-white/15 text-white">
+              {artist.isPublished ? 'Publicado' : 'Rascunho'}
             </Badge>
-          )}
-          <Button
-            variant={artist.isPublished ? 'outline' : 'default'}
-            onClick={() => publish.mutate(!artist.isPublished)}
-            disabled={publish.isPending}
-          >
-            {artist.isPublished ? 'Despublicar' : 'Publicar perfil'}
-          </Button>
-        </div>
-      </div>
+            {missingFields.length > 0 && (
+              <Badge variant="warning" className="gap-1">
+                <TriangleAlert className="h-3 w-3" />
+                {missingFields.length} {missingFields.length > 1 ? 'campos pendentes' : 'campo pendente'}
+              </Badge>
+            )}
+            <Button
+              className={artist.isPublished ? 'border-white/20 bg-white/10 text-white hover:bg-white/20' : 'bg-white/15 text-white hover:bg-white/25 backdrop-blur-sm'}
+              onClick={() => publish.mutate(!artist.isPublished)}
+              disabled={publish.isPending}
+            >
+              {artist.isPublished ? 'Despublicar' : 'Publicar perfil'}
+            </Button>
+          </div>
+        }
+      />
 
       {/* Indicador de passos */}
       <ol className="flex flex-wrap items-center gap-x-3 gap-y-2">

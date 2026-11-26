@@ -14,7 +14,9 @@ import { TaxaAdministrativaCard } from '@/pages/admin/TaxaAdministrativaCard'
 import { TaxaIngressosCard } from '@/pages/admin/TaxaIngressosCard'
 import { formatDate, formatMoney, formatTime } from '@/lib/utils'
 import type { Booking } from '@/types'
-import {StatCard} from "@/pages/artist/ArtistDashboardPage.tsx";
+import { StatCard } from '@/components/StatCard'
+import { PageHeader } from '@/components/PageHeader'
+import { LayoutDashboard } from 'lucide-react'
 
 /**
  * Painel do administrador.
@@ -26,10 +28,12 @@ export function AdminDashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Painel do administrador</h1>
-        <p className="text-sm text-muted-foreground">Acesso administrativo da reprissa</p>
-      </div>
+      <PageHeader
+        icon={<LayoutDashboard />}
+        title="Painel do administrador"
+        subtitle="Acesso administrativo da reprissa"
+        gradient="from-red-500 to-rose-500"
+      />
       <Card>
         <CardContent className="flex items-center gap-4">
           <div className="flex flex-1 items-center gap-4 pt-6">

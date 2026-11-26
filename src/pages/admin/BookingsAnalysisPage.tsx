@@ -12,7 +12,7 @@ import { Link } from 'react-router-dom'
 import { BookingStatusBadge, EmptyState, eventTypeLabel } from '@/components/badges'
 import { formatDate, formatMoney, formatTime } from '@/lib/utils'
 import type { Booking } from '@/types'
-import {StatCard} from "@/pages/artist/ArtistDashboardPage.tsx";
+import { StatCard } from '@/components/StatCard'
 
 /**
  * Painel do administrador.

@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { RatingStars } from '@/components/ui/rating-stars'
 import { EmptyState } from '@/components/badges'
 import { formatMoney } from '@/lib/utils'
+import { PageHeader } from '@/components/PageHeader'
 
 export function MarketplacePage() {
   const [search, setSearch] = useState('')
@@ -52,12 +53,12 @@ export function MarketplacePage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Buscar artistas</h1>
-        <p className="text-sm text-muted-foreground">
-          Encontre profissionais por categoria, localização, data, horário, duração e preço
-        </p>
-      </div>
+      <PageHeader
+        icon={<Search />}
+        title="Buscar artistas"
+        subtitle="Encontre profissionais por categoria, localização, data, horário, duração e preço"
+        gradient="from-primary to-primary/60"
+      />
 
       <Card>
         <CardContent className="grid gap-3 p-4 md:grid-cols-4">
